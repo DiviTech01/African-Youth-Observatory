@@ -74,12 +74,12 @@ const Themes = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <div className="bg-muted/30 py-12">
+      <div className="bg-muted/30 py-8 md:py-12">
         <div className="container px-4 md:px-6">
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 md:gap-4">
             <div>
-              <h1 className="text-3xl font-bold">Thematic Areas</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-2xl sm:text-3xl font-bold">Thematic Areas</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
                 Explore our five core thematic areas of youth development in Africa.
               </p>
             </div>
@@ -87,56 +87,56 @@ const Themes = () => {
         </div>
       </div>
       
-      <main className="flex-grow py-8">
+      <main className="flex-grow py-6 md:py-8">
         <div className="container px-4 md:px-6">
-          <div className="grid gap-8">
+          <div className="grid gap-4 md:gap-6 lg:gap-8">
             {themes.map((theme) => (
               <Card key={theme.id} className={`border-l-4 border-l-pan-${theme.color}-500`}>
-                <CardContent className="p-6">
-                  <div className="grid md:grid-cols-3 gap-6">
+                <CardContent className="p-4 md:p-6">
+                  <div className="grid md:grid-cols-3 gap-4 md:gap-6">
                     <div className="md:col-span-2">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={`p-2 rounded-md bg-pan-${theme.color}-100 text-pan-${theme.color}-500`}>
-                          <theme.icon className="h-6 w-6" />
+                      <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                        <div className={`p-1.5 md:p-2 rounded-md bg-pan-${theme.color}-100 text-pan-${theme.color}-500`}>
+                          <theme.icon className="h-5 w-5 md:h-6 md:w-6" />
                         </div>
-                        <h2 className="text-2xl font-bold">{theme.title}</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold">{theme.title}</h2>
                       </div>
                       
-                      <p className="text-muted-foreground mb-6">
+                      <p className="text-sm sm:text-base text-muted-foreground mb-4 md:mb-6">
                         {theme.description}
                       </p>
                       
-                      <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
                         {theme.stats.map((stat, i) => (
-                          <div key={i} className={`p-3 rounded-md bg-pan-${theme.color}-50`}>
-                            <p className="text-sm text-muted-foreground">{stat.label}</p>
-                            <p className="text-xl font-bold">{stat.value}</p>
+                          <div key={i} className={`p-2 md:p-3 rounded-md bg-pan-${theme.color}-50`}>
+                            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground line-clamp-1">{stat.label}</p>
+                            <p className="text-base sm:text-lg md:text-xl font-bold">{stat.value}</p>
                           </div>
                         ))}
                       </div>
                       
                       <div className="flex flex-wrap gap-2">
                         <Link to={`/explore?theme=${theme.id}`}>
-                          <Button>Explore Data</Button>
+                          <Button size="sm" className="text-xs sm:text-sm">Explore Data</Button>
                         </Link>
                         <Link to={`/explore?theme=${theme.id}`}>
-                          <Button variant="outline">View Indicators</Button>
+                          <Button variant="outline" size="sm" className="text-xs sm:text-sm">View Indicators</Button>
                         </Link>
                         <Link to={`/compare?theme=${theme.id}`}>
-                          <Button variant="outline">Compare Countries</Button>
+                          <Button variant="outline" size="sm" className="text-xs sm:text-sm">Compare Countries</Button>
                         </Link>
                       </div>
                     </div>
                     
                     <div className="hidden md:block md:col-span-1">
-                      <div className={`h-full rounded-md bg-pan-${theme.color}-50 flex items-center justify-center p-6`}>
+                      <div className={`h-full min-h-[200px] rounded-md bg-pan-${theme.color}-50 flex items-center justify-center p-4 md:p-6`}>
                         <div className="w-full aspect-square relative">
                           {theme.id === "population" && (
                             <div className="w-full h-full flex items-end justify-around">
                               {[...Array(5)].map((_, i) => (
                                 <div
                                   key={i}
-                                  className={`w-12 bg-pan-${theme.color}-${300 + (i * 50)} hover:bg-pan-${theme.color}-${400 + (i * 50)} transition-all rounded-t-md`}
+                                  className={`w-8 md:w-12 bg-pan-${theme.color}-${300 + (i * 50)} hover:bg-pan-${theme.color}-${400 + (i * 50)} transition-all rounded-t-md`}
                                   style={{ height: `${40 + Math.random() * 50}%` }}
                                 ></div>
                               ))}
@@ -145,23 +145,23 @@ const Themes = () => {
                           
                           {theme.id === "education" && (
                             <div className="w-full h-full flex items-center justify-center">
-                              <div className="w-32 h-32 rounded-full border-8 border-pan-blue-300 flex items-center justify-center">
-                                <span className="text-2xl font-bold text-pan-blue-500">73%</span>
+                              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-8 border-pan-blue-300 flex items-center justify-center">
+                                <span className="text-xl md:text-2xl font-bold text-pan-blue-500">73%</span>
                               </div>
                             </div>
                           )}
                           
                           {theme.id === "health" && (
                             <div className="w-full h-full flex items-center justify-center">
-                              <Heart className="w-32 h-32 text-pan-purple-300" />
+                              <Heart className="w-24 h-24 md:w-32 md:h-32 text-pan-purple-300" />
                             </div>
                           )}
                           
                           {theme.id === "employment" && (
-                            <div className="w-full h-full flex items-end justify-around">
-                              <div className="w-24 h-24 rounded-full border-8 border-pan-orange-300 flex items-center justify-center relative">
-                                <span className="text-2xl font-bold text-pan-orange-500">42%</span>
-                                <div className="absolute -top-4 -right-4 w-12 h-12 rounded-full bg-pan-orange-500 flex items-center justify-center text-white font-bold">
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-8 border-pan-orange-300 flex items-center justify-center relative">
+                                <span className="text-xl md:text-2xl font-bold text-pan-orange-500">42%</span>
+                                <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 w-10 h-10 md:w-12 md:h-12 rounded-full bg-pan-orange-500 flex items-center justify-center text-white font-bold">
                                   +
                                 </div>
                               </div>
@@ -170,11 +170,11 @@ const Themes = () => {
                           
                           {theme.id === "entrepreneurship" && (
                             <div className="w-full h-full flex items-center justify-center">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="w-12 h-12 rounded-md bg-pan-green-300"></div>
-                                <div className="w-12 h-12 rounded-md bg-pan-green-400"></div>
-                                <div className="w-12 h-12 rounded-md bg-pan-green-500"></div>
-                                <div className="w-12 h-12 rounded-md bg-pan-green-600"></div>
+                              <div className="grid grid-cols-2 gap-2 md:gap-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-md bg-pan-green-300"></div>
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-md bg-pan-green-400"></div>
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-md bg-pan-green-500"></div>
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-md bg-pan-green-600"></div>
                               </div>
                             </div>
                           )}
