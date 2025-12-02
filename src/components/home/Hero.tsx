@@ -5,34 +5,34 @@ import { Link } from 'react-router-dom';
 
 const Hero = () => {
   return (
-    <section className="py-12 md:py-24 bg-gradient-to-br from-pan-green-50 to-white">
+    <section className="py-8 sm:py-12 md:py-24 bg-gradient-to-br from-pan-green-50 to-white">
       <div className="container px-4 md:px-6">
         <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
-          <div className="flex flex-col justify-center space-y-4">
+          <div className="flex flex-col justify-center space-y-4 text-center lg:text-left">
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
+              <h1 className="text-2xl font-bold tracking-tighter sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl">
                 African Youth Statistics Database
               </h1>
-              <p className="max-w-[700px] text-muted-foreground md:text-xl">
+              <p className="max-w-[700px] text-muted-foreground text-sm sm:text-base md:text-lg lg:text-xl mx-auto lg:mx-0">
                 Your comprehensive resource for data on African youth across population, 
                 education, health, employment, and entrepreneurship.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-              <Link to="/explore">
-                <Button className="bg-pan-green-500 hover:bg-pan-green-600">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
+              <Link to="/explore" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto bg-pan-green-500 hover:bg-pan-green-600">
                   Explore Data
                 </Button>
               </Link>
-              <Link to="/compare">
-                <Button variant="outline">
+              <Link to="/compare" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto">
                   Compare Countries
                 </Button>
               </Link>
             </div>
           </div>
-          <div className="flex items-center justify-center">
-            <div className="relative w-full max-w-[500px] aspect-square">
+          <div className="flex items-center justify-center order-first lg:order-last">
+            <div className="relative w-full max-w-[280px] sm:max-w-[350px] md:max-w-[400px] lg:max-w-[500px] aspect-square">
               <div className="absolute inset-0 rounded-full bg-pan-green-100 animate-pulse-gentle"></div>
               <svg
                 className="absolute inset-0 w-full h-full"

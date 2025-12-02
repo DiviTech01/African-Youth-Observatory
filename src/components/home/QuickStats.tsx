@@ -12,7 +12,7 @@ const statsData = [
     trend: '+2.3%',
     color: 'pan-green',
     icon: Users,
-    link: '/themes/population'
+    link: '/explore?theme=population'
   },
   {
     title: 'Education',
@@ -21,7 +21,7 @@ const statsData = [
     trend: '+5.7%',
     color: 'pan-blue',
     icon: GraduationCap,
-    link: '/themes/education'
+    link: '/explore?theme=education'
   },
   {
     title: 'Health',
@@ -30,7 +30,7 @@ const statsData = [
     trend: '+3.1%',
     color: 'pan-purple',
     icon: Heart,
-    link: '/themes/health'
+    link: '/explore?theme=health'
   },
   {
     title: 'Employment',
@@ -39,7 +39,7 @@ const statsData = [
     trend: '-1.2%',
     color: 'pan-orange',
     icon: Briefcase,
-    link: '/themes/employment'
+    link: '/explore?theme=employment'
   },
   {
     title: 'Entrepreneurship',
@@ -48,48 +48,47 @@ const statsData = [
     trend: '+4.5%',
     color: 'pan-green',
     icon: BookOpen,
-    link: '/themes/entrepreneurship'
+    link: '/explore?theme=entrepreneurship'
   }
 ];
 
 const QuickStats = () => {
   return (
-    <section className="py-12">
+    <section className="py-8 md:py-12">
       <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
+        <div className="flex flex-col items-center justify-center space-y-3 md:space-y-4 text-center">
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter md:text-4xl">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter md:text-4xl">
               Key Statistics
             </h2>
-            <p className="max-w-[700px] text-muted-foreground md:text-xl mx-auto">
+            <p className="max-w-[700px] text-sm sm:text-base text-muted-foreground md:text-xl mx-auto">
               Explore essential data points on African youth across our five core thematic areas.
             </p>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mt-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 mt-6 md:mt-8">
           {statsData.map((stat, index) => (
             <Link key={index} to={stat.link} className="block group">
-              <Card className={`stat-card border-l-4 border-l-${stat.color}-500 group-hover:border-l-6 transition-all`}>
-                <CardContent className="p-6">
+              <Card className={`stat-card border-l-4 border-l-${stat.color}-500 group-hover:border-l-6 transition-all h-full`}>
+                <CardContent className="p-4 md:p-6">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">{stat.title}</p>
-                      <h3 className="text-2xl font-bold">{stat.value}</h3>
-                      <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">{stat.title}</p>
+                      <h3 className="text-xl sm:text-2xl font-bold">{stat.value}</h3>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{stat.description}</p>
                     </div>
-                    <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-${stat.color}-100 text-${stat.color}-500`}>
-                      <stat.icon className="w-5 h-5" />
+                    <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-${stat.color}-100 text-${stat.color}-500 ml-2`}>
+                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center text-xs">
+                  <div className="mt-3 md:mt-4 flex items-center text-xs">
                     <span className={`inline-block px-2 py-1 rounded-full ${stat.trend.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {stat.trend} since 2020
                     </span>
                   </div>
                   
-                  <div className="mt-4 mini-chart">
-                    {/* Simplified chart visual - in real implementation, this would be a proper recharts component */}
+                  <div className="mt-3 md:mt-4 h-8 md:h-10">
                     <div className="h-full w-full flex items-end">
                       {[...Array(10)].map((_, i) => (
                         <div 
