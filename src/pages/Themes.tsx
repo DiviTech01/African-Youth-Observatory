@@ -119,11 +119,11 @@ const Themes = () => {
                         <Link to={`/explore?theme=${theme.id}`}>
                           <Button>Explore Data</Button>
                         </Link>
-                        <Link to={`/themes/${theme.id}/indicators`}>
+                        <Link to={`/explore?theme=${theme.id}`}>
                           <Button variant="outline">View Indicators</Button>
                         </Link>
-                        <Link to={`/themes/${theme.id}/reports`}>
-                          <Button variant="outline">View Reports</Button>
+                        <Link to={`/compare?theme=${theme.id}`}>
+                          <Button variant="outline">Compare Countries</Button>
                         </Link>
                       </div>
                     </div>
