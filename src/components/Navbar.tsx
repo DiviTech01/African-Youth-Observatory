@@ -15,9 +15,10 @@ import {
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/explore', label: 'Data Explorer' },
-  { to: '/compare', label: 'Compare Countries' },
-  { to: '/themes', label: 'Themes' },
+  { to: '/youth-index', label: 'Youth Index' },
+  { to: '/compare', label: 'Compare' },
   { to: '/countries', label: 'Countries' },
+  { to: '/reports', label: 'Reports' },
   { to: '/about', label: 'About' },
 ];
 
@@ -38,11 +39,11 @@ const Navbar = () => {
       <div className="container flex h-14 sm:h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center space-x-2">
-            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-md bg-pan-green-500">
-              <span className="font-bold text-white text-sm sm:text-base">AY</span>
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-md bg-primary">
+              <span className="font-bold text-primary-foreground text-sm sm:text-base">AYD</span>
             </div>
-            <span className="hidden font-bold sm:inline-block text-sm md:text-base">
-              African Youth Stats
+            <span className="hidden font-display font-bold sm:inline-block text-sm md:text-base">
+              African Youth Database
             </span>
           </Link>
         </div>
