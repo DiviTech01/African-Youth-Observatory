@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Search, Menu, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   Sheet,
   SheetContent,
@@ -35,14 +35,14 @@ const Navbar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 sm:h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center space-x-2">
             <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-md bg-primary">
               <span className="font-bold text-primary-foreground text-sm sm:text-base">AYD</span>
             </div>
-            <span className="hidden font-display font-bold sm:inline-block text-sm md:text-base">
+            <span className="hidden font-display font-bold sm:inline-block text-sm md:text-base text-foreground">
               African Youth Database
             </span>
           </Link>
@@ -63,7 +63,7 @@ const Navbar = () => {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           {isSearchOpen ? (
             <div className="flex items-center relative animate-fade-in">
               <Input
@@ -91,6 +91,8 @@ const Navbar = () => {
             </Button>
           )}
           
+          <ThemeToggle />
+          
           <Button
             variant="outline"
             size="sm"
@@ -113,10 +115,10 @@ const Navbar = () => {
             <SheetContent side="right" className="w-[280px] sm:w-[320px]">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-pan-green-500">
-                    <span className="font-bold text-white">AY</span>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
+                    <span className="font-bold text-primary-foreground">AYD</span>
                   </div>
-                  <span>African Youth Stats</span>
+                  <span className="text-foreground">African Youth Database</span>
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 mt-6">
@@ -136,7 +138,7 @@ const Navbar = () => {
                 ))}
               </nav>
               
-              <div className="mt-6 pt-6 border-t space-y-4">
+              <div className="mt-6 pt-6 border-t border-border space-y-4">
                 <div className="relative">
                   <Input
                     type="search"
