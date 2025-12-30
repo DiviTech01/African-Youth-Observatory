@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import Explore from "./pages/Explore";
 import Compare from "./pages/Compare";
@@ -16,6 +17,8 @@ import YouthIndex from "./pages/YouthIndex";
 import Glossary from "./pages/resources/Glossary";
 import FAQ from "./pages/resources/FAQ";
 import Methodology from "./pages/resources/Methodology";
+import SignIn from "./pages/auth/SignIn";
+import SignUp from "./pages/auth/SignUp";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +31,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            <Route path="/landing" element={<Landing />} />
             <Route path="/" element={<Index />} />
             <Route path="/explore" element={<Explore />} />
             <Route path="/compare" element={<Compare />} />
@@ -40,6 +44,8 @@ const App = () => (
             <Route path="/resources/glossary" element={<Glossary />} />
             <Route path="/resources/faq" element={<FAQ />} />
             <Route path="/resources/methodology" element={<Methodology />} />
+            <Route path="/auth/signin" element={<SignIn />} />
+            <Route path="/auth/signup" element={<SignUp />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
