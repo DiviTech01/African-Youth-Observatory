@@ -17,6 +17,8 @@ const navLinks = [
   { to: '/explore', label: 'Data Explorer' },
   { to: '/youth-index', label: 'Youth Index' },
   { to: '/compare', label: 'Compare' },
+  { to: '/dashboard', label: 'Dashboard' },
+  { to: '/insights', label: 'AI Insights' },
   { to: '/countries', label: 'Countries' },
   { to: '/reports', label: 'Reports' },
   { to: '/about', label: 'About' },

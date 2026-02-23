@@ -14,6 +14,8 @@ import About from "./pages/About";
 import Reports from "./pages/Reports";
 import Contact from "./pages/Contact";
 import YouthIndex from "./pages/YouthIndex";
+import Insights from "./pages/Insights";
+import Dashboard from "./pages/Dashboard";
 import Glossary from "./pages/resources/Glossary";
 import FAQ from "./pages/resources/FAQ";
 import Methodology from "./pages/resources/Methodology";
@@ -41,6 +43,8 @@ const App = () => (
             <Route path="/reports" element={<Reports />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/youth-index" element={<YouthIndex />} />
+            <Route path="/insights" element={<Insights />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/resources/glossary" element={<Glossary />} />
             <Route path="/resources/faq" element={<FAQ />} />
             <Route path="/resources/methodology" element={<Methodology />} />

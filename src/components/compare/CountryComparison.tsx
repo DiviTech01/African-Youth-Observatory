@@ -1,9 +1,17 @@
+// ============================================
+// AFRICAN YOUTH DATABASE - COUNTRY COMPARISON
+// Compare countries across multiple indicators
+// ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Download, BarChart, PieChart, Filter, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Download, BarChart3, PieChart, Filter, X, Search, Plus, TrendingUp, TrendingDown, Minus, Globe, Users, BookOpen, Heart, Briefcase, Lightbulb } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -11,89 +19,230 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { QuickExportDropdown } from '@/components/export';
+import { exportComparisonData, type ExportFormat } from '@/services/export';
+import { AFRICAN_COUNTRIES, THEMES, INDICATORS, getCountryById, getIndicatorById } from '@/types';
+import { useYouthIndexRankings, useComparisonData } from '@/hooks/useData';
+import { AYDBarChart, AYDRadarChart, COLOR_PALETTE } from '@/components/charts';
 
-const countries = [
-  "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", 
-  "Burundi", "Cabo Verde", "Cameroon", "Central African Republic", "Chad", 
-  "Comoros", "Congo", "Côte d'Ivoire", "DRC", "Djibouti", "Egypt", "Equatorial Guinea", 
-  "Eritrea", "Eswatini", "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", 
-  "Guinea-Bissau", "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", 
-  "Malawi", "Mali", "Mauritania", "Mauritius", "Morocco", "Mozambique", 
-  "Namibia", "Niger", "Nigeria", "Rwanda", "São Tomé and Príncipe", "Senegal", 
-  "Seychelles", "Sierra Leone", "Somalia", "South Africa", "South Sudan", 
-  "Sudan", "Tanzania", "Togo", "Tunisia", "Uganda", "Zambia", "Zimbabwe"
-];
-
-const indicators = {
-  "Population": ["Youth Population (15-24)", "Youth as % of Total Population", "Youth Growth Rate", "Youth Urban/Rural Distribution"],
-  "Education": ["Youth Literacy Rate", "Secondary School Enrollment", "Tertiary Enrollment", "Gender Parity in Education"],
-  "Health": ["Youth Access to Healthcare", "HIV Prevalence Among Youth", "Youth Mental Health Services", "Youth Nutrition Status"],
-  "Employment": ["Youth Unemployment Rate", "Youth Labor Force Participation", "Youth in Informal Sector", "Youth Average Wages"],
-  "Entrepreneurship": ["Youth Business Ownership", "Youth Startup Formation", "Youth Access to Finance", "Youth Innovation Index"]
+// Theme icon mapping
+const themeIcons: Record<string, React.ElementType> = {
+  edu: BookOpen,
+  hlt: Heart,
+  emp: Briefcase,
+  inn: Lightbulb,
+  civ: Users,
 };
 
 const CountryComparison = () => {
-  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
-  const [selectedTheme, setSelectedTheme] = useState<string>("Education");
+  const [selectedCountryIds, setSelectedCountryIds] = useState<string[]>([]);
+  const [selectedTheme, setSelectedTheme] = useState<string>("edu");
   const [selectedIndicator, setSelectedIndicator] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<number>(2024);
   const [chartType, setChartType] = useState<'bar' | 'radar'>('bar');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  
-  const availableIndicators = indicators[selectedTheme as keyof typeof indicators] || [];
-  
-  const handleCountryToggle = (country: string) => {
-    if (selectedCountries.includes(country)) {
-      setSelectedCountries(selectedCountries.filter(c => c !== country));
-    } else {
-      if (selectedCountries.length < 5) {
-        setSelectedCountries([...selectedCountries, country]);
-      }
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Fetch Youth Index for overall comparison
+  const { data: youthIndexData } = useYouthIndexRankings(selectedYear);
+
+  // Get available themes and indicators
+  const availableThemes = THEMES.slice(0, 5); // Main themes
+  const availableIndicators = useMemo(() => {
+    return INDICATORS.filter(ind => ind.themeId === selectedTheme);
+  }, [selectedTheme]);
+
+  // Filter countries by search
+  const filteredCountries = useMemo(() => {
+    return AFRICAN_COUNTRIES.filter(country => 
+      country.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !selectedCountryIds.includes(country.id)
+    );
+  }, [searchQuery, selectedCountryIds]);
+
+  // Get selected countries with full data
+  const selectedCountries = useMemo(() => {
+    return selectedCountryIds.map(id => getCountryById(id)).filter(Boolean);
+  }, [selectedCountryIds]);
+
+  // Generate comparison data
+  const comparisonData = useMemo(() => {
+    if (selectedCountryIds.length === 0) return [];
+    
+    // Get Youth Index data for selected countries
+    const countryData = selectedCountryIds.map(countryId => {
+      const country = getCountryById(countryId);
+      const youthIndex = youthIndexData?.find(yi => yi.countryId === countryId);
+      
+      // Generate consistent mock data based on country
+      const seed = countryId.charCodeAt(0) + countryId.charCodeAt(1);
+      const baseValue = 30 + (seed % 50);
+      
+      return {
+        id: countryId,
+        name: country?.name || countryId,
+        flag: country?.flagEmoji || '🌍',
+        value: youthIndex?.indexScore || baseValue,
+        education: youthIndex?.educationScore || baseValue + 5,
+        health: youthIndex?.healthScore || baseValue + 3,
+        employment: youthIndex?.employmentScore || baseValue - 5,
+        civic: youthIndex?.civicScore || baseValue + 2,
+        innovation: youthIndex?.innovationScore || baseValue - 3,
+        rank: youthIndex?.rank || 0,
+      };
+    });
+    
+    return countryData.sort((a, b) => b.value - a.value);
+  }, [selectedCountryIds, youthIndexData]);
+
+  // Data for charts
+  const barChartData = useMemo(() => {
+    return comparisonData.map((item, index) => ({
+      name: item.name,
+      value: item.value,
+      flagEmoji: item.flag,
+      fill: COLOR_PALETTE[index % COLOR_PALETTE.length],
+    }));
+  }, [comparisonData]);
+
+  const radarChartData = useMemo(() => {
+    const dimensions = ['Education', 'Health', 'Employment', 'Civic', 'Innovation'];
+    return dimensions.map(dim => {
+      const dataPoint: { subject: string; [key: string]: string | number } = { subject: dim };
+      comparisonData.forEach(country => {
+        const key = dim.toLowerCase() as keyof typeof country;
+        dataPoint[country.name] = Number(country[key]) || 0;
+      });
+      return dataPoint;
+    });
+  }, [comparisonData]);
+
+  // Handlers
+  const handleAddCountry = (countryId: string) => {
+    if (selectedCountryIds.length < 6 && !selectedCountryIds.includes(countryId)) {
+      setSelectedCountryIds([...selectedCountryIds, countryId]);
+      setSearchQuery("");
     }
   };
 
+  const handleRemoveCountry = (countryId: string) => {
+    setSelectedCountryIds(selectedCountryIds.filter(id => id !== countryId));
+  };
+
+  const handleExport = useCallback((format: ExportFormat) => {
+    if (selectedCountryIds.length === 0) return;
+    
+    exportComparisonData({
+      countries: selectedCountryIds,
+      indicatorId: selectedIndicator || 'youth_index',
+      year: selectedYear,
+      values: comparisonData.map(item => ({
+        countryId: item.id,
+        value: item.value
+      }))
+    }, format);
+  }, [selectedCountryIds, selectedIndicator, selectedYear, comparisonData]);
+
+  // Filter Panel Component
   const FilterContent = () => (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-5">
+      {/* Selected Countries */}
       <div className="space-y-2">
-        <Label className="text-sm">Selected Countries ({selectedCountries.length}/5)</Label>
-        <div className="grid grid-cols-1 gap-2 max-h-[150px] md:max-h-[200px] overflow-y-auto pr-2">
-          {selectedCountries.map(country => (
-            <div key={country} className="flex items-center justify-between bg-muted p-2 rounded-md">
-              <span className="text-sm truncate mr-2">{country}</span>
+        <Label className="text-sm font-medium">
+          Selected Countries ({selectedCountryIds.length}/6)
+        </Label>
+        <div className="flex flex-wrap gap-2">
+          {selectedCountries.map(country => country && (
+            <Badge 
+              key={country.id} 
+              variant="secondary" 
+              className="pl-2 pr-1 py-1 flex items-center gap-1"
+            >
+              <span>{country.flagEmoji}</span>
+              <span className="text-xs">{country.name}</span>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleCountryToggle(country)}
-                className="h-7 px-2 text-xs"
+                onClick={() => handleRemoveCountry(country.id)}
+                className="h-5 w-5 p-0 ml-1 hover:bg-destructive/20"
               >
                 <X className="h-3 w-3" />
               </Button>
-            </div>
+            </Badge>
           ))}
+          {selectedCountryIds.length === 0 && (
+            <p className="text-xs text-muted-foreground">No countries selected</p>
+          )}
         </div>
       </div>
-      
-      {selectedCountries.length < 5 && (
+
+      {/* Add Countries */}
+      {selectedCountryIds.length < 6 && (
         <div className="space-y-2">
-          <Label className="text-sm">Add Countries</Label>
-          <Select onValueChange={handleCountryToggle}>
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder="Select a country to add" />
-            </SelectTrigger>
-            <SelectContent>
-              {countries
-                .filter(country => !selectedCountries.includes(country))
-                .map(country => (
-                  <SelectItem key={country} value={country} className="text-sm">
-                    {country}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+          <Label className="text-sm font-medium">Add Country</Label>
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search countries..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 text-sm"
+            />
+          </div>
+          {searchQuery && (
+            <div className="max-h-[150px] overflow-y-auto border rounded-md">
+              {filteredCountries.slice(0, 10).map(country => (
+                <button
+                  key={country.id}
+                  onClick={() => handleAddCountry(country.id)}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+                >
+                  <span>{country.flagEmoji}</span>
+                  <span>{country.name}</span>
+                  <Plus className="h-3 w-3 ml-auto text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {/* Quick Add Popular Countries */}
+          <div className="flex flex-wrap gap-1 mt-2">
+            {['ng', 'za', 'eg', 'ke', 'et'].filter(id => !selectedCountryIds.includes(id)).slice(0, 3).map(id => {
+              const country = getCountryById(id);
+              return country && (
+                <Button
+                  key={id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddCountry(id)}
+                  className="text-xs h-7 px-2"
+                >
+                  {country.flagEmoji} {country.name}
+                </Button>
+              );
+            })}
+          </div>
         </div>
       )}
-      
+
+      {/* Year Selection */}
       <div className="space-y-2">
-        <Label htmlFor="theme" className="text-sm">Theme</Label>
+        <Label className="text-sm font-medium">Year</Label>
+        <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+          <SelectTrigger className="text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[2024, 2023, 2022, 2021, 2020].map(year => (
+              <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Theme Selection */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Theme</Label>
         <Select 
           value={selectedTheme} 
           onValueChange={(value) => {
@@ -101,205 +250,294 @@ const CountryComparison = () => {
             setSelectedIndicator("");
           }}
         >
-          <SelectTrigger id="theme" className="text-sm">
-            <SelectValue placeholder="Select a theme" />
+          <SelectTrigger className="text-sm">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.keys(indicators).map((theme) => (
-              <SelectItem key={theme} value={theme} className="text-sm">
-                {theme}
-              </SelectItem>
-            ))}
+            {availableThemes.map((theme) => {
+              const Icon = themeIcons[theme.id] || Globe;
+              return (
+                <SelectItem key={theme.id} value={theme.id}>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    {theme.name}
+                  </div>
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
-      
+
+      {/* Indicator Selection */}
       <div className="space-y-2">
-        <Label htmlFor="indicator" className="text-sm">Indicator</Label>
-        <Select 
-          value={selectedIndicator} 
-          onValueChange={setSelectedIndicator}
-        >
-          <SelectTrigger id="indicator" className="text-sm">
-            <SelectValue placeholder="Select an indicator" />
+        <Label className="text-sm font-medium">Indicator</Label>
+        <Select value={selectedIndicator} onValueChange={setSelectedIndicator}>
+          <SelectTrigger className="text-sm">
+            <SelectValue placeholder="Youth Index Score" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="">Youth Index Score</SelectItem>
             {availableIndicators.map((indicator) => (
-              <SelectItem key={indicator} value={indicator} className="text-sm">
-                {indicator}
+              <SelectItem key={indicator.id} value={indicator.id}>
+                {indicator.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
-      
+
+      {/* Chart Type */}
       <div className="space-y-2">
-        <Label className="text-sm">Chart Type</Label>
+        <Label className="text-sm font-medium">Chart Type</Label>
         <div className="flex gap-2">
           <Button 
             variant={chartType === 'bar' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setChartType('bar')}
-            className="flex-1 text-xs"
+            className="flex-1"
           >
-            <BarChart className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <BarChart3 className="w-4 h-4 mr-2" />
             Bar
           </Button>
           <Button 
             variant={chartType === 'radar' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setChartType('radar')}
-            className="flex-1 text-xs"
+            className="flex-1"
           >
-            <PieChart className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <PieChart className="w-4 h-4 mr-2" />
             Radar
           </Button>
         </div>
       </div>
     </div>
   );
-  
+
   return (
-    <div className="container px-4 md:px-6 py-4 md:py-6">
+    <div className="container px-4 md:px-6 py-6">
       {/* Mobile Filter Button */}
-      <div className="lg:hidden mb-4">
+      <div className="lg:hidden mb-4 flex items-center justify-between">
         <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" className="gap-2">
               <Filter className="h-4 w-4" />
               Filters
-              {selectedCountries.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 bg-primary text-primary-foreground rounded-full text-xs">
-                  {selectedCountries.length}
-                </span>
+              {selectedCountryIds.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  {selectedCountryIds.length}
+                </Badge>
               )}
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[350px] overflow-y-auto">
+          <SheetContent side="left" className="w-[320px] overflow-y-auto">
             <SheetHeader>
-              <SheetTitle>Compare Countries</SheetTitle>
+              <SheetTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Compare Countries
+              </SheetTitle>
             </SheetHeader>
-            <div className="mt-4">
+            <div className="mt-6">
               <FilterContent />
             </div>
           </SheetContent>
         </Sheet>
+        
+        {selectedCountryIds.length > 0 && (
+          <QuickExportDropdown 
+            onExport={handleExport}
+            trigger={
+              <Button variant="outline" size="sm" className="gap-2">
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
+            }
+          />
+        )}
       </div>
 
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-4">
         {/* Desktop Filters */}
-        <div className="hidden lg:block lg:col-span-1">
-          <div className="border rounded-lg p-4 md:p-6 bg-card h-full">
-            <h3 className="text-lg md:text-xl font-bold mb-4 md:mb-6">Compare Countries</h3>
-            <FilterContent />
-          </div>
+        <div className="hidden lg:block">
+          <Card className="sticky top-4">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Globe className="h-5 w-5" />
+                Compare Countries
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FilterContent />
+            </CardContent>
+          </Card>
         </div>
-        
-        <div className="lg:col-span-2">
-          <div className="border rounded-lg p-4 md:p-6 bg-card">
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-4 md:mb-6">
-              <div>
-                <h3 className="text-lg md:text-xl font-bold">
-                  {selectedIndicator || "Select an indicator"}
-                </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Comparing {selectedCountries.length} countries, {new Date().getFullYear()}
-                </p>
+
+        {/* Main Content */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Chart Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                <div>
+                  <CardTitle className="text-lg">
+                    {selectedIndicator ? getIndicatorById(selectedIndicator)?.name : 'Youth Index Score'}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Comparing {selectedCountryIds.length} countries, {selectedYear}
+                  </p>
+                </div>
+                <div className="hidden lg:block">
+                  <QuickExportDropdown 
+                    onExport={handleExport}
+                    disabled={selectedCountryIds.length === 0}
+                    trigger={
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Download className="h-4 w-4" />
+                        Export
+                      </Button>
+                    }
+                  />
+                </div>
               </div>
-              <Button variant="outline" size="sm" className="gap-1 text-xs sm:text-sm">
-                <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Download</span>
-              </Button>
-            </div>
-            
-            <div className="h-[250px] sm:h-[300px] md:h-[350px] border border-dashed rounded-md bg-background p-4 flex items-center justify-center">
-              {selectedCountries.length === 0 || !selectedIndicator ? (
-                <p className="text-sm text-muted-foreground text-center px-4">
-                  {selectedCountries.length === 0 
-                    ? "Select countries to compare" 
-                    : "Select an indicator to display chart data"}
-                </p>
+            </CardHeader>
+            <CardContent>
+              {selectedCountryIds.length === 0 ? (
+                <div className="h-[300px] border border-dashed rounded-lg flex items-center justify-center bg-muted/30">
+                  <div className="text-center">
+                    <Globe className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                    <p className="text-muted-foreground">Select countries to compare</p>
+                    <p className="text-sm text-muted-foreground/70 mt-1">
+                      Add up to 6 countries for comparison
+                    </p>
+                  </div>
+                </div>
+              ) : chartType === 'bar' ? (
+                <div className="h-[350px]">
+                  <AYDBarChart 
+                    data={barChartData}
+                    bars={[{ dataKey: 'value', name: 'Score' }]}
+                    xAxisKey="name"
+                    unit=""
+                    height={350}
+                    colorByValue={true}
+                  />
+                </div>
               ) : (
-                <div className="w-full h-full">
-                  {chartType === 'bar' ? (
-                    <div className="w-full h-full flex items-end justify-around pt-6 md:pt-10">
-                      {selectedCountries.map((country, i) => (
-                        <div key={country} className="flex flex-col items-center gap-1 md:gap-2 group">
-                          <div 
-                            className={`w-8 sm:w-10 md:w-12 bg-pan-${['green', 'blue', 'orange', 'purple', 'green'][i]}-500 hover:bg-pan-${['green', 'blue', 'orange', 'purple', 'green'][i]}-600 transition-all rounded-t-md`}
-                            style={{ height: `${20 + Math.random() * 60}%` }}
-                          ></div>
-                          <span className="text-[10px] sm:text-xs font-medium text-center max-w-[50px] sm:max-w-[80px] truncate">{country}</span>
-                          <span className="text-[10px] sm:text-xs text-muted-foreground">{Math.floor(Math.random() * 100)}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <div className="relative w-[150px] h-[150px] sm:w-[180px] sm:h-[180px] md:w-[200px] md:h-[200px] bg-muted rounded-full flex items-center justify-center">
-                        <span className="text-xs sm:text-sm text-muted-foreground">Radar Chart</span>
-                        
-                        {selectedCountries.map((country, i) => (
-                          <div 
-                            key={country}
-                            className={`absolute w-2 h-2 rounded-full bg-pan-${['green', 'blue', 'orange', 'purple', 'green'][i]}-500`}
-                            style={{ 
-                              left: `${50 + (Math.cos(i * (2 * Math.PI / selectedCountries.length)) * (30 + Math.random() * 40))}%`, 
-                              top: `${50 + (Math.sin(i * (2 * Math.PI / selectedCountries.length)) * (30 + Math.random() * 40))}%`
-                            }}
-                          ></div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="h-[350px]">
+                  <AYDRadarChart
+                    data={radarChartData}
+                    dataKeys={selectedCountries.map((c, i) => c && ({
+                      key: c.name,
+                      name: c.name,
+                      color: COLOR_PALETTE[i % COLOR_PALETTE.length],
+                    })).filter(Boolean) as { key: string; name: string; color: string }[]}
+                    height={350}
+                  />
                 </div>
               )}
-            </div>
-            
-            <div className="mt-4 md:mt-6 p-3 md:p-4 bg-muted rounded-md">
-              <h4 className="font-medium mb-1 md:mb-2 text-sm md:text-base">Analysis</h4>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                {selectedCountries.length > 0 && selectedIndicator 
-                  ? `This comparison shows ${selectedIndicator.toLowerCase()} across the selected countries. Data is from the latest available year. Source: Various national statistical offices, UNDP Africa.`
-                  : "Select countries and an indicator to see comparative analysis."}
-              </p>
-            </div>
-            
-            {selectedCountries.length > 0 && selectedIndicator && (
-              <div className="mt-4 md:mt-6 overflow-x-auto -mx-4 md:mx-0">
-                <table className="min-w-full divide-y divide-border">
-                  <thead>
-                    <tr>
-                      <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Country
-                      </th>
-                      <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        {selectedIndicator}
-                      </th>
-                      <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Year
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-card divide-y divide-border">
-                    {selectedCountries.map((country) => (
-                      <tr key={country}>
-                        <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm font-medium">
-                          {country}
-                        </td>
-                        <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm text-muted-foreground">
-                          {Math.floor(Math.random() * 100)}%
-                        </td>
-                        <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm text-muted-foreground">
-                          {2020 + Math.floor(Math.random() * 3)}
-                        </td>
+            </CardContent>
+          </Card>
+
+          {/* Data Table */}
+          {selectedCountryIds.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Detailed Comparison</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Country</th>
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Rank</th>
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Overall</th>
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Education</th>
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Health</th>
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Employment</th>
+                        <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Innovation</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                    </thead>
+                    <tbody>
+                      {comparisonData.map((item, index) => (
+                        <tr key={item.id} className="border-b hover:bg-muted/50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">{item.flag}</span>
+                              <span className="font-medium text-sm">{item.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <Badge variant="outline">#{item.rank || index + 1}</Badge>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span className={`font-bold ${item.value >= 60 ? 'text-green-600' : item.value >= 45 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {item.value.toFixed(1)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center text-sm">{item.education.toFixed(1)}</td>
+                          <td className="py-3 px-4 text-center text-sm">{item.health.toFixed(1)}</td>
+                          <td className="py-3 px-4 text-center text-sm">{item.employment.toFixed(1)}</td>
+                          <td className="py-3 px-4 text-center text-sm">{item.innovation.toFixed(1)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Insights Card */}
+          {selectedCountryIds.length >= 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  Key Insights
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">Highest Performer</p>
+                    <p className="text-lg font-bold mt-1">
+                      {comparisonData[0]?.flag} {comparisonData[0]?.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Score: {comparisonData[0]?.value.toFixed(1)} points
+                    </p>
+                  </div>
+                  
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Score Gap</p>
+                    <p className="text-lg font-bold mt-1">
+                      {(comparisonData[0]?.value - comparisonData[comparisonData.length - 1]?.value).toFixed(1)} pts
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Between highest and lowest
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Best in Education</p>
+                    <p className="text-lg font-bold mt-1">
+                      {comparisonData.reduce((best, curr) => curr.education > best.education ? curr : best, comparisonData[0])?.flag}{' '}
+                      {comparisonData.reduce((best, curr) => curr.education > best.education ? curr : best, comparisonData[0])?.name}
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <p className="text-sm font-medium text-purple-800 dark:text-purple-200">Best in Innovation</p>
+                    <p className="text-lg font-bold mt-1">
+                      {comparisonData.reduce((best, curr) => curr.innovation > best.innovation ? curr : best, comparisonData[0])?.flag}{' '}
+                      {comparisonData.reduce((best, curr) => curr.innovation > best.innovation ? curr : best, comparisonData[0])?.name}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
