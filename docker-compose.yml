@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ayd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ayd_user
+      POSTGRES_PASSWORD: ayd_password
+      POSTGRES_DB: ayd_database
+    ports:
+      - '5432:5432'
+    volumes:
+      - ayd_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ayd_user -d ayd_database']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ayd_pgdata:
+    driver: local

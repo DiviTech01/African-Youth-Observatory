@@ -1,0 +1,74 @@
+[
+  {
+    "name": "Education",
+    "slug": "education",
+    "description": "Access to quality education, literacy rates, enrollment, STEM participation, and skills development for African youth aged 15-35.",
+    "icon": "GraduationCap",
+    "color": "#4CAF50",
+    "sortOrder": 1
+  },
+  {
+    "name": "Employment & Entrepreneurship",
+    "slug": "employment-entrepreneurship",
+    "description": "Youth employment, unemployment rates, labor force participation, entrepreneurship, self-employment, and informal sector engagement.",
+    "icon": "Briefcase",
+    "color": "#2196F3",
+    "sortOrder": 2
+  },
+  {
+    "name": "Health",
+    "slug": "health",
+    "description": "Youth health outcomes including mortality, reproductive health, HIV/AIDS, mental health, healthcare access, and nutrition.",
+    "icon": "Heart",
+    "color": "#F44336",
+    "sortOrder": 3
+  },
+  {
+    "name": "Civic Engagement & Governance",
+    "slug": "civic-engagement-governance",
+    "description": "Youth participation in political processes, voter turnout, representation in government, civil society engagement, and policy influence.",
+    "icon": "Vote",
+    "color": "#9C27B0",
+    "sortOrder": 4
+  },
+  {
+    "name": "Innovation & Technology",
+    "slug": "innovation-technology",
+    "description": "Digital connectivity, internet access, mobile penetration, digital skills, tech startups, and innovation ecosystem development.",
+    "icon": "Lightbulb",
+    "color": "#FF9800",
+    "sortOrder": 5
+  },
+  {
+    "name": "Agriculture",
+    "slug": "agriculture",
+    "description": "Youth participation in agriculture, land access, agribusiness development, food security, and agricultural innovation.",
+    "icon": "Wheat",
+    "color": "#8BC34A",
+    "sortOrder": 6
+  },
+  {
+    "name": "Gender Equality",
+    "slug": "gender-equality",
+    "description": "Gender parity in education, employment gaps, women's economic empowerment, GBV prevalence, and gender-responsive policy coverage.",
+    "icon": "Users",
+    "color": "#E91E63",
+    "sortOrder": 7
+  },
+  {
+    "name": "Financial Inclusion",
+    "slug": "financial-inclusion",
+    "description": "Access to banking, mobile money adoption, credit availability, savings rates, and financial literacy among youth.",
+    "icon": "Wallet",
+    "color": "#00BCD4",
+    "sortOrder": 8
+  },
+  {
+    "name": "Environment & Climate",
+    "slug": "environment-climate",
+    "description": "Youth engagement in environmental action, climate change impact, green jobs, renewable energy access, and environmental education.",
+    "icon": "Leaf",
+    "color": "#009688",
+    "sortOrder": 9
+  }
+]

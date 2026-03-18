@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ GEOGRAPHY ============
+
+model Country {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  isoCode2        String   @unique @db.Char(2)
+  isoCode3        String   @unique @db.Char(3)
+  region          Region
+  capital         String
+  population      BigInt
+  youthPopulation BigInt
+  area            Float?
+  currency        String?
+  languages       String[]
+  economicBlocs   String[]
+  latitude        Float
+  longitude       Float
+  flagEmoji       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  indicatorValues  IndicatorValue[]
+  youthIndexScores YouthIndexScore[]
+  policies         CountryPolicy[]
+  experts          Expert[]
+
+  @@index([region])
+  @@index([isoCode3])
+}
+
+enum Region {
+  NORTH_AFRICA
+  WEST_AFRICA
+  CENTRAL_AFRICA
+  EAST_AFRICA
+  SOUTHERN_AFRICA
+}
+
+// ============ THEMES & INDICATORS ============
+
+model Theme {
+  id          String @id @default(cuid())
+  name        String @unique
+  slug        String @unique
+  description String
+  icon        String
+  color       String
+  sortOrder   Int
+
+  indicators Indicator[]
+}
+
+model Indicator {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String
+  unit        IndicatorUnit
+  source      String
+  methodology String?
+  frequency   String?
+  themeId     String
+
+  theme  Theme            @relation(fields: [themeId], references: [id])
+  values IndicatorValue[]
+
+  @@index([themeId])
+  @@index([slug])
+}
+
+enum IndicatorUnit {
+  PERCENTAGE
+  NUMBER
+  INDEX
+  RATIO
+  RATE
+  CURRENCY
+  SCORE
+  YEARS
+}
+
+// ============ DATA VALUES ============
+
+model IndicatorValue {
+  id          String     @id @default(cuid())
+  value       Float
+  year        Int
+  gender      GenderType @default(TOTAL)
+  ageGroup    String     @default("15-35")
+  source      String
+  confidence  Float      @default(1.0)
+  isEstimate  Boolean    @default(false)
+  countryId   String
+  indicatorId String
+  createdAt   DateTime   @default(now())
+
+  country   Country   @relation(fields: [countryId], references: [id])
+  indicator Indicator @relation(fields: [indicatorId], references: [id])
+
+  @@unique([countryId, indicatorId, year, gender, ageGroup])
+  @@index([countryId])
+  @@index([indicatorId])
+  @@index([year])
+  @@index([countryId, indicatorId, year])
+}
+
+enum GenderType {
+  MALE
+  FEMALE
+  TOTAL
+}
+
+// ============ YOUTH INDEX ============
+
+model YouthIndexScore {
+  id              String    @id @default(cuid())
+  year            Int
+  overallScore    Float
+  educationScore  Float
+  employmentScore Float
+  healthScore     Float
+  civicScore      Float
+  innovationScore Float
+  rank            Int
+  previousRank    Int?
+  rankChange      Int?
+  percentile      Float
+  tier            IndexTier
+  countryId       String
+  createdAt       DateTime  @default(now())
+
+  country Country @relation(fields: [countryId], references: [id])
+
+  @@unique([countryId, year])
+  @@index([year])
+  @@index([rank])
+}
+
+enum IndexTier {
+  HIGH
+  MEDIUM_HIGH
+  MEDIUM
+  MEDIUM_LOW
+  LOW
+}
+
+// ============ POLICY MONITOR ============
+
+model CountryPolicy {
+  id              String  @id @default(cuid())
+  countryId       String
+  policyName      String
+  policyType      String
+  yearAdopted     Int?
+  yearRevised     Int?
+  aycRatified     Boolean @default(false)
+  aycRatifiedYear Int?
+  wpayCompliant   Boolean @default(false)
+  complianceScore Float?
+  status          String  @default("active")
+
+  country Country @relation(fields: [countryId], references: [id])
+
+  @@index([countryId])
+}
+
+// ============ EXPERTS ============
+
+model Expert {
+  id              String   @id @default(cuid())
+  name            String
+  email           String?  @unique
+  title           String
+  organization    String?
+  countryId       String
+  specializations String[]
+  languages       String[]
+  bio             String?
+  verified        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  country Country @relation(fields: [countryId], references: [id])
+
+  @@index([countryId])
+}
+
+// ============ USERS ============
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String?
+  role         UserRole  @default(PUBLIC)
+  organization String?
+  avatar       String?
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  dashboards Dashboard[]
+}
+
+enum UserRole {
+  PUBLIC
+  REGISTERED
+  RESEARCHER
+  CONTRIBUTOR
+  INSTITUTIONAL
+  ADMIN
+}
+
+// ============ DASHBOARDS ============
+
+model Dashboard {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  layout      Json     @default("{}")
+  widgets     Json     @default("[]")
+  isPublic    Boolean  @default(false)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// ============ DATA SOURCES ============
+
+model DataSource {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  url         String?
+  description String?
+  type        String
+  lastSync    DateTime?
+  createdAt   DateTime  @default(now())
+}
