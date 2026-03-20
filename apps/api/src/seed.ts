@@ -1,6 +1,20 @@
 import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
+
+// Simple bcryptjs-compatible hash for seed only (avoids needing bcryptjs at seed time)
+// When bcryptjs is installed, replace with: import * as bcrypt from 'bcryptjs'; bcrypt.hashSync(...)
+async function hashPassword(password: string): Promise<string> {
+  // Use dynamic import to try bcryptjs first, fall back to SHA-256
+  try {
+    const bcrypt = await import('bcryptjs');
+    return bcrypt.hashSync(password, 12);
+  } catch {
+    // Fallback if bcryptjs not available at seed time
+    return '$2a$12$' + crypto.createHash('sha256').update(password + 'ayd-salt').digest('hex');
+  }
+}
 
 const prisma = new PrismaClient();
 
@@ -244,6 +258,162 @@ async function main() {
       });
     }
   }
+
+  // 6. Seed default admin user
+  // NOTE: Change this password in production!
+  console.log('  👤 Seeding default admin user...');
+  const adminPasswordHash = await hashPassword('AYD@Admin2026!');
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@africanyouthdatabase.org' },
+    update: {},
+    create: {
+      email: 'admin@africanyouthdatabase.org',
+      name: 'AYD Admin',
+      passwordHash: adminPasswordHash,
+      role: 'ADMIN',
+      organization: 'African Youth Database',
+    },
+  });
+  console.log(`  ✅ Admin user created: ${adminUser.email}`);
+
+  // 7. Seed dashboard templates
+  console.log('  📊 Seeding dashboard templates...');
+  const templates = [
+    {
+      title: 'Continental Overview',
+      description: 'High-level view of youth data across all 54 African countries.',
+      isPublic: true,
+      layout: { isTemplate: true, columns: 2 },
+      widgets: [
+        {
+          id: 'w-overview-1',
+          type: 'stat_card',
+          title: 'Countries with Data',
+          config: { dataSource: 'platform-stats', metric: 'countriesWithData' },
+          position: { x: 0, y: 0, w: 1, h: 1 },
+        },
+        {
+          id: 'w-overview-2',
+          type: 'map',
+          title: 'Youth Unemployment Rate (Latest)',
+          config: { indicatorSlug: 'youth-unemployment-rate', year: 'latest' },
+          position: { x: 1, y: 0, w: 1, h: 2 },
+        },
+        {
+          id: 'w-overview-3',
+          type: 'bar_chart',
+          title: 'Top 10 Countries by Youth Index Score',
+          config: { dataSource: 'youth-index-rankings', limit: 10, sortOrder: 'desc' },
+          position: { x: 0, y: 1, w: 1, h: 1 },
+        },
+        {
+          id: 'w-overview-4',
+          type: 'line_chart',
+          title: 'Continental Average Youth Index Over Time',
+          config: { dataSource: 'youth-index-trend', yearStart: 2010, yearEnd: 2024 },
+          position: { x: 0, y: 2, w: 2, h: 1 },
+        },
+      ],
+    },
+    {
+      title: 'Country Deep Dive',
+      description: 'Detailed analysis of a single country across all dimensions.',
+      isPublic: true,
+      layout: { isTemplate: true, columns: 2, defaultCountry: 'configurable' },
+      widgets: [
+        {
+          id: 'w-deep-1',
+          type: 'stat_card',
+          title: 'Youth Population',
+          config: { dataSource: 'country-stats', metric: 'youthPopulation' },
+          position: { x: 0, y: 0, w: 1, h: 1 },
+        },
+        {
+          id: 'w-deep-2',
+          type: 'stat_card',
+          title: 'Youth Index Rank',
+          config: { dataSource: 'country-stats', metric: 'youthIndexRank' },
+          position: { x: 1, y: 0, w: 1, h: 1 },
+        },
+        {
+          id: 'w-deep-3',
+          type: 'radar',
+          title: 'Dimensional Scores',
+          config: { dataSource: 'youth-index-dimensions' },
+          position: { x: 0, y: 1, w: 1, h: 2 },
+        },
+        {
+          id: 'w-deep-4',
+          type: 'line_chart',
+          title: 'Youth Unemployment Trend (2010-2024)',
+          config: { indicatorSlug: 'youth-unemployment-rate', yearStart: 2010, yearEnd: 2024 },
+          position: { x: 1, y: 1, w: 1, h: 1 },
+        },
+        {
+          id: 'w-deep-5',
+          type: 'bar_chart',
+          title: 'Education Theme Indicators',
+          config: { themeSlug: 'education', sortOrder: 'desc' },
+          position: { x: 1, y: 2, w: 1, h: 1 },
+        },
+      ],
+    },
+    {
+      title: 'Regional Comparison',
+      description: 'Compare youth outcomes across Africa\'s five regions.',
+      isPublic: true,
+      layout: { isTemplate: true, columns: 2 },
+      widgets: [
+        {
+          id: 'w-region-1',
+          type: 'bar_chart',
+          title: 'Youth Unemployment by Region',
+          config: { dataSource: 'regional-comparison', indicatorSlug: 'youth-unemployment-rate' },
+          position: { x: 0, y: 0, w: 1, h: 1 },
+        },
+        {
+          id: 'w-region-2',
+          type: 'map',
+          title: 'Education Expenditure (% GDP)',
+          config: { indicatorSlug: 'education-expenditure-gdp', year: 'latest' },
+          position: { x: 1, y: 0, w: 1, h: 1 },
+        },
+        {
+          id: 'w-region-3',
+          type: 'table',
+          title: 'Top 5 Most Improved Countries',
+          config: { dataSource: 'most-improved', limit: 5 },
+          position: { x: 0, y: 1, w: 1, h: 1 },
+        },
+        {
+          id: 'w-region-4',
+          type: 'pie_chart',
+          title: 'Youth Population Distribution by Region',
+          config: { dataSource: 'regional-population' },
+          position: { x: 1, y: 1, w: 1, h: 1 },
+        },
+      ],
+    },
+  ];
+
+  for (const template of templates) {
+    await prisma.dashboard.upsert({
+      where: {
+        id: `template-${template.title.toLowerCase().replace(/\s+/g, '-')}`,
+      },
+      update: {},
+      create: {
+        id: `template-${template.title.toLowerCase().replace(/\s+/g, '-')}`,
+        title: template.title,
+        description: template.description,
+        isPublic: template.isPublic,
+        layout: template.layout,
+        widgets: template.widgets,
+        userId: adminUser.id,
+      },
+    });
+  }
+  console.log(`  ✅ Created ${templates.length} dashboard templates`);
 
   console.log('✅ Seeding complete!');
 }

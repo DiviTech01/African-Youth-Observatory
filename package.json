@@ -18,7 +18,10 @@
     "db:studio": "pnpm --filter @ayd/database studio",
     "clean": "pnpm run --parallel clean",
     "import:worldbank": "tsx scripts/import-worldbank.ts",
-    "import:csv": "tsx scripts/import-csv.ts"
+    "import:csv": "tsx scripts/import-csv.ts",
+    "import:ilo": "tsx scripts/import-ilo.ts",
+    "seed:policies": "tsx scripts/seed-policies.ts",
+    "seed:experts": "tsx scripts/seed-experts.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

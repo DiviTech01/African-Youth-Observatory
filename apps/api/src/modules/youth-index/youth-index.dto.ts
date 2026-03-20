@@ -1,5 +1,5 @@
-import { IsOptional, IsInt, Min } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsInt, Min, Max } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 export class YouthIndexQueryDto {
@@ -23,4 +23,13 @@ export class TopPerformersDto {
   @Type(() => Number)
   @IsInt()
   year?: number = 2024;
+}
+
+export class ComputeYearDto {
+  @ApiProperty({ description: 'Year to compute the Youth Index for', example: 2023 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2030)
+  year: number;
 }
