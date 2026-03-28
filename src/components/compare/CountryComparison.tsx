@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Download, BarChart, PieChart, Filter, X } from 'lucide-react';
+import { Download, BarChart as BarChartIcon, PieChart, Filter, X } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -11,6 +11,45 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import {
+  BarChart,
+  Bar,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
+import CountryFlag from '@/components/CountryFlag';
+
+/* Deterministic pseudo-random helpers (same approach as CountryProfile) */
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function seededRandom(seed: number, index: number): number {
+  const x = Math.sin(seed + index) * 10000;
+  return x - Math.floor(x);
+}
+
+const CHART_COLORS = [
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+];
 
 const countries = [
   "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", 
@@ -31,6 +70,93 @@ const indicators = {
   "Employment": ["Youth Unemployment Rate", "Youth Labor Force Participation", "Youth in Informal Sector", "Youth Average Wages"],
   "Entrepreneurship": ["Youth Business Ownership", "Youth Startup Formation", "Youth Access to Finance", "Youth Innovation Index"]
 };
+
+/* Radar dimension labels used for the radar chart */
+const radarDimensions = ['Education', 'Health', 'Employment', 'Entrepreneurship', 'Population'];
+
+/** Sub-component that renders either a BarChart or RadarChart via Recharts */
+function ComparisonChart({
+  selectedCountries,
+  selectedIndicator,
+  selectedTheme,
+  chartType,
+}: {
+  selectedCountries: string[];
+  selectedIndicator: string;
+  selectedTheme: string;
+  chartType: 'bar' | 'radar';
+}) {
+  /* Bar chart data: one entry per country */
+  const barData = useMemo(() => {
+    return selectedCountries.map((country) => {
+      const seed = hashCode(country + selectedIndicator);
+      return {
+        country: country.length > 10 ? country.slice(0, 9) + '.' : country,
+        value: Math.round(20 + seededRandom(seed, 0) * 70),
+      };
+    });
+  }, [selectedCountries, selectedIndicator]);
+
+  /* Radar chart data: one entry per dimension, each country is a series */
+  const radarData = useMemo(() => {
+    return radarDimensions.map((dim, di) => {
+      const entry: Record<string, string | number> = { dimension: dim };
+      selectedCountries.forEach((country) => {
+        const seed = hashCode(country + dim);
+        entry[country] = Math.round(30 + seededRandom(seed, di) * 60);
+      });
+      return entry;
+    });
+  }, [selectedCountries]);
+
+  if (selectedCountries.length === 0 || !selectedIndicator) {
+    return (
+      <div className="h-[250px] sm:h-[300px] md:h-[350px] border border-dashed rounded-md bg-background p-4 flex items-center justify-center">
+        <p className="text-sm text-muted-foreground text-center px-4">
+          {selectedCountries.length === 0
+            ? 'Select countries to compare'
+            : 'Select an indicator to display chart data'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-[250px] sm:h-[300px] md:h-[350px] border border-dashed rounded-md bg-background p-2 sm:p-4">
+      {chartType === 'bar' ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={barData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+            <XAxis dataKey="country" tick={{ fontSize: 11 }} interval={0} />
+            <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${v}%`} />
+            <Tooltip formatter={(value: number) => [`${value}%`, selectedIndicator]} />
+            <Bar dataKey="value" name={selectedIndicator} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+            <PolarGrid className="stroke-muted" />
+            <PolarAngleAxis dataKey="dimension" tick={{ fontSize: 11 }} />
+            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
+            {selectedCountries.map((country, i) => (
+              <Radar
+                key={country}
+                name={country}
+                dataKey={country}
+                stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                fill={CHART_COLORS[i % CHART_COLORS.length]}
+                fillOpacity={0.15}
+              />
+            ))}
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Tooltip />
+          </RadarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
 
 const CountryComparison = () => {
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
@@ -58,7 +184,10 @@ const CountryComparison = () => {
         <div className="grid grid-cols-1 gap-2 max-h-[150px] md:max-h-[200px] overflow-y-auto pr-2">
           {selectedCountries.map(country => (
             <div key={country} className="flex items-center justify-between bg-muted p-2 rounded-md">
-              <span className="text-sm truncate mr-2">{country}</span>
+              <span className="text-sm truncate mr-2 flex items-center gap-1.5">
+                <CountryFlag country={country} size="xs" />
+                {country}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -142,7 +271,7 @@ const CountryComparison = () => {
             onClick={() => setChartType('bar')}
             className="flex-1 text-xs"
           >
-            <BarChart className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <BarChartIcon className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
             Bar
           </Button>
           <Button 
@@ -212,49 +341,12 @@ const CountryComparison = () => {
               </Button>
             </div>
             
-            <div className="h-[250px] sm:h-[300px] md:h-[350px] border border-dashed rounded-md bg-background p-4 flex items-center justify-center">
-              {selectedCountries.length === 0 || !selectedIndicator ? (
-                <p className="text-sm text-muted-foreground text-center px-4">
-                  {selectedCountries.length === 0 
-                    ? "Select countries to compare" 
-                    : "Select an indicator to display chart data"}
-                </p>
-              ) : (
-                <div className="w-full h-full">
-                  {chartType === 'bar' ? (
-                    <div className="w-full h-full flex items-end justify-around pt-6 md:pt-10">
-                      {selectedCountries.map((country, i) => (
-                        <div key={country} className="flex flex-col items-center gap-1 md:gap-2 group">
-                          <div 
-                            className={`w-8 sm:w-10 md:w-12 bg-pan-${['green', 'blue', 'orange', 'purple', 'green'][i]}-500 hover:bg-pan-${['green', 'blue', 'orange', 'purple', 'green'][i]}-600 transition-all rounded-t-md`}
-                            style={{ height: `${20 + Math.random() * 60}%` }}
-                          ></div>
-                          <span className="text-[10px] sm:text-xs font-medium text-center max-w-[50px] sm:max-w-[80px] truncate">{country}</span>
-                          <span className="text-[10px] sm:text-xs text-muted-foreground">{Math.floor(Math.random() * 100)}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <div className="relative w-[150px] h-[150px] sm:w-[180px] sm:h-[180px] md:w-[200px] md:h-[200px] bg-muted rounded-full flex items-center justify-center">
-                        <span className="text-xs sm:text-sm text-muted-foreground">Radar Chart</span>
-                        
-                        {selectedCountries.map((country, i) => (
-                          <div 
-                            key={country}
-                            className={`absolute w-2 h-2 rounded-full bg-pan-${['green', 'blue', 'orange', 'purple', 'green'][i]}-500`}
-                            style={{ 
-                              left: `${50 + (Math.cos(i * (2 * Math.PI / selectedCountries.length)) * (30 + Math.random() * 40))}%`, 
-                              top: `${50 + (Math.sin(i * (2 * Math.PI / selectedCountries.length)) * (30 + Math.random() * 40))}%`
-                            }}
-                          ></div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <ComparisonChart
+              selectedCountries={selectedCountries}
+              selectedIndicator={selectedIndicator}
+              selectedTheme={selectedTheme}
+              chartType={chartType}
+            />
             
             <div className="mt-4 md:mt-6 p-3 md:p-4 bg-muted rounded-md">
               <h4 className="font-medium mb-1 md:mb-2 text-sm md:text-base">Analysis</h4>
@@ -282,19 +374,27 @@ const CountryComparison = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-card divide-y divide-border">
-                    {selectedCountries.map((country) => (
-                      <tr key={country}>
-                        <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm font-medium">
-                          {country}
-                        </td>
-                        <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm text-muted-foreground">
-                          {Math.floor(Math.random() * 100)}%
-                        </td>
-                        <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm text-muted-foreground">
-                          {2020 + Math.floor(Math.random() * 3)}
-                        </td>
-                      </tr>
-                    ))}
+                    {selectedCountries.map((country) => {
+                      const seed = hashCode(country + selectedIndicator);
+                      const value = Math.floor(20 + seededRandom(seed, 0) * 70);
+                      const year = 2020 + Math.floor(seededRandom(seed, 1) * 3);
+                      return (
+                        <tr key={country}>
+                          <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm font-medium">
+                            <span className="flex items-center gap-1.5">
+                              <CountryFlag country={country} size="sm" />
+                              {country}
+                            </span>
+                          </td>
+                          <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm text-muted-foreground">
+                            {value}%
+                          </td>
+                          <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm text-muted-foreground">
+                            {year}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

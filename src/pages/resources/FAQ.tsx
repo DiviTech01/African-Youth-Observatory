@@ -1,6 +1,4 @@
 import React from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { HelpCircle, Database, Download, Lock, Users, BarChart } from 'lucide-react';
 
@@ -97,9 +95,7 @@ const faqCategories = [
 
 const FAQ = () => {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      
+    <>
       <header className="gradient-hero py-8 md:py-12">
         <div className="container px-4 md:px-6">
           <div className="flex items-center gap-3 mb-2">
@@ -112,7 +108,7 @@ const FAQ = () => {
         </div>
       </header>
 
-      <main className="flex-grow py-6 md:py-8">
+      <div className="py-6 md:py-8">
         <div className="container px-4 md:px-6">
           <div className="max-w-4xl mx-auto space-y-8">
             {faqCategories.map((category, catIndex) => (
@@ -151,10 +147,8 @@ const FAQ = () => {
             </a>
           </div>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

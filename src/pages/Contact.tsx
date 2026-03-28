@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Mail, MapPin, Phone, Clock, Send, MessageSquare, Building, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Contact = () => {
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
@@ -45,19 +45,17 @@ const Contact = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      
+    <>
       <header className="gradient-hero py-8 md:py-12">
         <div className="container px-4 md:px-6">
-          <h1 className="section-title mb-2">Contact Us</h1>
+          <h1 className="section-title mb-2">{t('contact.title')}</h1>
           <p className="section-description">
-            Get in touch with the African Youth Database team. We're here to help.
+            {t('contact.subtitle')}
           </p>
         </div>
       </header>
 
-      <main className="flex-grow py-6 md:py-8">
+      <div className="py-6 md:py-8">
         <div className="container px-4 md:px-6">
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Contact Information */}
@@ -249,10 +247,8 @@ const Contact = () => {
             </Card>
           </div>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

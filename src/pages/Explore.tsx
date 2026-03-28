@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback } from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import { useLanguage } from '@/contexts/LanguageContext';
+import NLQSearchBar from '@/components/NLQSearchBar';
 import DataFilters from '@/components/explore/DataFilters';
 import DataChart from '@/components/explore/DataChart';
 import AfricaMap from '@/components/explore/AfricaMap';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/sheet';
 
 const Explore = () => {
+  const { t } = useLanguage();
   const [selectedCountry, setSelectedCountry] = useState("All Countries");
   const [selectedTheme, setSelectedTheme] = useState("All Themes");
   const [selectedIndicator, setSelectedIndicator] = useState("Select an indicator");
@@ -40,15 +41,14 @@ const Explore = () => {
   );
   
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <>
       <div className="bg-muted/30 py-8 md:py-12">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Data Explorer</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">{t('explore.title')}</h1>
               <p className="text-sm sm:text-base text-muted-foreground">
-                Explore comprehensive data on African youth across multiple countries and themes.
+                {t('explore.subtitle')}
               </p>
             </div>
             
@@ -73,14 +73,17 @@ const Explore = () => {
         </div>
       </div>
       
-      <main className="flex-grow py-6 md:py-8">
+      <div className="py-6 md:py-8">
         <div className="container px-4 md:px-6">
+          <div className="mb-6">
+            <NLQSearchBar />
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
             {/* Desktop Filters */}
             <div className="hidden lg:block lg:col-span-1">
               <FilterContent />
             </div>
-            
+
             <div className="lg:col-span-3 space-y-6 md:space-y-8">
               <div className="border rounded-lg p-4 md:p-6 bg-card">
                 <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">Africa Map</h3>
@@ -91,8 +94,8 @@ const Explore = () => {
                   <AfricaMap onCountrySelect={handleCountrySelect} />
                 </div>
               </div>
-              
-              <DataChart 
+
+              <DataChart
                 country={selectedCountry}
                 theme={selectedTheme}
                 indicator={selectedIndicator}
@@ -101,10 +104,8 @@ const Explore = () => {
             </div>
           </div>
         </div>
-      </main>
-      
-      <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Search, BookOpen } from 'lucide-react';
@@ -112,9 +110,7 @@ const Glossary = () => {
   });
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      
+    <>
       <header className="gradient-hero py-8 md:py-12">
         <div className="container px-4 md:px-6">
           <div className="flex items-center gap-3 mb-2">
@@ -127,7 +123,7 @@ const Glossary = () => {
         </div>
       </header>
 
-      <main className="flex-grow py-6 md:py-8">
+      <div className="py-6 md:py-8">
         <div className="container px-4 md:px-6">
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -185,10 +181,8 @@ const Glossary = () => {
             </div>
           )}
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

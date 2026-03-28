@@ -1,19 +1,77 @@
 
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { 
-  TrendingUp, 
-  Globe, 
-  Database, 
-  Users, 
-  BarChart3, 
+import { motion } from 'framer-motion';
+import {
+  TrendingUp,
+  Globe,
+  Database,
+  Users,
+  BarChart3,
   ArrowRight,
   Sparkles,
   MapPin,
   BookOpen
 } from 'lucide-react';
+
+function useCountUp(target: number, duration = 2000, suffix = '') {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLParagraphElement>(null);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated.current) {
+          hasAnimated.current = true;
+          const start = performance.now();
+          const step = (now: number) => {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.floor(eased * target));
+            if (progress < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  return { ref, display: `${count}${suffix}` };
+}
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (delay: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, delay, ease: 'easeOut' },
+  }),
+};
+
+const AnimatedStat = ({ target, suffix, label, icon: Icon, delay }: { target: number; suffix: string; label: string; icon: React.ElementType; delay: number }) => {
+  const { ref, display } = useCountUp(target, 2000, suffix);
+  return (
+    <motion.div
+      className="text-center space-y-2"
+      variants={fadeUp}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.3 }}
+      custom={delay}
+    >
+      <Icon className="h-8 w-8 mx-auto text-primary" />
+      <p ref={ref} className="text-3xl md:text-4xl font-display font-bold text-foreground">{display}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
+    </motion.div>
+  );
+};
 
 const Landing = () => {
   return (
@@ -55,25 +113,49 @@ const Landing = () => {
         <div className="container px-4 md:px-6">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium animate-fade-in">
+            <motion.div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium"
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              custom={0}
+            >
               <Sparkles className="h-4 w-4" />
               Africa's Premier Youth Data Intelligence Platform
-            </div>
+            </motion.div>
 
             {/* Main Title */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <motion.h1
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight"
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              custom={0.15}
+            >
               Empowering Africa's
               <span className="block gradient-text">Youth Through Data</span>
-            </h1>
+            </motion.h1>
 
             {/* Description */}
-            <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              Access comprehensive youth statistics across all 54 African nations. 
+            <motion.p
+              className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground"
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              custom={0.3}
+            >
+              Access comprehensive youth statistics across all 54 African nations.
               Power your research, policy decisions, and investments with trusted, real-time data.
-            </p>
+            </motion.p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{ animationDelay: '0.3s' }}>
+            <motion.div
+              className="flex flex-col sm:flex-row gap-4 justify-center"
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              custom={0.45}
+            >
               <Link to="/auth/signup">
                 <Button size="lg" className="w-full sm:w-auto text-base gap-2 px-8">
                   <Database className="h-5 w-5" />
@@ -85,7 +167,7 @@ const Landing = () => {
                   Sign In to Dashboard
                 </Button>
               </Link>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -94,22 +176,10 @@ const Landing = () => {
       <section className="py-16 border-y border-border/50 bg-muted/30 backdrop-blur-sm">
         <div className="container px-4 md:px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { value: '54', label: 'African Countries', icon: MapPin },
-              { value: '500+', label: 'Data Indicators', icon: BarChart3 },
-              { value: '226M', label: 'Youth Covered', icon: Users },
-              { value: '10+', label: 'Years of Data', icon: TrendingUp },
-            ].map((stat, index) => (
-              <div 
-                key={stat.label}
-                className="text-center space-y-2 animate-fade-in"
-                style={{ animationDelay: `${0.4 + index * 0.1}s` }}
-              >
-                <stat.icon className="h-8 w-8 mx-auto text-primary" />
-                <p className="text-3xl md:text-4xl font-display font-bold text-foreground">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            ))}
+            <AnimatedStat target={54} suffix="" label="African Countries" icon={MapPin} delay={0} />
+            <AnimatedStat target={500} suffix="+" label="Data Indicators" icon={BarChart3} delay={0.1} />
+            <AnimatedStat target={226} suffix="M" label="Youth Covered" icon={Users} delay={0.2} />
+            <AnimatedStat target={10} suffix="+" label="Years of Data" icon={TrendingUp} delay={0.3} />
           </div>
         </div>
       </section>

@@ -1,27 +1,26 @@
 
 import React from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent } from '@/components/ui/card';
 
 const About = () => {
+  const { t } = useLanguage();
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <>
       <div className="bg-muted/30 py-8 md:py-12">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col gap-3 md:gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">About the Platform</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">{t('about.title')}</h1>
               <p className="text-sm sm:text-base text-muted-foreground">
-                Learn more about the African Youth Statistical Database.
+                {t('about.subtitle')}
               </p>
             </div>
           </div>
         </div>
       </div>
       
-      <main className="flex-grow py-6 md:py-8">
+      <div className="py-6 md:py-8">
         <div className="container px-4 md:px-6">
           <div className="grid gap-4 md:gap-6 lg:gap-8 md:grid-cols-2">
             <Card>
@@ -155,10 +154,8 @@ const About = () => {
             </div>
           </div>
         </div>
-      </main>
-      
-      <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 
