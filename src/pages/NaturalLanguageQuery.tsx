@@ -150,9 +150,6 @@ const NaturalLanguageQuery = () => {
         {/* Header */}
         {!result && (
           <div className="text-center pt-16 pb-8">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <Sparkles className="h-8 w-8 text-[#D4A017]" />
-            </div>
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent mb-3">
               What can I help you explore?
             </h1>
