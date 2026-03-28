@@ -111,8 +111,8 @@ function ComparisonChart({
 
   if (selectedCountries.length === 0 || !selectedIndicator) {
     return (
-      <div className="h-[250px] sm:h-[300px] md:h-[350px] border border-dashed rounded-md bg-background p-4 flex items-center justify-center">
-        <p className="text-sm text-muted-foreground text-center px-4">
+      <div className="h-[250px] sm:h-[300px] md:h-[350px] border border-gray-800 rounded-xl bg-black/30 p-4 flex items-center justify-center">
+        <p className="text-sm text-gray-500 text-center px-4">
           {selectedCountries.length === 0
             ? 'Select countries to compare'
             : 'Select an indicator to display chart data'}
@@ -122,7 +122,7 @@ function ComparisonChart({
   }
 
   return (
-    <div className="h-[250px] sm:h-[300px] md:h-[350px] border border-dashed rounded-md bg-background p-2 sm:p-4">
+    <div className="h-[250px] sm:h-[300px] md:h-[350px] border border-gray-800 rounded-xl bg-black/30 p-2 sm:p-4">
       {chartType === 'bar' ? (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={barData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -180,10 +180,10 @@ const CountryComparison = () => {
   const FilterContent = () => (
     <div className="space-y-4 md:space-y-6">
       <div className="space-y-2">
-        <Label className="text-sm">Selected Countries ({selectedCountries.length}/5)</Label>
+        <Label className="text-sm text-gray-300">Selected Countries ({selectedCountries.length}/5)</Label>
         <div className="grid grid-cols-1 gap-2 max-h-[150px] md:max-h-[200px] overflow-y-auto pr-2">
           {selectedCountries.map(country => (
-            <div key={country} className="flex items-center justify-between bg-muted p-2 rounded-md">
+            <div key={country} className="flex items-center justify-between bg-white/[0.05] border border-gray-800 p-2 rounded-md">
               <span className="text-sm truncate mr-2 flex items-center gap-1.5">
                 <CountryFlag country={country} size="xs" />
                 {country}
@@ -203,7 +203,7 @@ const CountryComparison = () => {
       
       {selectedCountries.length < 5 && (
         <div className="space-y-2">
-          <Label className="text-sm">Add Countries</Label>
+          <Label className="text-sm text-gray-300">Add Countries</Label>
           <Select onValueChange={handleCountryToggle}>
             <SelectTrigger className="text-sm">
               <SelectValue placeholder="Select a country to add" />
@@ -222,7 +222,7 @@ const CountryComparison = () => {
       )}
       
       <div className="space-y-2">
-        <Label htmlFor="theme" className="text-sm">Theme</Label>
+        <Label htmlFor="theme" className="text-sm text-gray-300">Theme</Label>
         <Select 
           value={selectedTheme} 
           onValueChange={(value) => {
@@ -244,7 +244,7 @@ const CountryComparison = () => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="indicator" className="text-sm">Indicator</Label>
+        <Label htmlFor="indicator" className="text-sm text-gray-300">Indicator</Label>
         <Select 
           value={selectedIndicator} 
           onValueChange={setSelectedIndicator}
@@ -263,7 +263,7 @@ const CountryComparison = () => {
       </div>
       
       <div className="space-y-2">
-        <Label className="text-sm">Chart Type</Label>
+        <Label className="text-sm text-gray-300">Chart Type</Label>
         <div className="flex gap-2">
           <Button 
             variant={chartType === 'bar' ? 'default' : 'outline'}
@@ -318,20 +318,20 @@ const CountryComparison = () => {
       <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
         {/* Desktop Filters */}
         <div className="hidden lg:block lg:col-span-1">
-          <div className="border rounded-lg p-4 md:p-6 bg-card h-full">
-            <h3 className="text-lg md:text-xl font-bold mb-4 md:mb-6">Compare Countries</h3>
+          <div className="rounded-2xl border border-gray-800 bg-white/[0.03] p-4 md:p-6 h-full">
+            <h3 className="text-lg md:text-xl font-semibold bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent mb-4 md:mb-6">Compare Countries</h3>
             <FilterContent />
           </div>
         </div>
         
         <div className="lg:col-span-2">
-          <div className="border rounded-lg p-4 md:p-6 bg-card">
+          <div className="rounded-2xl border border-gray-800 bg-white/[0.03] p-4 md:p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-4 md:mb-6">
               <div>
-                <h3 className="text-lg md:text-xl font-bold">
+                <h3 className="text-lg md:text-xl font-semibold text-white">
                   {selectedIndicator || "Select an indicator"}
                 </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-gray-400">
                   Comparing {selectedCountries.length} countries, {new Date().getFullYear()}
                 </p>
               </div>
@@ -348,10 +348,10 @@ const CountryComparison = () => {
               chartType={chartType}
             />
             
-            <div className="mt-4 md:mt-6 p-3 md:p-4 bg-muted rounded-md">
-              <h4 className="font-medium mb-1 md:mb-2 text-sm md:text-base">Analysis</h4>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                {selectedCountries.length > 0 && selectedIndicator 
+            <div className="mt-4 md:mt-6 p-3 md:p-4 bg-white/[0.03] border border-gray-800 rounded-xl">
+              <h4 className="font-medium mb-1 md:mb-2 text-sm md:text-base text-gray-200">Analysis</h4>
+              <p className="text-xs sm:text-sm text-gray-400">
+                {selectedCountries.length > 0 && selectedIndicator
                   ? `This comparison shows ${selectedIndicator.toLowerCase()} across the selected countries. Data is from the latest available year. Source: Various national statistical offices, UNDP Africa.`
                   : "Select countries and an indicator to see comparative analysis."}
               </p>
@@ -359,21 +359,21 @@ const CountryComparison = () => {
             
             {selectedCountries.length > 0 && selectedIndicator && (
               <div className="mt-4 md:mt-6 overflow-x-auto -mx-4 md:mx-0">
-                <table className="min-w-full divide-y divide-border">
+                <table className="min-w-full divide-y divide-gray-800/50">
                   <thead>
                     <tr>
-                      <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Country
                       </th>
-                      <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-gray-400 uppercase tracking-wider">
                         {selectedIndicator}
                       </th>
-                      <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      <th className="px-3 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Year
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-card divide-y divide-border">
+                  <tbody className="divide-y divide-gray-800/50">
                     {selectedCountries.map((country) => {
                       const seed = hashCode(country + selectedIndicator);
                       const value = Math.floor(20 + seededRandom(seed, 0) * 70);
@@ -386,10 +386,10 @@ const CountryComparison = () => {
                               {country}
                             </span>
                           </td>
-                          <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm text-muted-foreground">
+                          <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-400">
                             {value}%
                           </td>
-                          <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm text-muted-foreground">
+                          <td className="px-3 md:px-4 py-2 md:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-400">
                             {year}
                           </td>
                         </tr>

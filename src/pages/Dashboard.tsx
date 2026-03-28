@@ -266,10 +266,10 @@ const Dashboard = () => {
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <LayoutDashboard className="h-7 w-7 text-primary" />
+          <LayoutDashboard className="h-7 w-7 text-[#D4A017]" />
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">My Dashboard</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">My Dashboard</h1>
+            <p className="text-sm text-gray-400">
               Build and customize your data overview
             </p>
           </div>
@@ -285,7 +285,7 @@ const Dashboard = () => {
               </DialogTrigger>
 
               {/* ── Add Widget Dialog ──────────────────────────────────── */}
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-black/95 border-gray-800">
                 <DialogHeader>
                   <DialogTitle>Add Widget</DialogTitle>
                   <DialogDescription>
@@ -306,7 +306,7 @@ const Dashboard = () => {
                           className={`flex flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs transition-colors
                             ${newChartType === opt.type
                               ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border hover:bg-muted'}`}
+                              : 'border-gray-800 hover:bg-white/[0.05]'}`}
                         >
                           {opt.icon}
                           {opt.label}
@@ -333,7 +333,7 @@ const Dashboard = () => {
                   {/* Countries multi-select */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">
-                      Countries <span className="text-muted-foreground font-normal">(up to 5)</span>
+                      Countries <span className="text-gray-400 font-normal">(up to 5)</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       {COUNTRIES.map((country) => (
@@ -396,7 +396,7 @@ const Dashboard = () => {
       {/* ── Personalized Welcome Section ────────────────────────────────── */}
       <div>
         {isPersonalized && preferences.myCountry ? (
-          <Card>
+          <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
             <CardContent className="p-5 space-y-4">
               {/* Welcome row with country flag and stats */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -406,7 +406,7 @@ const Dashboard = () => {
                     Welcome back! Here's your overview for {preferences.myCountry}
                   </h2>
                   {countryMeta && (
-                    <div className="flex flex-wrap gap-4 mt-1.5 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap gap-4 mt-1.5 text-sm text-gray-400">
                       <span className="inline-flex items-center gap-1">
                         <Users className="h-3.5 w-3.5" />
                         Population: {countryMeta.population}
@@ -423,7 +423,7 @@ const Dashboard = () => {
               {/* Favorite Countries row */}
               {preferences.favoriteCountries.length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <p className="text-xs font-medium text-gray-400 flex items-center gap-1">
                     <Star className="h-3 w-3" /> Favorite Countries
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -431,7 +431,7 @@ const Dashboard = () => {
                       <Link
                         key={country}
                         to="/dashboard/countries"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-muted/50 hover:bg-muted transition-colors text-sm"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gray-800 bg-white/[0.03] hover:bg-white/[0.05] transition-colors text-sm"
                       >
                         <CountryFlag country={country} size="xs" />
                         <span>{country}</span>
@@ -444,14 +444,14 @@ const Dashboard = () => {
               {/* Recently Viewed row */}
               {preferences.recentlyViewed.length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <p className="text-xs font-medium text-gray-400 flex items-center gap-1">
                     <Clock className="h-3 w-3" /> Recently Viewed
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {preferences.recentlyViewed.map((country) => (
                       <span
                         key={country}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs text-muted-foreground"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-gray-800 text-xs text-gray-400"
                       >
                         <CountryFlag country={country} size="xs" />
                         {country}
@@ -463,10 +463,10 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-dashed">
+          <Card className="border-dashed border-gray-800 bg-white/[0.03] rounded-2xl">
             <CardContent className="p-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Sparkles className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Sparkles className="h-4 w-4 text-[#D4A017]" />
                 <span>Personalize your experience to see country-specific insights and favorites.</span>
               </div>
               <Link to="/settings">
@@ -483,9 +483,9 @@ const Dashboard = () => {
       <div>
         {widgets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <LayoutDashboard className="h-16 w-16 text-muted-foreground/40 mb-4" />
+            <LayoutDashboard className="h-16 w-16 text-gray-400/40 mb-4" />
             <h2 className="text-xl font-semibold mb-2">No widgets yet</h2>
-            <p className="text-muted-foreground mb-6 max-w-sm">
+            <p className="text-gray-400 mb-6 max-w-sm">
               Start building your custom dashboard by adding your first widget.
             </p>
             <Button className="gap-2" onClick={() => setDialogOpen(true)}>
@@ -496,11 +496,11 @@ const Dashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {widgets.map((widget) => (
-              <Card key={widget.id} className="flex flex-col">
+              <Card key={widget.id} className="flex flex-col bg-white/[0.03] border-gray-800 rounded-2xl">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
                   <div className="space-y-0.5 min-w-0">
                     <h3 className="font-semibold text-sm leading-tight truncate">{widget.title}</h3>
-                    <p className="text-xs text-muted-foreground truncate">{widget.indicator}</p>
+                    <p className="text-xs text-gray-400 truncate">{widget.indicator}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0 ml-2">
                     <Button variant="ghost" size="icon" className="h-7 w-7">

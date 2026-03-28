@@ -54,7 +54,7 @@ const TYPE_STYLES: Record<InsightType, { bg: string; text: string; icon: React.E
 const TREND_ICONS: Record<TrendDirection, { icon: React.ElementType; color: string }> = {
   up:   { icon: TrendingUp,   color: 'text-emerald-500' },
   down: { icon: TrendingDown,  color: 'text-red-500' },
-  flat: { icon: Minus,         color: 'text-muted-foreground' },
+  flat: { icon: Minus,         color: 'text-gray-400' },
 };
 
 const FILTER_TYPES: { label: string; value: InsightType | 'all' }[] = [
@@ -241,27 +241,31 @@ const Insights: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-
-        {/* ── Header ──────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="mb-8"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Sparkles className="h-5 w-5 text-primary" />
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <header className="relative py-8 md:py-12 overflow-hidden">
+        <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <h1 className="text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">
+                {t('insights.title')}
+              </h1>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              {t('insights.title')}
-            </h1>
-          </div>
-          <p className="text-muted-foreground max-w-2xl">
-            {t('insights.subtitle')}
-          </p>
-        </motion.div>
+            <p className="text-[#A89070] max-w-2xl">
+              {t('insights.subtitle')}
+            </p>
+          </motion.div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
 
         {/* ── Filters ─────────────────────────────────────────────── */}
         <motion.div
@@ -288,7 +292,7 @@ const Insights: React.FC = () => {
           {/* Country dropdown */}
           <Select value={countryFilter} onValueChange={setCountryFilter}>
             <SelectTrigger className="w-[200px]">
-              <Globe className="mr-2 h-4 w-4 text-muted-foreground" />
+              <Globe className="mr-2 h-4 w-4 text-gray-400" />
               <SelectValue placeholder="Filter by country" />
             </SelectTrigger>
             <SelectContent>
@@ -302,15 +306,15 @@ const Insights: React.FC = () => {
         </motion.div>
 
         {/* ── Results count ───────────────────────────────────────── */}
-        <p className="mb-4 text-sm text-muted-foreground">
+        <p className="mb-4 text-sm text-gray-400">
           Showing {filtered.length} insight{filtered.length !== 1 ? 's' : ''}
         </p>
 
         {/* ── Insight Cards Grid ──────────────────────────────────── */}
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Activity className="h-12 w-12 text-muted-foreground/40 mb-4" />
-            <p className="text-muted-foreground">No insights match the current filters.</p>
+            <Activity className="h-12 w-12 text-gray-400/40 mb-4" />
+            <p className="text-gray-400">No insights match the current filters.</p>
           </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
@@ -328,7 +332,7 @@ const Insights: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: index * 0.06 }}
                 >
-                  <Card className={`border ${sev.border} hover:shadow-md transition-shadow h-full`}>
+                  <Card className={`border ${sev.border} bg-white/[0.03] border-gray-800 rounded-2xl hover:shadow-md transition-shadow h-full`}>
                     <CardContent className="p-5 flex flex-col gap-3 h-full">
 
                       {/* Badges row */}
@@ -348,12 +352,12 @@ const Insights: React.FC = () => {
                       </h3>
 
                       {/* Summary */}
-                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                      <p className="text-sm text-gray-400 leading-relaxed line-clamp-3">
                         {insight.summary}
                       </p>
 
                       {/* Trend + meta */}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground mt-auto pt-2">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-400 mt-auto pt-2">
                         <span className={`flex items-center gap-1 font-medium ${trend.color}`}>
                           <TrendIcon className="h-3.5 w-3.5" />
                           {insight.trendDirection === 'up'
@@ -373,8 +377,8 @@ const Insights: React.FC = () => {
                       </div>
 
                       {/* Footer: timestamp + expand */}
-                      <div className="flex items-center justify-between border-t border-border pt-3 mt-1">
-                        <span className="text-[11px] text-muted-foreground">
+                      <div className="flex items-center justify-between border-t border-gray-800/50 pt-3 mt-1">
+                        <span className="text-[11px] text-gray-400">
                           Generated {formatDate(insight.generatedAt)}
                         </span>
 
@@ -384,7 +388,7 @@ const Insights: React.FC = () => {
                               Expand <ChevronDown className="h-3.5 w-3.5" />
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-black/95 border-gray-800">
                             <DialogHeader>
                               <div className="flex flex-wrap items-center gap-2 mb-2">
                                 <Badge className={`${sev.bg} ${sev.text} border-0 capitalize`}>
@@ -407,7 +411,7 @@ const Insights: React.FC = () => {
                               {/* Summary */}
                               <div>
                                 <h4 className="text-sm font-medium text-foreground mb-1">Summary</h4>
-                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                <p className="text-sm text-gray-400 leading-relaxed">
                                   {insight.summary}
                                 </p>
                               </div>
@@ -415,23 +419,23 @@ const Insights: React.FC = () => {
                               {/* Full detail */}
                               <div>
                                 <h4 className="text-sm font-medium text-foreground mb-1">Detailed Analysis</h4>
-                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                <p className="text-sm text-gray-400 leading-relaxed">
                                   {insight.detail}
                                 </p>
                               </div>
 
                               {/* Meta grid */}
-                              <div className="grid grid-cols-2 gap-3 rounded-lg border border-border p-4 text-sm">
+                              <div className="grid grid-cols-2 gap-3 rounded-lg border border-gray-800 p-4 text-sm">
                                 <div>
-                                  <span className="text-muted-foreground">Country</span>
+                                  <span className="text-gray-400">Country</span>
                                   <p className="font-medium text-foreground">{insight.country}</p>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground">Indicator</span>
+                                  <span className="text-gray-400">Indicator</span>
                                   <p className="font-medium text-foreground">{insight.indicator}</p>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground">Trend</span>
+                                  <span className="text-gray-400">Trend</span>
                                   <p className={`font-medium flex items-center gap-1 ${trend.color}`}>
                                     <TrendIcon className="h-4 w-4" />
                                     {insight.trendDirection === 'up'
@@ -442,7 +446,7 @@ const Insights: React.FC = () => {
                                   </p>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground">Generated</span>
+                                  <span className="text-gray-400">Generated</span>
                                   <p className="font-medium text-foreground">
                                     {formatDate(insight.generatedAt)}
                                   </p>

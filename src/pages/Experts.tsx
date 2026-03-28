@@ -154,15 +154,16 @@ const Experts = () => {
 
   return (
     <>
-      <header className="gradient-hero py-8 md:py-12">
-        <div className="container px-4 md:px-6">
+      <header className="relative py-8 md:py-12 overflow-hidden">
+        <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        <div className="container px-4 md:px-6 relative">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Users className="h-8 w-8 text-primary" />
-                <h1 className="section-title">{t('experts.title')}</h1>
+                <Users className="h-8 w-8 text-[#D4A017]" />
+                <h1 className="text-3xl md:text-4xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('experts.title')}</h1>
               </div>
-              <p className="section-description">
+              <p className="text-[#A89070]">
                 {t('experts.subtitle')}
               </p>
             </div>
@@ -173,7 +174,7 @@ const Experts = () => {
                   Register as Expert
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto bg-black/95 border-gray-800">
                 <DialogHeader>
                   <DialogTitle>Register as an Expert</DialogTitle>
                 </DialogHeader>
@@ -256,16 +257,16 @@ const Experts = () => {
       <div className="py-6 md:py-8">
         <div className="container px-4 md:px-6">
           {/* Search & Filters */}
-          <Card className="mb-8">
+          <Card className="mb-8 bg-white/[0.03] border-gray-800 rounded-2xl">
             <CardContent className="p-4">
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="relative md:col-span-4 lg:col-span-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search experts..."
-                    className="pl-9"
+                    className="pl-9 border-gray-800 bg-white/[0.03]"
                   />
                 </div>
                 <Select value={countryFilter} onValueChange={setCountryFilter}>
@@ -312,14 +313,14 @@ const Experts = () => {
           </Card>
 
           {/* Results count */}
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-sm text-gray-400 mb-4">
             Showing {filtered.length} of {experts.length} experts
           </p>
 
           {/* Expert Grid */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((expert) => (
-              <Card key={expert.id} className="hover:shadow-lg transition-shadow">
+              <Card key={expert.id} className="hover:shadow-lg transition-shadow bg-white/[0.03] border-gray-800 rounded-2xl">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4 mb-4">
                     <Avatar className="h-14 w-14 text-lg">
@@ -329,8 +330,8 @@ const Experts = () => {
                     </Avatar>
                     <div className="flex-grow min-w-0">
                       <h3 className="font-bold text-base truncate">{expert.name}</h3>
-                      <p className="text-sm text-muted-foreground truncate">{expert.title}</p>
-                      <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                      <p className="text-sm text-gray-400 truncate">{expert.title}</p>
+                      <p className="text-sm text-gray-400 truncate flex items-center gap-1">
                         <Briefcase className="h-3 w-3 shrink-0" />
                         {expert.organization}
                       </p>
@@ -339,7 +340,7 @@ const Experts = () => {
 
                   <div className="space-y-3">
                     <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <MapPin className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                       <Badge variant="secondary" className="text-xs flex items-center gap-1">
                         <CountryFlag country={expert.country} size="xs" />
                         {expert.country}
@@ -357,7 +358,7 @@ const Experts = () => {
                       ))}
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
                       <Globe className="h-3.5 w-3.5 shrink-0" />
                       {expert.languages.join(', ')}
                     </div>
@@ -373,9 +374,9 @@ const Experts = () => {
 
           {filtered.length === 0 && (
             <div className="text-center py-12">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
               <p className="text-lg font-medium">No experts found</p>
-              <p className="text-sm text-muted-foreground">Try adjusting your search or filters.</p>
+              <p className="text-sm text-gray-400">Try adjusting your search or filters.</p>
             </div>
           )}
         </div>

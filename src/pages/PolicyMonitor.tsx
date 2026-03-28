@@ -341,15 +341,16 @@ const PolicyMonitor = () => {
 
   return (
     <>
-      <header className="gradient-hero py-8 md:py-12">
-        <div className="container px-4 md:px-6">
+      <header className="relative py-8 md:py-12 overflow-hidden">
+        <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        <div className="relative z-10 container px-4 md:px-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="h-8 w-8 text-primary" />
-                <h1 className="section-title">{t('policy.title')}</h1>
+                <h1 className="text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('policy.title')}</h1>
               </div>
-              <p className="section-description">
+              <p className="text-[#A89070]">
                 {t('policy.subtitle')}
               </p>
             </div>
@@ -365,34 +366,34 @@ const PolicyMonitor = () => {
         <div className="container px-4 md:px-6">
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-4 mb-8">
-            <Card>
+            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardContent className="p-4 text-center">
                 <p className="text-3xl font-bold text-primary">{ratifiedCount}/{policyData.length}</p>
-                <p className="text-sm text-muted-foreground mt-1">AYC Ratified</p>
+                <p className="text-sm text-gray-400 mt-1">AYC Ratified</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardContent className="p-4 text-center">
                 <p className="text-3xl font-bold text-primary">{withPolicyCount}/{policyData.length}</p>
-                <p className="text-sm text-muted-foreground mt-1">National Youth Policy</p>
+                <p className="text-sm text-gray-400 mt-1">National Youth Policy</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardContent className="p-4 text-center">
                 <p className={`text-3xl font-bold ${getScoreTextColor(avgScore)}`}>{avgScore}%</p>
-                <p className="text-sm text-muted-foreground mt-1">Avg. Compliance Score</p>
+                <p className="text-sm text-gray-400 mt-1">Avg. Compliance Score</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardContent className="p-4 text-center">
                 <p className="text-3xl font-bold text-primary">{policyData.filter(d => d.wpay).length}</p>
-                <p className="text-sm text-muted-foreground mt-1">WPAY Aligned</p>
+                <p className="text-sm text-gray-400 mt-1">WPAY Aligned</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Compliance Score Table */}
-          <Card className="mb-8">
+          <Card className="mb-8 bg-white/[0.03] border-gray-800 rounded-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
@@ -403,14 +404,14 @@ const PolicyMonitor = () => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-2 text-xs font-medium text-muted-foreground">Country</th>
-                      <th className="text-center py-3 px-2 text-xs font-medium text-muted-foreground">AYC Ratified</th>
-                      <th className="text-center py-3 px-2 text-xs font-medium text-muted-foreground">Nat. Youth Policy</th>
-                      <th className="text-center py-3 px-2 text-xs font-medium text-muted-foreground">Policy Year</th>
-                      <th className="text-left py-3 px-2 text-xs font-medium text-muted-foreground min-w-[200px]">Compliance Score</th>
-                      <th className="text-center py-3 px-2 text-xs font-medium text-muted-foreground">WPAY</th>
-                      <th className="text-center py-3 px-2 text-xs font-medium text-muted-foreground">Details</th>
+                    <tr className="border-b border-gray-800/50">
+                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400">Country</th>
+                      <th className="text-center py-3 px-2 text-xs font-medium text-gray-400">AYC Ratified</th>
+                      <th className="text-center py-3 px-2 text-xs font-medium text-gray-400">Nat. Youth Policy</th>
+                      <th className="text-center py-3 px-2 text-xs font-medium text-gray-400">Policy Year</th>
+                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 min-w-[200px]">Compliance Score</th>
+                      <th className="text-center py-3 px-2 text-xs font-medium text-gray-400">WPAY</th>
+                      <th className="text-center py-3 px-2 text-xs font-medium text-gray-400">Details</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -418,7 +419,7 @@ const PolicyMonitor = () => {
                       const isMyCountry = preferences.myCountry && item.country.toLowerCase() === preferences.myCountry.toLowerCase();
                       return (
                       <React.Fragment key={item.country}>
-                        <tr className={`border-b hover:bg-muted/50 transition-colors ${isMyCountry ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}>
+                        <tr className={`border-b border-gray-800/50 hover:bg-white/[0.04] transition-colors ${isMyCountry ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}>
                           <td className="py-3 px-2 font-medium">
                             <span className="inline-flex items-center gap-2">
                               <CountryFlag country={item.country} size="sm" />
@@ -440,7 +441,7 @@ const PolicyMonitor = () => {
                               <Badge className="bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30">No</Badge>
                             )}
                           </td>
-                          <td className="py-3 px-2 text-center text-sm text-muted-foreground">
+                          <td className="py-3 px-2 text-center text-sm text-gray-400">
                             {item.policyYear ?? '—'}
                           </td>
                           <td className="py-3 px-2">
@@ -460,7 +461,7 @@ const PolicyMonitor = () => {
                             {item.wpay ? (
                               <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 text-xs">WPAY</Badge>
                             ) : (
-                              <span className="text-muted-foreground text-xs">—</span>
+                              <span className="text-gray-400 text-xs">—</span>
                             )}
                           </td>
                           <td className="py-3 px-2 text-center">
@@ -479,7 +480,7 @@ const PolicyMonitor = () => {
                           </td>
                         </tr>
                         {expandedCountry === item.country && (
-                          <tr className="bg-muted/30">
+                          <tr className="bg-white/[0.03]">
                             <td colSpan={7} className="p-4">
                               <div className="grid gap-6 md:grid-cols-2">
                                 {/* AYC Article Breakdown */}
@@ -502,7 +503,7 @@ const PolicyMonitor = () => {
                                       <div key={idx} className="relative">
                                         <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-primary border-2 border-background" />
                                         <p className="text-xs font-bold text-primary">{evt.year}</p>
-                                        <p className="text-sm text-muted-foreground">{evt.event}</p>
+                                        <p className="text-sm text-gray-400">{evt.event}</p>
                                       </div>
                                     ))}
                                   </div>
@@ -521,9 +522,9 @@ const PolicyMonitor = () => {
           </Card>
 
           {/* Legend / Methodology Note */}
-          <div className="p-4 bg-muted/50 rounded-lg">
+          <div className="p-4 bg-white/[0.03] border border-gray-800 rounded-lg">
             <h3 className="font-bold mb-2">Scoring Methodology</h3>
-            <p className="text-sm text-muted-foreground mb-3">
+            <p className="text-sm text-gray-400 mb-3">
               Compliance scores are calculated based on alignment with the African Youth Charter (AYC) articles,
               the World Programme of Action for Youth (WPAY) indicators, and the existence and currency of a
               national youth policy framework.

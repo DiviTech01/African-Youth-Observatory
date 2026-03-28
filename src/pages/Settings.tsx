@@ -118,10 +118,10 @@ const Settings = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <SettingsIcon className="h-7 w-7 text-primary" />
+        <SettingsIcon className="h-7 w-7 text-[#D4A017]" />
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Settings</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">Settings</h1>
+          <p className="text-sm sm:text-base text-[#A89070]">
             Personalize your experience on the African Youth Database.
           </p>
         </div>
@@ -131,13 +131,13 @@ const Settings = () => {
         <div className="flex flex-col gap-6">
 
             {/* Language */}
-            <Card>
+            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Globe className="h-5 w-5" />
                   Language
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                   Choose your preferred language for the interface.
                 </CardDescription>
               </CardHeader>
@@ -151,7 +151,7 @@ const Settings = () => {
                     <div key={lang.code} className="flex items-center space-x-2">
                       <RadioGroupItem value={lang.code} id={`lang-${lang.code}`} />
                       <Label htmlFor={`lang-${lang.code}`} className="cursor-pointer">
-                        {lang.nativeName} <span className="text-muted-foreground">({lang.name})</span>
+                        {lang.nativeName} <span className="text-gray-400">({lang.name})</span>
                       </Label>
                     </div>
                   ))}
@@ -160,10 +160,10 @@ const Settings = () => {
             </Card>
 
             {/* My Country */}
-            <Card>
+            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardHeader>
                 <CardTitle>My Country</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                   Set your home country. This will personalize your experience across the platform.
                 </CardDescription>
               </CardHeader>
@@ -194,7 +194,7 @@ const Settings = () => {
                   )}
                 </div>
                 {preferences.myCountry && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
                     <CountryFlag country={preferences.myCountry} size="md" />
                     <span className="font-medium text-foreground">{preferences.myCountry}</span>
                     is your home country
@@ -204,10 +204,10 @@ const Settings = () => {
             </Card>
 
             {/* Favorite Countries */}
-            <Card>
+            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardHeader>
                 <CardTitle>Favorite Countries</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                   Quick access to countries you track frequently.
                 </CardDescription>
               </CardHeader>
@@ -234,7 +234,7 @@ const Settings = () => {
                   </div>
                 )}
                 {preferences.favoriteCountries.length >= 10 ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-400">
                     Maximum of 10 favorites reached. Remove one to add another.
                   </p>
                 ) : (
@@ -255,7 +255,7 @@ const Settings = () => {
                   </Select>
                 )}
                 {preferences.favoriteCountries.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-400">
                     No favorites yet. Add up to 10 countries for quick access.
                   </p>
                 )}
@@ -263,10 +263,10 @@ const Settings = () => {
             </Card>
 
             {/* Preferred Region */}
-            <Card>
+            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardHeader>
                 <CardTitle>Preferred Region</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                   Filter data to your region by default.
                 </CardDescription>
               </CardHeader>
@@ -302,10 +302,10 @@ const Settings = () => {
             </Card>
 
             {/* Recently Viewed */}
-            <Card>
+            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardHeader>
                 <CardTitle>Recently Viewed</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                   Countries you have viewed recently.
                 </CardDescription>
               </CardHeader>
@@ -330,7 +330,7 @@ const Settings = () => {
                     </Button>
                   </>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-400">
                     No recently viewed countries.
                   </p>
                 )}
@@ -338,10 +338,10 @@ const Settings = () => {
             </Card>
 
             {/* Reset All Preferences */}
-            <Card className="border-destructive/50">
+            <Card className="border-destructive/50 bg-white/[0.03] rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-destructive">Reset All Preferences</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                   This will clear your home country, favorites, preferred region, recently viewed history,
                   and all other personalization settings. This action cannot be undone.
                 </CardDescription>
@@ -354,7 +354,7 @@ const Settings = () => {
                       Reset All Preferences
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="bg-black/95 border-gray-800">
                     <DialogHeader>
                       <DialogTitle>Are you sure?</DialogTitle>
                       <DialogDescription>

@@ -84,7 +84,7 @@ const YouthIndex = () => {
   const getTrendIcon = (change: number) => {
     if (change > 0) return <TrendingUp className="h-4 w-4 text-pan-green-500" />;
     if (change < 0) return <TrendingDown className="h-4 w-4 text-pan-red-500" />;
-    return <Minus className="h-4 w-4 text-muted-foreground" />;
+    return <Minus className="h-4 w-4 text-gray-500" />;
   };
 
   const getScoreColor = (score: number) => {
@@ -96,15 +96,16 @@ const YouthIndex = () => {
 
   return (
     <>
-      <header className="gradient-hero py-8 md:py-12">
-        <div className="container px-4 md:px-6">
+      <header className="relative py-8 md:py-12 overflow-hidden">
+        <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        <div className="container px-4 md:px-6 relative z-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Award className="h-8 w-8 text-primary" />
-                <h1 className="section-title">{t('youthIndex.title')}</h1>
+                <Award className="h-8 w-8 text-[#D4A017]" />
+                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('youthIndex.title')}</h1>
               </div>
-              <p className="section-description">
+              <p className="text-sm sm:text-base text-[#A89070]">
                 {t('youthIndex.subtitle')}
               </p>
             </div>
@@ -133,13 +134,13 @@ const YouthIndex = () => {
           {/* Methodology Overview */}
           <div className="grid gap-4 md:grid-cols-4 mb-8">
             {dimensions.map((dim) => (
-              <Card key={dim.key}>
+              <Card key={dim.key} className="bg-white/[0.03] border-gray-800 rounded-2xl">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className={`font-semibold ${dim.color}`}>{dim.label}</span>
                     <Badge variant="secondary" className="text-xs">{dim.weight}</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-400">
                     Measures youth outcomes in {dim.label.toLowerCase()}
                   </p>
                 </CardContent>
@@ -150,7 +151,7 @@ const YouthIndex = () => {
           {/* Top 3 Highlight */}
           <div className="grid gap-4 md:grid-cols-3 mb-8">
             {indexData.slice(0, 3).map((item, idx) => (
-              <Card key={item.country} className={`relative overflow-hidden ${idx === 0 ? 'border-2 border-pan-gold-400' : ''}`}>
+              <Card key={item.country} className={`relative overflow-hidden bg-white/[0.03] border-gray-800 rounded-2xl ${idx === 0 ? 'border-2 border-pan-gold-400' : ''}`}>
                 {idx === 0 && (
                   <div className="absolute top-0 right-0 bg-pan-gold-400 text-white px-3 py-1 text-xs font-medium">
                     Top Ranked
@@ -168,9 +169,9 @@ const YouthIndex = () => {
                       </h3>
                       <div className="flex items-center gap-2">
                         <span className={`text-2xl font-bold ${getScoreColor(item.score)}`}>{item.score}</span>
-                        <span className="text-sm text-muted-foreground">/ 100</span>
+                        <span className="text-sm text-gray-500">/ 100</span>
                         {getTrendIcon(item.change)}
-                        <span className={`text-xs ${item.change > 0 ? 'text-pan-green-500' : item.change < 0 ? 'text-pan-red-500' : 'text-muted-foreground'}`}>
+                        <span className={`text-xs ${item.change > 0 ? 'text-pan-green-500' : item.change < 0 ? 'text-pan-red-500' : 'text-gray-500'}`}>
                           {item.change > 0 ? '+' : ''}{item.change} from last year
                         </span>
                       </div>
@@ -178,19 +179,19 @@ const YouthIndex = () => {
                   </div>
                   <div className="grid grid-cols-4 gap-2 mt-4 text-center">
                     <div>
-                      <p className="text-xs text-muted-foreground">Education</p>
+                      <p className="text-xs text-gray-400">Education</p>
                       <p className="font-semibold text-sm">{item.education}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Employment</p>
+                      <p className="text-xs text-gray-400">Employment</p>
                       <p className="font-semibold text-sm">{item.employment}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Health</p>
+                      <p className="text-xs text-gray-400">Health</p>
                       <p className="font-semibold text-sm">{item.health}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Civic</p>
+                      <p className="text-xs text-gray-400">Civic</p>
                       <p className="font-semibold text-sm">{item.civic}</p>
                     </div>
                   </div>
@@ -201,7 +202,7 @@ const YouthIndex = () => {
 
           {/* Radar Chart Dialog */}
           <Dialog open={!!selectedCountry} onOpenChange={(open) => { if (!open) setSelectedCountry(null); }}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] bg-black/95 border-gray-800">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   {selectedCountry && <CountryFlag country={selectedCountry.country} size="lg" />}
@@ -227,19 +228,19 @@ const YouthIndex = () => {
                 {selectedCountry && (
                   <div className="grid grid-cols-4 gap-4 mt-2 w-full text-center">
                     <div>
-                      <p className="text-xs text-muted-foreground">Education</p>
+                      <p className="text-xs text-gray-400">Education</p>
                       <p className="font-bold text-sm">{selectedCountry.education}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Employment</p>
+                      <p className="text-xs text-gray-400">Employment</p>
                       <p className="font-bold text-sm">{selectedCountry.employment}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Health</p>
+                      <p className="text-xs text-gray-400">Health</p>
                       <p className="font-bold text-sm">{selectedCountry.health}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Civic</p>
+                      <p className="text-xs text-gray-400">Civic</p>
                       <p className="font-bold text-sm">{selectedCountry.civic}</p>
                     </div>
                   </div>
@@ -249,7 +250,7 @@ const YouthIndex = () => {
           </Dialog>
 
           {/* Full Rankings Table */}
-          <Card>
+          <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
@@ -275,7 +276,7 @@ const YouthIndex = () => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b">
+                    <tr className="border-b border-gray-800/50">
                       {([
                         { field: 'rank' as SortField, label: 'Rank', align: 'text-left', color: '' },
                         { field: 'country' as SortField, label: 'Country', align: 'text-left', color: '' },
@@ -288,7 +289,7 @@ const YouthIndex = () => {
                       ]).map((col) => (
                         <th
                           key={col.field}
-                          className={`${col.align} py-3 px-2 text-xs font-medium text-muted-foreground ${col.color} cursor-pointer select-none hover:text-foreground transition-colors`}
+                          className={`${col.align} py-3 px-2 text-xs font-medium text-gray-400 ${col.color} cursor-pointer select-none hover:text-foreground transition-colors`}
                           onClick={() => handleSort(col.field)}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -311,7 +312,7 @@ const YouthIndex = () => {
                       return (
                       <tr
                         key={item.country}
-                        className={`border-b hover:bg-muted/50 transition-colors cursor-pointer ${isMyCountry ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}
+                        className={`border-b border-gray-800/50 hover:bg-white/[0.04] transition-colors cursor-pointer ${isMyCountry ? 'bg-[#D4A017]/10 border-l-2 border-l-[#D4A017]' : ''}`}
                         onClick={() => setSelectedCountry(item)}
                       >
                         <td className="py-3 px-2 font-bold">{item.rank}</td>
@@ -331,7 +332,7 @@ const YouthIndex = () => {
                         <td className="py-3 px-2">
                           <span className="flex items-center gap-1">
                             {getTrendIcon(item.change)}
-                            <span className={`text-xs ${item.change > 0 ? 'text-pan-green-500' : item.change < 0 ? 'text-pan-red-500' : 'text-muted-foreground'}`}>
+                            <span className={`text-xs ${item.change > 0 ? 'text-pan-green-500' : item.change < 0 ? 'text-pan-red-500' : 'text-gray-500'}`}>
                               {item.change > 0 ? '+' : ''}{item.change}
                             </span>
                           </span>
@@ -350,9 +351,9 @@ const YouthIndex = () => {
           </Card>
 
           {/* Methodology Note */}
-          <div className="mt-8 p-4 bg-muted/50 rounded-lg">
+          <div className="mt-8 p-4 bg-white/[0.03] border border-gray-800 rounded-2xl">
             <h3 className="font-bold mb-2">About the African Youth Index</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-400">
               The AYI is a composite indicator ranking African countries based on youth development outcomes. 
               Scores range from 0-100, calculated across four dimensions: Education (25%), Employment (30%), 
               Health (25%), and Civic Engagement (20%). Rankings are updated annually. 

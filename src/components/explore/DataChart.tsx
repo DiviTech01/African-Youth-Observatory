@@ -223,11 +223,11 @@ const DataChart = ({
   };
 
   return (
-    <div className="border rounded-lg p-6 bg-card">
+    <div className="rounded-2xl border border-gray-800 bg-white/[0.03] p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
         <div>
-          <h3 className="text-xl font-bold">{indicator}</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="text-xl font-bold text-white">{indicator}</h3>
+          <p className="text-sm text-gray-400">
             {country !== 'All Countries' ? country : 'All African Countries'},{' '}
             {yearRange[0]}-{yearRange[1]}
           </p>
@@ -280,9 +280,9 @@ const DataChart = ({
         </div>
       )}
 
-      <div className="chart-container border border-dashed rounded-md bg-background p-4 flex items-center justify-center min-h-[350px]">
+      <div className="min-h-[350px] rounded-xl border border-gray-800 bg-black/30 p-4 flex items-center justify-center">
         {!hasSelection ? (
-          <p className="text-muted-foreground">
+          <p className="text-gray-500">
             Select a theme and indicator to display chart data
           </p>
         ) : (
@@ -292,9 +292,9 @@ const DataChart = ({
         )}
       </div>
 
-      <div className="mt-6 p-4 bg-muted rounded-md">
-        <h4 className="font-medium mb-2">Data Notes</h4>
-        <p className="text-sm text-muted-foreground">
+      <div className="mt-6 p-4 bg-white/[0.03] border border-gray-800 rounded-md">
+        <h4 className="font-medium mb-2 text-gray-200">Data Notes</h4>
+        <p className="text-sm text-gray-400">
           {hasSelection
             ? `This data displays ${indicator.toLowerCase()} for ${
                 country !== 'All Countries' ? country : 'all African countries'

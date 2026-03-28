@@ -89,15 +89,16 @@ const Countries = () => {
 
   return (
     <>
-      <div className="bg-muted/30 py-8 md:py-12">
-        <div className="container px-4 md:px-6">
+      <div className="relative py-8 md:py-12 overflow-hidden">
+        <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        <div className="container px-4 md:px-6 relative z-10">
           <div className="flex flex-col gap-3 md:gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Globe className="h-6 w-6 text-primary" />
-                <h1 className="text-2xl sm:text-3xl font-bold">{t('countries.title')}</h1>
+                <Globe className="h-6 w-6 text-[#D4A017]" />
+                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('countries.title')}</h1>
               </div>
-              <p className="text-sm sm:text-base text-muted-foreground">
+              <p className="text-sm sm:text-base text-[#A89070]">
                 {t('countries.subtitle')}
               </p>
             </div>
@@ -108,7 +109,7 @@ const Countries = () => {
                 placeholder={t('countries.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="rounded-r-none text-sm"
+                className="rounded-r-none text-sm border-gray-800 bg-white/[0.03]"
               />
               <Button className="rounded-l-none px-3 sm:px-4">
                 <Search className="h-4 w-4" />
@@ -140,7 +141,7 @@ const Countries = () => {
             <Button
               variant="outline"
               onClick={() => setSelectedCountry(null)}
-              className="mb-4 md:mb-6 gap-2 text-sm"
+              className="mb-4 md:mb-6 gap-2 text-sm border-gray-800"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Country List
@@ -151,7 +152,7 @@ const Countries = () => {
         ) : (
           <div className="container px-4 md:px-6">
             {filteredCountries.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
+              <div className="text-center py-12 text-gray-500">
                 <Search className="h-10 w-10 mx-auto mb-3 opacity-40" />
                 <p className="text-lg font-medium">No countries found</p>
                 <p className="text-sm mt-1">Try adjusting your search or region filter.</p>
@@ -164,7 +165,7 @@ const Countries = () => {
                   return (
                     <Card
                       key={country}
-                      className={`hover-lift cursor-pointer group border hover:border-primary/50 transition-colors ${isMyCountry ? 'ring-2 ring-primary border-primary/50' : ''}`}
+                      className={`hover-lift cursor-pointer group rounded-2xl border border-gray-800 bg-white/[0.03] hover:border-gray-600 transition-colors ${isMyCountry ? 'ring-2 ring-[#D4A017] border-[#D4A017]/50' : ''}`}
                       onClick={() => {
                         trackCountryView(country);
                         setSelectedCountry(country);
@@ -177,13 +178,13 @@ const Countries = () => {
                             <span className="text-sm sm:text-base font-bold leading-tight line-clamp-1">
                               {country}
                             </span>
-                            {isMyCountry && <Star className="h-4 w-4 text-primary fill-primary flex-shrink-0" />}
+                            {isMyCountry && <Star className="h-4 w-4 text-[#D4A017] fill-[#D4A017] flex-shrink-0" />}
                           </div>
                           {(() => {
                             const meta = getCountryMeta(country);
                             return meta ? (
                               <>
-                                <span className="text-[11px] text-muted-foreground">{meta.capital}</span>
+                                <span className="text-[11px] text-gray-400">{meta.capital}</span>
                                 <div className="flex flex-wrap gap-1">
                                   {meta.languages.slice(0, 2).map((lang) => (
                                     <Badge key={lang} variant="secondary" className="text-[9px] px-1 py-0 h-4">
@@ -213,10 +214,10 @@ const Countries = () => {
                         </div>
 
                         <div className="flex items-center justify-between mt-1">
-                          <span className="text-[11px] sm:text-xs text-muted-foreground font-medium group-hover:text-primary transition-colors">
+                          <span className="text-[11px] sm:text-xs text-gray-500 font-medium group-hover:text-[#D4A017] transition-colors">
                             View Profile
                           </span>
-                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                          <ChevronRight className="h-3.5 w-3.5 text-gray-500 group-hover:text-[#D4A017] group-hover:translate-x-0.5 transition-all" />
                         </div>
                       </CardContent>
                     </Card>
