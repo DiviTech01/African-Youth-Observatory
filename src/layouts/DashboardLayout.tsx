@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ThemeToggle } from '@/components/ThemeToggle';
+// Theme toggle removed - dark mode only
 import LiveDataTicker from '@/components/LiveDataTicker';
 import { Button } from '@/components/ui/button';
 import {
@@ -127,7 +127,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
 
           <div className="flex items-center gap-2">
-            <ThemeToggle />
             <Button variant="outline" size="sm" className="text-xs h-8">
               Sign Out
             </Button>

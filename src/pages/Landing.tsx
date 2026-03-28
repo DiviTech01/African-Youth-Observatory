@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ThemeToggle';
+// Theme toggle removed - dark mode only
 import { motion } from 'framer-motion';
 import {
   TrendingUp,
@@ -94,7 +94,6 @@ const Landing = () => {
             <span className="font-display font-bold text-lg hidden sm:block">African Youth Database</span>
           </Link>
           <div className="flex items-center gap-3">
-            <ThemeToggle />
             <Link to="/auth/signin">
               <Button variant="ghost" size="sm">Sign In</Button>
             </Link>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ThemeToggle } from '@/components/ThemeToggle';
+// Theme toggle removed - dark mode only
 import { 
   Eye, 
   EyeOff, 
@@ -119,7 +119,6 @@ const SignUp = () => {
               </div>
               <span className="font-display font-bold text-lg">African Youth Database</span>
             </Link>
-            <ThemeToggle />
           </div>
 
           {/* Form Header */}

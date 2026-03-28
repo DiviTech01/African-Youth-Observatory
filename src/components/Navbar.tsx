@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Search, Menu, X, LogOut, LayoutDashboard, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { ThemeToggle } from '@/components/ThemeToggle';
+// Theme toggle removed - dark mode only
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -121,7 +121,6 @@ const Navbar = () => {
           
           <WhatsNew />
           <LanguageSwitcher />
-          <ThemeToggle />
           
           {isAuthenticated && user ? (
             <DropdownMenu>
