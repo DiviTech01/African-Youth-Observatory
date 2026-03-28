@@ -1,26 +1,235 @@
-
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, Share, ExternalLink } from 'lucide-react';
+import { Download, Share, ExternalLink, BarChart3, TrendingUp, Layers } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
-const DataChart = ({ 
-  country, 
+type ChartType = 'bar' | 'line' | 'area';
+
+const CHART_COLORS = {
+  primary: 'hsl(var(--chart-1))',
+  secondary: 'hsl(var(--chart-2))',
+  tertiary: 'hsl(var(--chart-3))',
+  quaternary: 'hsl(var(--chart-4))',
+  quinary: 'hsl(var(--chart-5))',
+};
+
+/** Seeded pseudo-random to keep data stable across re-renders */
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+function generateMockData(
+  indicator: string,
+  yearRange: [number, number],
+  country: string,
+) {
+  const [startYear, endYear] = yearRange;
+  const seed =
+    indicator.length * 7 + country.length * 13 + startYear + endYear;
+
+  // Pick a realistic baseline and range based on indicator keywords
+  let base = 45;
+  let variance = 15;
+  let trend = 1.2; // upward trend per year
+  const lower = indicator.toLowerCase();
+
+  if (lower.includes('unemployment') || lower.includes('poverty')) {
+    base = 35;
+    variance = 8;
+    trend = -0.6;
+  } else if (lower.includes('enrollment') || lower.includes('literacy')) {
+    base = 55;
+    variance = 10;
+    trend = 1.5;
+  } else if (lower.includes('population') || lower.includes('growth')) {
+    base = 2.5;
+    variance = 0.4;
+    trend = 0.05;
+  } else if (lower.includes('employment') || lower.includes('participation')) {
+    base = 40;
+    variance = 12;
+    trend = 0.9;
+  }
+
+  const data = [];
+  for (let year = startYear; year <= endYear; year++) {
+    const idx = year - startYear;
+    const noise = (seededRandom(seed + idx * 31) - 0.5) * variance;
+    const value = Math.max(
+      0,
+      Math.round((base + trend * idx + noise) * 10) / 10,
+    );
+    data.push({ year: year.toString(), value });
+  }
+  return data;
+}
+
+const DataChart = ({
+  country,
   theme,
   indicator,
-  yearRange
+  yearRange,
 }: {
   country: string;
   theme: string;
   indicator: string;
   yearRange: [number, number];
 }) => {
+  const [chartType, setChartType] = useState<ChartType>('bar');
+
+  const hasSelection =
+    theme !== 'All Themes' && indicator !== 'Select an indicator';
+
+  const data = useMemo(
+    () =>
+      hasSelection ? generateMockData(indicator, yearRange, country) : [],
+    [indicator, yearRange, country, hasSelection],
+  );
+
+  const renderChart = () => {
+    const commonProps = {
+      data,
+      margin: { top: 10, right: 20, left: 0, bottom: 0 },
+    };
+
+    const axisProps = {
+      xAxis: (
+        <XAxis
+          dataKey="year"
+          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+          tickLine={false}
+          axisLine={{ stroke: 'hsl(var(--border))' }}
+        />
+      ),
+      yAxis: (
+        <YAxis
+          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+          tickLine={false}
+          axisLine={false}
+          width={45}
+        />
+      ),
+      grid: (
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="hsl(var(--border))"
+          vertical={false}
+        />
+      ),
+      tooltip: (
+        <Tooltip
+          contentStyle={{
+            backgroundColor: 'hsl(var(--popover))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '6px',
+            color: 'hsl(var(--popover-foreground))',
+            fontSize: 13,
+          }}
+          labelFormatter={(label) => `Year: ${label}`}
+          formatter={(val: number) => [val, indicator]}
+        />
+      ),
+      legend: (
+        <Legend
+          wrapperStyle={{ fontSize: 12, color: 'hsl(var(--muted-foreground))' }}
+        />
+      ),
+    };
+
+    switch (chartType) {
+      case 'line':
+        return (
+          <LineChart {...commonProps}>
+            {axisProps.grid}
+            {axisProps.xAxis}
+            {axisProps.yAxis}
+            {axisProps.tooltip}
+            {axisProps.legend}
+            <Line
+              type="monotone"
+              dataKey="value"
+              name={indicator}
+              stroke={CHART_COLORS.primary}
+              strokeWidth={2}
+              dot={{ r: 4, fill: CHART_COLORS.primary }}
+              activeDot={{ r: 6, fill: CHART_COLORS.secondary }}
+            />
+          </LineChart>
+        );
+      case 'area':
+        return (
+          <AreaChart {...commonProps}>
+            {axisProps.grid}
+            {axisProps.xAxis}
+            {axisProps.yAxis}
+            {axisProps.tooltip}
+            {axisProps.legend}
+            <defs>
+              <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor={CHART_COLORS.primary}
+                  stopOpacity={0.4}
+                />
+                <stop
+                  offset="95%"
+                  stopColor={CHART_COLORS.primary}
+                  stopOpacity={0.05}
+                />
+              </linearGradient>
+            </defs>
+            <Area
+              type="monotone"
+              dataKey="value"
+              name={indicator}
+              stroke={CHART_COLORS.primary}
+              strokeWidth={2}
+              fill="url(#areaGradient)"
+            />
+          </AreaChart>
+        );
+      default:
+        return (
+          <BarChart {...commonProps}>
+            {axisProps.grid}
+            {axisProps.xAxis}
+            {axisProps.yAxis}
+            {axisProps.tooltip}
+            {axisProps.legend}
+            <Bar
+              dataKey="value"
+              name={indicator}
+              fill={CHART_COLORS.primary}
+              radius={[4, 4, 0, 0]}
+              maxBarSize={48}
+            />
+          </BarChart>
+        );
+    }
+  };
+
   return (
-    <div className="border rounded-lg p-6 bg-card">
-      <div className="flex justify-between items-start mb-6">
+    <div className="rounded-2xl border border-gray-800 bg-white/[0.03] p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
         <div>
-          <h3 className="text-xl font-bold">{indicator}</h3>
-          <p className="text-sm text-muted-foreground">
-            {country !== "All Countries" ? country : "All African Countries"}, {yearRange[0]}-{yearRange[1]}
+          <h3 className="text-xl font-bold text-white">{indicator}</h3>
+          <p className="text-sm text-gray-400">
+            {country !== 'All Countries' ? country : 'All African Countries'},{' '}
+            {yearRange[0]}-{yearRange[1]}
           </p>
         </div>
         <div className="flex gap-2">
@@ -38,40 +247,59 @@ const DataChart = ({
           </Button>
         </div>
       </div>
-      
-      <div className="chart-container border border-dashed rounded-md bg-background p-4 flex items-center justify-center">
-        {(theme === "All Themes" || indicator === "Select an indicator") ? (
-          <p className="text-muted-foreground">Select a theme and indicator to display chart data</p>
+
+      {hasSelection && (
+        <div className="flex gap-1 mb-4">
+          <Button
+            variant={chartType === 'bar' ? 'default' : 'outline'}
+            size="sm"
+            className="gap-1"
+            onClick={() => setChartType('bar')}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Bar
+          </Button>
+          <Button
+            variant={chartType === 'line' ? 'default' : 'outline'}
+            size="sm"
+            className="gap-1"
+            onClick={() => setChartType('line')}
+          >
+            <TrendingUp className="h-4 w-4" />
+            Line
+          </Button>
+          <Button
+            variant={chartType === 'area' ? 'default' : 'outline'}
+            size="sm"
+            className="gap-1"
+            onClick={() => setChartType('area')}
+          >
+            <Layers className="h-4 w-4" />
+            Area
+          </Button>
+        </div>
+      )}
+
+      <div className="min-h-[350px] rounded-xl border border-gray-800 bg-black/30 p-4 flex items-center justify-center">
+        {!hasSelection ? (
+          <p className="text-gray-500">
+            Select a theme and indicator to display chart data
+          </p>
         ) : (
-          <div className="w-full h-full">
-            {/* This is where we would render an actual chart with Recharts */}
-            <div className="w-full h-full flex items-end justify-around px-10">
-              {[...Array(10)].map((_, i) => (
-                <div 
-                  key={i} 
-                  className="w-6 bg-pan-green-500 hover:bg-pan-green-600 transition-all rounded-t-md relative group"
-                  style={{ height: `${20 + Math.random() * 60}%` }}
-                >
-                  <div className="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 transform -translate-x-1/2 bg-foreground text-background text-xs py-1 px-2 rounded transition-opacity">
-                    {yearRange[0] + i}: {Math.floor(Math.random() * 100)}%
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex justify-between px-8">
-              <span className="text-xs text-muted-foreground">{yearRange[0]}</span>
-              <span className="text-xs text-muted-foreground">{yearRange[1]}</span>
-            </div>
-          </div>
+          <ResponsiveContainer width="100%" height={320}>
+            {renderChart()}
+          </ResponsiveContainer>
         )}
       </div>
-      
-      <div className="mt-6 p-4 bg-muted rounded-md">
-        <h4 className="font-medium mb-2">Data Notes</h4>
-        <p className="text-sm text-muted-foreground">
-          {theme !== "All Themes" && indicator !== "Select an indicator" 
-            ? `This data displays ${indicator.toLowerCase()} for ${country !== "All Countries" ? country : "all African countries"} from ${yearRange[0]} to ${yearRange[1]}. Source: Ministry of Youth and Sports, UNDP Africa.`
-            : "Select data filters to see information about the data source and methodology."}
+
+      <div className="mt-6 p-4 bg-white/[0.03] border border-gray-800 rounded-md">
+        <h4 className="font-medium mb-2 text-gray-200">Data Notes</h4>
+        <p className="text-sm text-gray-400">
+          {hasSelection
+            ? `This data displays ${indicator.toLowerCase()} for ${
+                country !== 'All Countries' ? country : 'all African countries'
+              } from ${yearRange[0]} to ${yearRange[1]}. Source: Ministry of Youth and Sports, UNDP Africa.`
+            : 'Select data filters to see information about the data source and methodology.'}
         </p>
       </div>
     </div>

@@ -1,24 +1,26 @@
 
 import React from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import Hero from '@/components/home/Hero';
+import { Hero } from '@/components/ui/hero-1';
+import SaaSHero from '@/components/ui/saa-s-template';
 import QuickStats from '@/components/home/QuickStats';
 import FeaturedData from '@/components/home/FeaturedData';
 import Partners from '@/components/home/Partners';
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-grow">
-        <Hero />
-        <QuickStats />
-        <FeaturedData />
-        <Partners />
-      </main>
-      <Footer />
-    </div>
+    <>
+      <Hero
+        eyebrow="Africa's Premier Youth Data Platform"
+        title="Empowering Africa's Youth Through Data"
+        subtitle="Access comprehensive youth statistics across all 54 African nations. Power your research, policy decisions, and investments with trusted, real-time data."
+        ctaLabel="Explore Data"
+        ctaHref="/explore"
+      />
+      <SaaSHero />
+      <QuickStats />
+      <FeaturedData />
+      <Partners />
+    </>
   );
 };
 

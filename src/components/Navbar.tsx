@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Search, Menu, X } from 'lucide-react';
+import { Search, Menu, X, LogOut, LayoutDashboard, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { ThemeToggle } from '@/components/ThemeToggle';
+// Theme toggle removed - dark mode only
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Sheet,
   SheetContent,
@@ -11,21 +21,39 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-
-const navLinks = [
-  { to: '/', label: 'Home' },
-  { to: '/explore', label: 'Data Explorer' },
-  { to: '/youth-index', label: 'Youth Index' },
-  { to: '/compare', label: 'Compare' },
-  { to: '/countries', label: 'Countries' },
-  { to: '/reports', label: 'Reports' },
-  { to: '/about', label: 'About' },
-];
+import { useAuth } from '@/contexts/AuthContext';
+import { WhatsNew } from '@/components/WhatsNew';
 
 const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, signOut } = useAuth();
+  const { t } = useLanguage();
+
+  const navLinks = [
+    { to: '/', label: t('nav.home') },
+    { to: '/explore', label: t('nav.explore') },
+    { to: '/youth-index', label: t('nav.youthIndex') },
+    { to: '/compare', label: t('nav.compare') },
+    { to: '/countries', label: t('nav.countries') },
+    { to: '/reports', label: t('nav.reports') },
+    { to: '/about', label: t('nav.about') },
+  ];
+
+  const getInitials = (name: string) =>
+    name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+
+  const handleSignOut = () => {
+    signOut();
+    navigate('/');
+  };
 
   const toggleSearch = () => setIsSearchOpen(!isSearchOpen);
 
@@ -68,7 +96,7 @@ const Navbar = () => {
             <div className="flex items-center relative animate-fade-in">
               <Input
                 type="search"
-                placeholder="Search countries, themes..."
+                placeholder={t('nav.search')}
                 className="w-[160px] sm:w-[200px] lg:w-[250px] text-sm"
               />
               <Button
@@ -91,15 +119,59 @@ const Navbar = () => {
             </Button>
           )}
           
-          <ThemeToggle />
+          <WhatsNew />
+          <LanguageSwitcher />
           
-          <Button
-            variant="outline"
-            size="sm"
-            className="hidden sm:flex text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-          >
-            Sign In
-          </Button>
+          {isAuthenticated && user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="hidden sm:flex items-center gap-2 h-8 sm:h-9 px-1 sm:px-2"
+                >
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                      {getInitials(user.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <div className="px-2 py-1.5 text-sm font-medium">{user.name}</div>
+                <div className="px-2 pb-1.5 text-xs text-muted-foreground">{user.email}</div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
+                    <LayoutDashboard className="h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden sm:flex text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+              asChild
+            >
+              <Link to="/auth/signin">{t('nav.signIn')}</Link>
+            </Button>
+          )}
           
           {/* Mobile Menu */}
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -142,14 +214,59 @@ const Navbar = () => {
                 <div className="relative">
                   <Input
                     type="search"
-                    placeholder="Search countries, themes..."
+                    placeholder={t('nav.search')}
                     className="w-full pr-10"
                   />
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 </div>
-                <Button className="w-full" variant="outline">
-                  Sign In
-                </Button>
+                {isAuthenticated && user ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 px-1">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                          {getInitials(user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{user.name}</span>
+                        <span className="text-xs text-muted-foreground">{user.email}</span>
+                      </div>
+                    </div>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setIsSheetOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Dashboard
+                    </Link>
+                    <Link
+                      to="/settings"
+                      onClick={() => setIsSheetOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Link>
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => {
+                        handleSignOut();
+                        setIsSheetOpen(false);
+                      }}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </Button>
+                  </div>
+                ) : (
+                  <Button className="w-full" variant="outline" asChild>
+                    <Link to="/auth/signin" onClick={() => setIsSheetOpen(false)}>
+                      {t('nav.signIn')}
+                    </Link>
+                  </Button>
+                )}
               </div>
             </SheetContent>
           </Sheet>

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npm i:*)",
+      "Bash(git clone:*)",
+      "Bash(find /c/Users/user/AFRICAN YOUTH DATABASE/African-Youth-Database -type f -not -path */node_modules/* -not -path */.git/*)",
+      "Bash(find . -type f -name *PROGRESS* -o -name *TRACKER* -o -name *LOG* -o -name *ACTIVITY* -o -name *DEVELOPMENT*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite:*)",
+      "WebFetch(domain:21st.dev)"
+    ]
+  }
+}
