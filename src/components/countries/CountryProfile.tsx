@@ -1,577 +1,1040 @@
-// ============================================
-// AFRICAN YOUTH DATABASE - COUNTRY PROFILE
-// Comprehensive country-level youth data dashboard
-// ============================================
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, ExternalLink, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  useCountry, 
-  useCountryStats, 
-  useYouthIndexByCountry, 
-  useTimeSeries,
-  useIndicatorsByTheme,
-  useRegionalData 
-} from '@/hooks/useData';
-import { AYDLineChart, AYDBarChart, AYDRadarChart } from '@/components/charts';
-import { getCountryByName, THEMES, getIndicatorById } from '@/types';
-import { QuickExportDropdown } from '@/components/export';
-import { exportCountryProfile, type ExportFormat } from '@/services/export';
-import { getCountryInsights } from '@/services/insights';
-import { InsightCard } from '@/components/insights';
-import { Lightbulb } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Download,
+  ExternalLink,
+  Users,
+  GraduationCap,
+  Heart,
+  Briefcase,
+  Rocket,
+  TrendingUp,
+  Globe,
+  Scale,
+  Megaphone,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import CountryFlag from '@/components/CountryFlag';
+import { getCountryMeta } from '@/lib/country-flags';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 interface CountryProfileProps {
   country: string;
 }
 
-const CountryProfile = ({ country: countryName }: CountryProfileProps) => {
-  // Get country data
-  const countryData = getCountryByName(countryName);
-  const countryId = countryData?.id;
-
-  const { data: countryInfo, isLoading: countryLoading } = useCountry(countryId || '');
-  const { data: countryStats } = useCountryStats(countryId || '', 2024);
-  const { data: youthIndex } = useYouthIndexByCountry(countryId || '', 2024);
-
-  // Get indicators for each theme
-  const { data: educationIndicators } = useIndicatorsByTheme('edu');
-  const { data: healthIndicators } = useIndicatorsByTheme('hlt');
-  const { data: employmentIndicators } = useIndicatorsByTheme('emp');
-  const { data: innovationIndicators } = useIndicatorsByTheme('inn');
-
-  // Time series for key indicators
-  const { data: literacyTrend } = useTimeSeries(countryId || '', 'edu001', [2015, 2024]);
-  const { data: unemploymentTrend } = useTimeSeries(countryId || '', 'emp001', [2015, 2024]);
-  const { data: internetTrend } = useTimeSeries(countryId || '', 'inn001', [2015, 2024]);
-
-  if (!countryData || !countryId) {
-    return (
-      <div className="container px-4 md:px-6 py-6">
-        <Card className="p-8">
-          <p className="text-center text-muted-foreground">Country not found</p>
-        </Card>
-      </div>
-    );
+/* Simple deterministic hash from a string to seed mock data */
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
   }
+  return Math.abs(hash);
+}
 
-  if (countryLoading) {
-    return (
-      <div className="container px-4 md:px-6 py-6">
-        <Card className="p-8">
-          <p className="text-center text-muted-foreground">Loading country profile...</p>
-        </Card>
-      </div>
-    );
-  }
+function seededRandom(seed: number, index: number): number {
+  const x = Math.sin(seed + index) * 10000;
+  return x - Math.floor(x);
+}
 
-  const formatNumber = (num: number | undefined) => {
-    if (!num) return 'N/A';
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toFixed(0);
-  };
+function generateData(country: string) {
+  const seed = hashCode(country);
 
-  const getTrendIcon = (change: number | undefined) => {
-    if (!change) return <Minus className="h-4 w-4" />;
-    if (change > 0) return <TrendingUp className="h-4 w-4 text-green-600" />;
-    if (change < 0) return <TrendingDown className="h-4 w-4 text-red-600" />;
-    return <Minus className="h-4 w-4" />;
-  };
+  const populationData = Array.from({ length: 10 }, (_, i) => {
+    const base = 8.5 + seededRandom(seed, i) * 4;
+    return {
+      year: `${2014 + i}`,
+      population: +(base + i * 0.42).toFixed(1),
+      male: +((base + i * 0.42) * (0.49 + seededRandom(seed, i + 100) * 0.04)).toFixed(1),
+      female: +((base + i * 0.42) * (0.47 + seededRandom(seed, i + 200) * 0.04)).toFixed(1),
+    };
+  });
 
-  // Export handler for country profile
-  const handleExport = useCallback((format: ExportFormat) => {
-    if (!countryId) return;
-    
-    // Gather available indicators
-    const indicators: { indicatorId: string; value: number; formattedValue?: string }[] = [];
-    
-    // Add mock indicator data for export
-    if (countryStats) {
-      indicators.push(
-        { indicatorId: 'edu001', value: 75 + Math.random() * 20 },
-        { indicatorId: 'hlt001', value: 55 + Math.random() * 15 },
-        { indicatorId: 'emp001', value: 15 + Math.random() * 20 },
-        { indicatorId: 'inn001', value: 20 + Math.random() * 40 }
-      );
-    }
-    
-    exportCountryProfile({
-      countryId,
-      year: 2024,
-      indicators,
-      youthIndex: youthIndex ? {
-        rank: youthIndex.rank,
-        countryId,
-        indexScore: youthIndex.indexScore,
-        educationScore: youthIndex.educationScore,
-        healthScore: youthIndex.healthScore,
-        employmentScore: youthIndex.employmentScore,
-        civicScore: youthIndex.civicScore,
-        innovationScore: youthIndex.innovationScore
-      } : undefined
-    }, format);
-  }, [countryId, countryStats, youthIndex]);
+  const educationData = Array.from({ length: 10 }, (_, i) => ({
+    year: `${2014 + i}`,
+    literacy: +(68 + i * 1.6 + seededRandom(seed, i + 300) * 3).toFixed(1),
+    secondaryEnrollment: +(55 + i * 1.8 + seededRandom(seed, i + 400) * 4).toFixed(1),
+    tertiaryEnrollment: +(10 + i * 1.0 + seededRandom(seed, i + 500) * 2).toFixed(1),
+  }));
+
+  const healthData = [
+    { indicator: 'Healthcare Access', value: +(60 + seededRandom(seed, 600) * 20).toFixed(1), benchmark: 75 },
+    { indicator: 'HIV Prev. (15-24)', value: +(1 + seededRandom(seed, 601) * 4).toFixed(1), benchmark: 2.5 },
+    { indicator: 'Mental Health Cov.', value: +(20 + seededRandom(seed, 602) * 25).toFixed(1), benchmark: 45 },
+    { indicator: 'Health Insurance', value: +(30 + seededRandom(seed, 603) * 30).toFixed(1), benchmark: 55 },
+    { indicator: 'Vaccination Rate', value: +(65 + seededRandom(seed, 604) * 25).toFixed(1), benchmark: 85 },
+    { indicator: 'Nutrition Index', value: +(45 + seededRandom(seed, 605) * 35).toFixed(1), benchmark: 70 },
+  ];
+
+  const employmentData = Array.from({ length: 10 }, (_, i) => ({
+    year: `${2014 + i}`,
+    employmentRate: +(32 + i * 1.2 + seededRandom(seed, i + 700) * 5).toFixed(1),
+    formalSector: +(18 + i * 0.8 + seededRandom(seed, i + 800) * 3).toFixed(1),
+    informalSector: +(14 + i * 0.4 + seededRandom(seed, i + 900) * 2).toFixed(1),
+  }));
+
+  const entrepreneurshipData = [
+    { metric: 'Business Ownership', value: +(8 + seededRandom(seed, 1000) * 10).toFixed(1) },
+    { metric: 'Startup Formation', value: +(2 + seededRandom(seed, 1001) * 5).toFixed(1) },
+    { metric: 'Capital Access', value: +(15 + seededRandom(seed, 1002) * 15).toFixed(1) },
+    { metric: '5-yr Survival', value: +(25 + seededRandom(seed, 1003) * 20).toFixed(1) },
+    { metric: 'Digital Business', value: +(5 + seededRandom(seed, 1004) * 12).toFixed(1) },
+    { metric: 'Export Readiness', value: +(3 + seededRandom(seed, 1005) * 8).toFixed(1) },
+  ];
+
+  return { populationData, educationData, healthData, employmentData, entrepreneurshipData };
+}
+
+/* Stat card with framer-motion fade-in */
+function StatCard({
+  label,
+  value,
+  sub,
+  delay = 0,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay }}
+      className="border rounded-lg p-4 bg-card shadow-sm hover:shadow-md transition-shadow"
+    >
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-2xl font-bold mt-1">{value}</p>
+      <p className="text-xs text-muted-foreground mt-1">{sub}</p>
+    </motion.div>
+  );
+}
+
+const chartColors = {
+  c1: 'hsl(var(--chart-1))',
+  c2: 'hsl(var(--chart-2))',
+  c3: 'hsl(var(--chart-3))',
+  c4: 'hsl(var(--chart-4))',
+  c5: 'hsl(var(--chart-5))',
+};
+
+const CountryProfile = ({ country }: CountryProfileProps) => {
+  const data = useMemo(() => generateData(country), [country]);
+  const seed = useMemo(() => hashCode(country), [country]);
+
+  /* Derive a few display values from seeded data */
+  const latestPop = data.populationData[data.populationData.length - 1].population;
+  const youthPct = (19 + seededRandom(seed, 50) * 5).toFixed(1);
+  const urbanPct = (50 + seededRandom(seed, 51) * 18).toFixed(1);
+  const genderRatio = (99 + Math.round(seededRandom(seed, 52) * 6)).toString();
 
   return (
     <div className="container px-4 md:px-6 py-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-6">
-        <div className="flex items-start gap-4">
-          <div className="text-5xl">{countryData.flagEmoji}</div>
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              {countryData.name}
-              {youthIndex && (
-                <Badge variant="secondary" className="text-sm">
-                  Rank #{youthIndex.rank}
-                </Badge>
-              )}
-            </h1>
-            <p className="text-muted-foreground">{countryData.region}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Capital: {countryData.capital} • {countryData.iso2Code}
-            </p>
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6"
+      >
+        <div>
+          <div className="flex items-center gap-3">
+            <CountryFlag country={country} size="xl" />
+            <h1 className="text-3xl font-bold">{country}</h1>
           </div>
+          {(() => {
+            const meta = getCountryMeta(country);
+            return meta ? (
+              <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
+                <span>{meta.capital}</span>
+                <span className="text-border">|</span>
+                <div className="flex items-center gap-1.5">
+                  {meta.languages.map((lang) => (
+                    <Badge key={lang} variant="secondary" className="text-xs px-1.5 py-0">
+                      {lang}
+                    </Badge>
+                  ))}
+                </div>
+                <span className="text-border">|</span>
+                <span>{meta.currency}</span>
+              </div>
+            ) : null;
+          })()}
+          <p className="text-muted-foreground mt-1">Youth Profile Overview</p>
         </div>
         <div className="flex gap-2">
-          <QuickExportDropdown 
-            onExport={handleExport}
-            trigger={
-              <Button variant="outline" size="sm" className="gap-1">
-                <Download className="h-4 w-4" />
-                Export
-              </Button>
-            }
-          />
+          <Button variant="outline" size="sm" className="gap-1">
+            <Download className="h-4 w-4" />
+            Download Profile
+          </Button>
           <Button variant="outline" size="sm" className="gap-1">
             <ExternalLink className="h-4 w-4" />
             Share
           </Button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Key Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Total Population</p>
-            <p className="text-2xl font-bold">{formatNumber(countryData.population)}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {((countryData.youthPopulation / countryData.population) * 100).toFixed(1)}% youth
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Youth Population</p>
-            <p className="text-2xl font-bold text-blue-600">{formatNumber(countryData.youthPopulation)}</p>
-            <p className="text-xs text-muted-foreground mt-1">Ages 15-24</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Youth Index Score</p>
-            <p className="text-2xl font-bold text-green-600">
-              {youthIndex?.indexScore ? youthIndex.indexScore.toFixed(1) : 'N/A'}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {youthIndex?.rank ? `Rank #${youthIndex.rank} of 54` : 'Loading...'}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">Economic Bloc</p>
-            <p className="text-sm font-bold mt-1">
-              {countryData.economicBlocks.join(', ') || 'N/A'}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Currency: {countryData.currency}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Youth Index Dimensions */}
-      {youthIndex && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Youth Index Performance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <AYDRadarChart
-                data={[
-                  { subject: 'Education', score: youthIndex.educationScore || 0, fullMark: 100 },
-                  { subject: 'Health', score: youthIndex.healthScore || 0, fullMark: 100 },
-                  { subject: 'Employment', score: youthIndex.employmentScore || 0, fullMark: 100 },
-                  { subject: 'Civic', score: youthIndex.civicScore || 0, fullMark: 100 },
-                  { subject: 'Innovation', score: youthIndex.innovationScore || 0, fullMark: 100 },
-                ]}
-                title="Youth Development Dimensions"
-              />
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
-              <div className="text-center p-2 rounded-lg bg-muted">
-                <p className="text-xs text-muted-foreground">Education</p>
-                <p className="text-lg font-bold">{youthIndex.educationScore?.toFixed(1) || 'N/A'}</p>
-              </div>
-              <div className="text-center p-2 rounded-lg bg-muted">
-                <p className="text-xs text-muted-foreground">Health</p>
-                <p className="text-lg font-bold">{youthIndex.healthScore?.toFixed(1) || 'N/A'}</p>
-              </div>
-              <div className="text-center p-2 rounded-lg bg-muted">
-                <p className="text-xs text-muted-foreground">Employment</p>
-                <p className="text-lg font-bold">{youthIndex.employmentScore?.toFixed(1) || 'N/A'}</p>
-              </div>
-              <div className="text-center p-2 rounded-lg bg-muted">
-                <p className="text-xs text-muted-foreground">Civic</p>
-                <p className="text-lg font-bold">{youthIndex.civicScore?.toFixed(1) || 'N/A'}</p>
-              </div>
-              <div className="text-center p-2 rounded-lg bg-muted">
-                <p className="text-xs text-muted-foreground">Innovation</p>
-                <p className="text-lg font-bold">{youthIndex.innovationScore?.toFixed(1) || 'N/A'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      <Tabs defaultValue="overview" className="mt-6">
-        <TabsList className="grid w-full grid-cols-7 mb-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="education">Education</TabsTrigger>
-          <TabsTrigger value="health">Health</TabsTrigger>
-          <TabsTrigger value="employment">Employment</TabsTrigger>
-          <TabsTrigger value="innovation">Innovation</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
-          <TabsTrigger value="insights">AI Insights</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Country Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold mb-3">Demographics</h4>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex justify-between py-1 border-b">
-                      <span className="text-muted-foreground">Total Population:</span>
-                      <span className="font-medium">{formatNumber(countryData.population)}</span>
-                    </li>
-                    <li className="flex justify-between py-1 border-b">
-                      <span className="text-muted-foreground">Youth Population:</span>
-                      <span className="font-medium">{formatNumber(countryData.youthPopulation)}</span>
-                    </li>
-                    <li className="flex justify-between py-1 border-b">
-                      <span className="text-muted-foreground">Youth Percentage:</span>
-                      <span className="font-medium">{countryData.youthPercentage}%</span>
-                    </li>
-                    <li className="flex justify-between py-1 border-b">
-                      <span className="text-muted-foreground">Land Area:</span>
-                      <span className="font-medium">{formatNumber(countryData.area)} km²</span>
-                    </li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-3">Basic Information</h4>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex justify-between py-1 border-b">
-                      <span className="text-muted-foreground">Capital City:</span>
-                      <span className="font-medium">{countryData.capital}</span>
-                    </li>
-                    <li className="flex justify-between py-1 border-b">
-                      <span className="text-muted-foreground">Currency:</span>
-                      <span className="font-medium">{countryData.currency}</span>
-                    </li>
-                    <li className="flex justify-between py-1 border-b">
-                      <span className="text-muted-foreground">Languages:</span>
-                      <span className="font-medium">{countryData.languages.join(', ')}</span>
-                    </li>
-                    <li className="flex justify-between py-1 border-b">
-                      <span className="text-muted-foreground">Economic Blocs:</span>
-                      <span className="font-medium">{countryData.economicBlocks.join(', ')}</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="education" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Education Indicators - {countryData.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {literacyTrend && literacyTrend.length > 0 && (
-                <div className="h-[300px] mb-6">
-                  <AYDLineChart
-                    data={literacyTrend}
-                    title="Youth Literacy Rate Trend (2015-2024)"
-                    subtitle={getIndicatorById('edu001')?.name || 'Youth Literacy'}
+      {/* Demographic overview card */}
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="col-span-1 md:col-span-3">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="flex-1">
+                <h2 className="text-xl font-bold mb-4">Demographic Overview</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <StatCard
+                    label="Total Youth Population"
+                    value={`${latestPop}M`}
+                    sub="Ages 15-24"
+                    delay={0}
+                  />
+                  <StatCard
+                    label="Youth as % of Population"
+                    value={`${youthPct}%`}
+                    sub="National average: 20.4%"
+                    delay={0.1}
+                  />
+                  <StatCard
+                    label="Urban Youth"
+                    value={`${urbanPct}%`}
+                    sub="+3.2% since 2018"
+                    delay={0.2}
+                  />
+                  <StatCard
+                    label="Gender Ratio"
+                    value={`${genderRatio}:100`}
+                    sub="Males to females"
+                    delay={0.3}
                   />
                 </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div>
-                  <h4 className="font-semibold mb-3">Key Statistics</h4>
-                  <ul className="space-y-2 text-sm">
-                    {educationIndicators?.slice(0, 5).map(indicator => (
-                      <li key={indicator.id} className="flex justify-between py-1 border-b">
-                        <span className="text-muted-foreground">{indicator.name}:</span>
-                        <span className="font-medium">
-                          {/* This would show real values */}
-                          {(Math.random() * 30 + 60).toFixed(1)}%
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="flex-1"
+              >
+                <div className="h-[240px] rounded-lg overflow-hidden">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.populationData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} unit="M" />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          border: '1px solid hsl(var(--border))',
+                          backgroundColor: 'hsl(var(--popover))',
+                          color: 'hsl(var(--popover-foreground))',
+                        }}
+                      />
+                      <Bar dataKey="male" name="Male" stackId="a" fill={chartColors.c1} radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="female" name="Female" stackId="a" fill={chartColors.c2} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-                <div>
-                  <h4 className="font-semibold mb-3">Education Access</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Education remains a key priority for youth development in {countryData.name}, 
-                    with significant investments in infrastructure and programs.
-                  </p>
-                  <Badge variant="outline" className="mr-2">Secondary</Badge>
-                  <Badge variant="outline" className="mr-2">Tertiary</Badge>
-                  <Badge variant="outline">Vocational</Badge>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Youth population by gender for {country}, 2014-2023
+                </p>
+              </motion.div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="overview" className="mt-6">
+        <TabsList className="flex flex-wrap h-auto gap-1 mb-6">
+          <TabsTrigger value="overview" className="gap-1.5">
+            <Globe className="h-3.5 w-3.5" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="population" className="gap-1.5">
+            <Users className="h-3.5 w-3.5" />
+            Population
+          </TabsTrigger>
+          <TabsTrigger value="education" className="gap-1.5">
+            <GraduationCap className="h-3.5 w-3.5" />
+            Education
+          </TabsTrigger>
+          <TabsTrigger value="health" className="gap-1.5">
+            <Heart className="h-3.5 w-3.5" />
+            Health
+          </TabsTrigger>
+          <TabsTrigger value="employment" className="gap-1.5">
+            <Briefcase className="h-3.5 w-3.5" />
+            Employment
+          </TabsTrigger>
+          <TabsTrigger value="entrepreneurship" className="gap-1.5">
+            <Rocket className="h-3.5 w-3.5" />
+            Entrepreneurship
+          </TabsTrigger>
+          <TabsTrigger value="statistics" className="gap-1.5">
+            <TrendingUp className="h-3.5 w-3.5" />
+            Statistics
+          </TabsTrigger>
+          <TabsTrigger value="legal" className="gap-1.5">
+            <Scale className="h-3.5 w-3.5" />
+            Legal &amp; Policy
+          </TabsTrigger>
+          <TabsTrigger value="youth-action" className="gap-1.5">
+            <Megaphone className="h-3.5 w-3.5" />
+            Youth In Action
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ───── Overview Tab ───── */}
+        <TabsContent value="overview" className="space-y-6">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold mb-4">Country Snapshot</h3>
+                <p className="text-muted-foreground mb-6">
+                  {country} presents a dynamic youth landscape with a population of {latestPop}M young
+                  people aged 15-24. The country has experienced steady growth in youth education attainment
+                  and rising digital entrepreneurship, while challenges persist in formal employment and
+                  healthcare access across rural regions.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatCard label="Youth Population" value={`${latestPop}M`} sub="Ages 15-24" delay={0} />
+                  <StatCard
+                    label="Literacy Rate"
+                    value={`${data.educationData[data.educationData.length - 1].literacy}%`}
+                    sub="Youth 15-24"
+                    delay={0.1}
+                  />
+                  <StatCard
+                    label="Employment Rate"
+                    value={`${data.employmentData[data.employmentData.length - 1].employmentRate}%`}
+                    sub="Formal + informal"
+                    delay={0.2}
+                  />
+                  <StatCard
+                    label="Healthcare Access"
+                    value={`${data.healthData[0].value}%`}
+                    sub="Youth coverage"
+                    delay={0.3}
+                  />
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-xl font-bold mb-4">Youth Development Index Trends</h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={data.educationData.map((d, i) => ({
+                      year: d.year,
+                      education: d.literacy,
+                      employment: data.employmentData[i].employmentRate,
+                      health: +(55 + i * 1.5 + seededRandom(seed, i + 1100) * 5).toFixed(1),
+                    }))}
+                    margin={{ top: 8, right: 24, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        border: '1px solid hsl(var(--border))',
+                        backgroundColor: 'hsl(var(--popover))',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                    />
+                    <Legend />
+                    <Line type="monotone" dataKey="education" name="Education" stroke={chartColors.c1} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="employment" name="Employment" stroke={chartColors.c2} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="health" name="Health" stroke={chartColors.c3} strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-        
-        <TabsContent value="health" className="space-y-6">
+
+        {/* ───── Population Tab ───── */}
+        <TabsContent value="population" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Health Indicators - {countryData.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
+              <h3 className="text-xl font-bold mb-4">Youth Population Trends</h3>
+              <div className="h-[320px] mb-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.populationData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} unit="M" />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        border: '1px solid hsl(var(--border))',
+                        backgroundColor: 'hsl(var(--popover))',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                      formatter={(val: number) => [`${val}M`, undefined]}
+                    />
+                    <Legend />
+                    <Bar dataKey="male" name="Male" fill={chartColors.c1} radius={[0, 0, 0, 0]} stackId="pop" />
+                    <Bar dataKey="female" name="Female" fill={chartColors.c2} radius={[4, 4, 0, 0]} stackId="pop" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold mb-3">Key Health Metrics</h4>
+                  <h4 className="font-medium mb-2">Key Statistics</h4>
                   <ul className="space-y-2 text-sm">
-                    {healthIndicators?.slice(0, 5).map(indicator => (
-                      <li key={indicator.id} className="flex justify-between py-1 border-b">
-                        <span className="text-muted-foreground">{indicator.name}:</span>
-                        <span className="font-medium">
-                          {(Math.random() * 30 + 60).toFixed(1)}%
-                        </span>
-                      </li>
-                    ))}
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Annual growth rate:</span>
+                      <span className="font-medium">2.1%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Projected youth population (2030):</span>
+                      <span className="font-medium">{(latestPop * 1.27).toFixed(1)} million</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Youth dependency ratio:</span>
+                      <span className="font-medium">43.2%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Youth migration rate:</span>
+                      <span className="font-medium">+1.3%</span>
+                    </li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-3">Health Services</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Youth health services in {countryData.name} continue to expand with focus on 
-                    preventive care and mental health support.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="p-3 bg-muted rounded-lg">
-                      <p className="text-xs text-muted-foreground">Health Centers</p>
-                      <p className="text-lg font-bold">{Math.floor(Math.random() * 200 + 50)}</p>
-                    </div>
-                    <div className="p-3 bg-muted rounded-lg">
-                      <p className="text-xs text-muted-foreground">Coverage</p>
-                      <p className="text-lg font-bold">{(Math.random() * 30 + 60).toFixed(0)}%</p>
-                    </div>
-                  </div>
+                  <h4 className="font-medium mb-2">Regional Distribution</h4>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Central region:</span>
+                      <span className="font-medium">32.4%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Eastern region:</span>
+                      <span className="font-medium">26.7%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Northern region:</span>
+                      <span className="font-medium">18.5%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Southern region:</span>
+                      <span className="font-medium">22.4%</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-xl font-bold mb-4">Population Analysis</h3>
+              <p className="text-muted-foreground mb-4">
+                The youth population in {country} has been growing steadily over the past decade, with a
+                slight acceleration in urban areas. Migration from rural to urban centers continues to shape
+                the youth demographic landscape, with education and employment opportunities being the
+                primary drivers.
+              </p>
+              <p className="text-muted-foreground">
+                Gender distribution remains relatively balanced, though regional variations exist. The
+                central region has the highest concentration of youth, primarily due to educational
+                institutions and economic opportunities in urban centers.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ───── Education Tab ───── */}
+        <TabsContent value="education" className="space-y-6">
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-xl font-bold mb-4">Education Indicators</h3>
+              <div className="h-[320px] mb-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data.educationData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} unit="%" />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        border: '1px solid hsl(var(--border))',
+                        backgroundColor: 'hsl(var(--popover))',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                      formatter={(val: number) => [`${val}%`, undefined]}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="literacy"
+                      name="Literacy Rate"
+                      stroke={chartColors.c1}
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="secondaryEnrollment"
+                      name="Secondary Enrollment"
+                      stroke={chartColors.c2}
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="tertiaryEnrollment"
+                      name="Tertiary Enrollment"
+                      stroke={chartColors.c3}
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-medium mb-2">Key Statistics</h4>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Youth literacy rate:</span>
+                      <span className="font-medium">
+                        {data.educationData[data.educationData.length - 1].literacy}%
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Secondary enrollment:</span>
+                      <span className="font-medium">
+                        {data.educationData[data.educationData.length - 1].secondaryEnrollment}%
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Tertiary enrollment:</span>
+                      <span className="font-medium">
+                        {data.educationData[data.educationData.length - 1].tertiaryEnrollment}%
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Secondary completion:</span>
+                      <span className="font-medium">65.3%</span>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Gender Analysis</h4>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Female literacy:</span>
+                      <span className="font-medium">79.8%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Male literacy:</span>
+                      <span className="font-medium">85.1%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Gender parity (secondary):</span>
+                      <span className="font-medium">0.92</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Gender parity (tertiary):</span>
+                      <span className="font-medium">0.87</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-        
+
+        {/* ───── Health Tab ───── */}
+        <TabsContent value="health" className="space-y-6">
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-xl font-bold mb-4">Health Indicators</h3>
+              <div className="h-[320px] mb-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.healthData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis type="number" tick={{ fontSize: 11 }} domain={[0, 100]} />
+                    <YAxis dataKey="indicator" type="category" tick={{ fontSize: 11 }} width={120} />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        border: '1px solid hsl(var(--border))',
+                        backgroundColor: 'hsl(var(--popover))',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="value" name={country} fill={chartColors.c1} radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="benchmark" name="AU Benchmark" fill={chartColors.c4} radius={[0, 4, 4, 0]} opacity={0.6} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-medium mb-2">Key Statistics</h4>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Access to healthcare:</span>
+                      <span className="font-medium">{data.healthData[0].value}%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">HIV prevalence (15-24):</span>
+                      <span className="font-medium">{data.healthData[1].value}%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Mental health coverage:</span>
+                      <span className="font-medium">{data.healthData[2].value}%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Youth health insurance:</span>
+                      <span className="font-medium">{data.healthData[3].value}%</span>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Health Services</h4>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Youth-friendly health centers:</span>
+                      <span className="font-medium">{Math.round(120 + seededRandom(seed, 700) * 150)}</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Mental health facilities:</span>
+                      <span className="font-medium">{Math.round(40 + seededRandom(seed, 701) * 80)}</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Reproductive health clinics:</span>
+                      <span className="font-medium">{Math.round(180 + seededRandom(seed, 702) * 150)}</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Health expenditure per youth:</span>
+                      <span className="font-medium">${Math.round(25 + seededRandom(seed, 703) * 50)} USD</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ───── Employment Tab ───── */}
         <TabsContent value="employment" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Employment Indicators - {countryData.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {unemploymentTrend && unemploymentTrend.length > 0 && (
-                <div className="h-[300px] mb-6">
-                  <AYDLineChart
-                    data={unemploymentTrend}
-                    title="Youth Unemployment Trend (2015-2024)"
-                    subtitle={getIndicatorById('emp001')?.name || 'Youth Unemployment'}
-                  />
-                </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-bold mb-4">Employment Trends</h3>
+              <div className="h-[320px] mb-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={data.employmentData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gradFormal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={chartColors.c1} stopOpacity={0.4} />
+                        <stop offset="95%" stopColor={chartColors.c1} stopOpacity={0.05} />
+                      </linearGradient>
+                      <linearGradient id="gradInformal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={chartColors.c3} stopOpacity={0.4} />
+                        <stop offset="95%" stopColor={chartColors.c3} stopOpacity={0.05} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} unit="%" />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        border: '1px solid hsl(var(--border))',
+                        backgroundColor: 'hsl(var(--popover))',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                      formatter={(val: number) => [`${val}%`, undefined]}
+                    />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="formalSector"
+                      name="Formal Sector"
+                      stroke={chartColors.c1}
+                      fill="url(#gradFormal)"
+                      strokeWidth={2}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="informalSector"
+                      name="Informal Sector"
+                      stroke={chartColors.c3}
+                      fill="url(#gradInformal)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold mb-3">Employment Statistics</h4>
+                  <h4 className="font-medium mb-2">Key Statistics</h4>
                   <ul className="space-y-2 text-sm">
-                    {employmentIndicators?.slice(0, 5).map(indicator => (
-                      <li key={indicator.id} className="flex justify-between py-1 border-b">
-                        <span className="text-muted-foreground">{indicator.name}:</span>
-                        <span className="font-medium">
-                          {(Math.random() * 30 + 40).toFixed(1)}%
-                        </span>
-                      </li>
-                    ))}
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Youth unemployment rate:</span>
+                      <span className="font-medium">
+                        {(100 - data.employmentData[data.employmentData.length - 1].employmentRate).toFixed(1)}%
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Labor force participation:</span>
+                      <span className="font-medium">
+                        {data.employmentData[data.employmentData.length - 1].employmentRate}%
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Informal employment:</span>
+                      <span className="font-medium">67.8%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">NEET rate:</span>
+                      <span className="font-medium">23.4%</span>
+                    </li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-3">Sector Distribution</h4>
-                  <div className="space-y-2">
-                    {['Services', 'Agriculture', 'Manufacturing', 'Technology'].map((sector, i) => (
-                      <div key={sector} className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">{sector}:</span>
-                        <div className="flex-1 mx-3 bg-muted rounded-full h-2">
-                          <div 
-                            className="bg-primary rounded-full h-2" 
-                            style={{ width: `${Math.random() * 50 + 20}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium">{(Math.random() * 40 + 10).toFixed(0)}%</span>
-                      </div>
-                    ))}
-                  </div>
+                  <h4 className="font-medium mb-2">Industry Distribution</h4>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Services:</span>
+                      <span className="font-medium">41.2%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Agriculture:</span>
+                      <span className="font-medium">28.7%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Manufacturing:</span>
+                      <span className="font-medium">14.3%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Technology/ICT:</span>
+                      <span className="font-medium">9.8%</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-        
-        <TabsContent value="innovation" className="space-y-6">
+
+        {/* ───── Entrepreneurship Tab ───── */}
+        <TabsContent value="entrepreneurship" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Innovation & Technology - {countryData.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {internetTrend && internetTrend.length > 0 && (
-                <div className="h-[300px] mb-6">
-                  <AYDLineChart
-                    data={internetTrend}
-                    title="Internet Penetration Trend (2015-2024)"
-                    subtitle={getIndicatorById('inn001')?.name || 'Internet Access'}
-                  />
-                </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-bold mb-4">Entrepreneurship Metrics</h3>
+              <div className="h-[320px] mb-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.entrepreneurshipData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="metric" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={60} />
+                    <YAxis tick={{ fontSize: 11 }} unit="%" />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        border: '1px solid hsl(var(--border))',
+                        backgroundColor: 'hsl(var(--popover))',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                      formatter={(val: number) => [`${val}%`, undefined]}
+                    />
+                    <Bar dataKey="value" name="Rate (%)" fill={chartColors.c5} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold mb-3">Innovation Metrics</h4>
+                  <h4 className="font-medium mb-2">Key Statistics</h4>
                   <ul className="space-y-2 text-sm">
-                    {innovationIndicators?.slice(0, 5).map(indicator => (
-                      <li key={indicator.id} className="flex justify-between py-1 border-b">
-                        <span className="text-muted-foreground">{indicator.name}:</span>
-                        <span className="font-medium">
-                          {(Math.random() * 40 + 30).toFixed(1)}%
-                        </span>
-                      </li>
-                    ))}
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Youth business ownership:</span>
+                      <span className="font-medium">{data.entrepreneurshipData[0].value}%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Startup formation rate:</span>
+                      <span className="font-medium">{data.entrepreneurshipData[1].value}%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Access to startup capital:</span>
+                      <span className="font-medium">{data.entrepreneurshipData[2].value}%</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">5-year business survival:</span>
+                      <span className="font-medium">{data.entrepreneurshipData[3].value}%</span>
+                    </li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-3">Tech Ecosystem</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    {countryData.name} is fostering innovation through tech hubs, 
-                    incubators, and digital skills programs for youth.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="p-3 bg-muted rounded-lg">
-                      <p className="text-xs text-muted-foreground">Tech Hubs</p>
-                      <p className="text-lg font-bold">{Math.floor(Math.random() * 50 + 10)}</p>
-                    </div>
-                    <div className="p-3 bg-muted rounded-lg">
-                      <p className="text-xs text-muted-foreground">Startups</p>
-                      <p className="text-lg font-bold">{Math.floor(Math.random() * 500 + 100)}</p>
-                    </div>
-                  </div>
+                  <h4 className="font-medium mb-2">Entrepreneurship Support</h4>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Incubators/accelerators:</span>
+                      <span className="font-medium">{Math.round(15 + seededRandom(seed, 1100) * 30)}</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Youth innovation hubs:</span>
+                      <span className="font-medium">{Math.round(25 + seededRandom(seed, 1101) * 40)}</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Entrepreneurship programs:</span>
+                      <span className="font-medium">{Math.round(40 + seededRandom(seed, 1102) * 50)}</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Youth investment funds:</span>
+                      <span className="font-medium">
+                        ${(5 + seededRandom(seed, 1103) * 20).toFixed(1)}M USD
+                      </span>
+                    </li>
+                  </ul>
                 </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-        
-        <TabsContent value="trends" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Historical Trends - {countryData.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6">
-                {literacyTrend && literacyTrend.length > 0 && (
-                  <div className="h-[250px]">
-                    <AYDLineChart
-                      data={literacyTrend}
-                      title="Youth Literacy Rate"
-                    />
-                  </div>
-                )}
-                {unemploymentTrend && unemploymentTrend.length > 0 && (
-                  <div className="h-[250px]">
-                    <AYDLineChart
-                      data={unemploymentTrend}
-                      title="Youth Unemployment Rate"
-                    />
-                  </div>
-                )}
-                {internetTrend && internetTrend.length > 0 && (
-                  <div className="h-[250px]">
-                    <AYDLineChart
-                      data={internetTrend}
-                      title="Internet Penetration"
-                    />
-                  </div>
-                )}
-              </div>
-              <div className="mt-6 p-4 bg-muted rounded-lg">
-                <h4 className="font-semibold mb-2">Trend Analysis</h4>
-                <p className="text-sm text-muted-foreground">
-                  {countryData.name} has shown consistent progress across multiple youth development 
-                  indicators from 2015 to 2024, with notable improvements in education access, 
-                  technology adoption, and employment opportunities.
+
+        {/* ───── Statistics Tab ───── */}
+        <TabsContent value="statistics" className="space-y-6">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold">Comparative Statistics</h3>
+                  <Badge variant="secondary">2023 Data</Badge>
+                </div>
+                <p className="text-muted-foreground mb-6">
+                  A side-by-side view of key youth development indicators for {country} compared to
+                  regional and continental averages.
                 </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <StatCard label="Youth HDI Score" value="0.58" sub="Regional avg: 0.52" delay={0} />
+                  <StatCard label="Digital Literacy" value="38.2%" sub="Continental avg: 31.7%" delay={0.05} />
+                  <StatCard label="Youth Poverty Rate" value="34.6%" sub="Target: <20% by 2030" delay={0.1} />
+                  <StatCard label="STEM Enrollment" value="14.3%" sub="+2.1pp from 2020" delay={0.15} />
+                  <StatCard label="Youth Civic Participation" value="27.8%" sub="Voter turnout 15-24" delay={0.2} />
+                  <StatCard label="Internet Penetration" value="52.4%" sub="Youth 15-24" delay={0.25} />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-xl font-bold mb-4">Cross-Sector Trends</h3>
+              <div className="h-[320px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={data.educationData.map((d, i) => ({
+                      year: d.year,
+                      education: d.literacy,
+                      employment: data.employmentData[i].employmentRate,
+                      entrepreneurship: +(5 + i * 1.2 + seededRandom(seed, i + 1200) * 3).toFixed(1),
+                    }))}
+                    margin={{ top: 8, right: 24, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="gradEdu" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={chartColors.c1} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={chartColors.c1} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="gradEmp" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={chartColors.c2} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={chartColors.c2} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        border: '1px solid hsl(var(--border))',
+                        backgroundColor: 'hsl(var(--popover))',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                    />
+                    <Legend />
+                    <Area type="monotone" dataKey="education" name="Education Index" stroke={chartColors.c1} fill="url(#gradEdu)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="employment" name="Employment Rate" stroke={chartColors.c2} fill="url(#gradEmp)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="entrepreneurship" name="Entrepreneurship" stroke={chartColors.c5} fill="none" strokeWidth={2} strokeDasharray="5 5" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-        
-        {/* AI Insights Tab */}
-        <TabsContent value="insights" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-yellow-500" />
-                <CardTitle>AI-Powered Insights for {countryData.name}</CardTitle>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Intelligent analysis of youth development data, identifying key trends, opportunities, and recommendations.
-              </p>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                const insights = getCountryInsights(countryData.id, 2024);
-                return insights.length > 0 ? (
+
+        {/* ───── Legal & Policy Tab ───── */}
+        <TabsContent value="legal" className="space-y-6">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold">Legal &amp; Policy Framework</h3>
+                  <Badge variant="outline">Last Updated: 2023</Badge>
+                </div>
+                <p className="text-muted-foreground mb-6">
+                  An overview of the legislative and policy environment affecting youth in {country},
+                  including national youth policies, AU charter alignment, and sector-specific regulations.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    {insights.map((insight) => (
-                      <InsightCard key={insight.id} insight={insight} />
-                    ))}
+                    <h4 className="font-medium">National Youth Policy</h4>
+                    <ul className="space-y-3 text-sm">
+                      <li className="flex items-start gap-2">
+                        <Badge className="mt-0.5 shrink-0" variant="secondary">Active</Badge>
+                        <div>
+                          <p className="font-medium">National Youth Policy &amp; Action Plan</p>
+                          <p className="text-muted-foreground text-xs">Adopted 2019, revised 2022. Covers education, employment, health, and civic participation.</p>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Badge className="mt-0.5 shrink-0" variant="secondary">Active</Badge>
+                        <div>
+                          <p className="font-medium">Youth Employment Strategy</p>
+                          <p className="text-muted-foreground text-xs">2020-2030 framework targeting 40% reduction in youth unemployment.</p>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Badge className="mt-0.5 shrink-0" variant="outline">Pending</Badge>
+                        <div>
+                          <p className="font-medium">Digital Youth Empowerment Act</p>
+                          <p className="text-muted-foreground text-xs">Draft legislation on digital skills, online safety, and tech entrepreneurship support.</p>
+                        </div>
+                      </li>
+                    </ul>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Lightbulb className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No insights available for this country yet.</p>
-                    <p className="text-sm">Check back as more data becomes available.</p>
+
+                  <div className="space-y-4">
+                    <h4 className="font-medium">AU Charter Alignment</h4>
+                    <ul className="space-y-3 text-sm">
+                      <li className="flex justify-between">
+                        <span className="text-muted-foreground">African Youth Charter ratification:</span>
+                        <Badge variant="secondary">Ratified</Badge>
+                      </li>
+                      <li className="flex justify-between">
+                        <span className="text-muted-foreground">Agenda 2063 youth targets:</span>
+                        <span className="font-medium">Partially aligned</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span className="text-muted-foreground">Youth ministry established:</span>
+                        <span className="font-medium">Yes</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span className="text-muted-foreground">Youth budget allocation:</span>
+                        <span className="font-medium">3.2% of GDP</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span className="text-muted-foreground">Youth council/parliament:</span>
+                        <span className="font-medium">Active since 2017</span>
+                      </li>
+                    </ul>
                   </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+        {/* ───── Youth In Action Tab ───── */}
+        <TabsContent value="youth-action" className="space-y-6">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold">Youth In Action</h3>
+                  <Badge>Spotlight</Badge>
+                </div>
+                <p className="text-muted-foreground mb-6">
+                  Highlighting youth-led initiatives, organizations, and success stories from {country}
+                  that are driving positive change across the continent.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  {[
+                    {
+                      title: 'Youth Innovation Challenge',
+                      desc: 'Annual tech competition with 2,400+ participants creating solutions for local challenges.',
+                      badge: 'Innovation',
+                    },
+                    {
+                      title: 'Green Youth Movement',
+                      desc: 'Climate action network of 15,000 young people focused on sustainable agriculture and reforestation.',
+                      badge: 'Climate',
+                    },
+                    {
+                      title: 'Digital Skills Academy',
+                      desc: 'Free coding bootcamp that has trained 8,000 youth in software development and digital marketing.',
+                      badge: 'Education',
+                    },
+                  ].map((item, i) => (
+                    <motion.div
+                      key={item.title}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: i * 0.1 }}
+                    >
+                      <Card className="h-full">
+                        <CardContent className="p-4">
+                          <Badge variant="outline" className="mb-2">{item.badge}</Badge>
+                          <h4 className="font-semibold mb-1">{item.title}</h4>
+                          <p className="text-sm text-muted-foreground">{item.desc}</p>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatCard label="Active Youth Orgs" value={`${Math.round(200 + seededRandom(seed, 1300) * 300)}`} sub="Registered NGOs" delay={0} />
+                  <StatCard label="Youth Volunteers" value={`${(50 + seededRandom(seed, 1301) * 100).toFixed(0)}K`} sub="Annual participants" delay={0.1} />
+                  <StatCard label="Community Projects" value={`${Math.round(500 + seededRandom(seed, 1302) * 800)}`} sub="Youth-led initiatives" delay={0.2} />
+                  <StatCard label="Int'l Programs" value={`${Math.round(20 + seededRandom(seed, 1303) * 40)}`} sub="Exchange & fellowship" delay={0.3} />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
       </Tabs>
     </div>

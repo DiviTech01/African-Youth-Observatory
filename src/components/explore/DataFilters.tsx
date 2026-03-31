@@ -53,12 +53,12 @@ const DataFilters = ({
     : ["Select a theme first"];
 
   return (
-    <div className="space-y-6 p-4 border rounded-lg bg-card">
+    <div className="space-y-6 p-4 rounded-2xl border border-gray-800 bg-white/[0.03]">
       <div>
-        <h3 className="text-lg font-semibold mb-4">Data Filters</h3>
+        <h3 className="text-lg font-semibold mb-4 bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">Data Filters</h3>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="country">Country</Label>
+            <Label htmlFor="country" className="text-gray-300">Country</Label>
             <Select 
               value={selectedCountry} 
               onValueChange={setSelectedCountry}
@@ -77,7 +77,7 @@ const DataFilters = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="theme">Theme</Label>
+            <Label htmlFor="theme" className="text-gray-300">Theme</Label>
             <Select 
               value={selectedTheme} 
               onValueChange={(value) => {
@@ -99,7 +99,7 @@ const DataFilters = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="indicator">Indicator</Label>
+            <Label htmlFor="indicator" className="text-gray-300">Indicator</Label>
             <Select 
               value={selectedIndicator} 
               onValueChange={setSelectedIndicator}
@@ -120,8 +120,8 @@ const DataFilters = ({
 
           <div className="space-y-4 pt-2">
             <div className="flex justify-between">
-              <Label>Year Range</Label>
-              <span className="text-sm text-muted-foreground">
+              <Label className="text-gray-300">Year Range</Label>
+              <span className="text-sm text-[#A89070]">
                 {yearRange[0]} - {yearRange[1]}
               </span>
             </div>
@@ -136,7 +136,7 @@ const DataFilters = ({
           </div>
 
           <div className="space-y-2 pt-2">
-            <Label htmlFor="gender">Gender</Label>
+            <Label htmlFor="gender" className="text-gray-300">Gender</Label>
             <Select defaultValue="all">
               <SelectTrigger id="gender">
                 <SelectValue placeholder="Select gender" />
@@ -150,7 +150,7 @@ const DataFilters = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="age">Age Group</Label>
+            <Label htmlFor="age" className="text-gray-300">Age Group</Label>
             <Select defaultValue="15-24">
               <SelectTrigger id="age">
                 <SelectValue placeholder="Select age group" />

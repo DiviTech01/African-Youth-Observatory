@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { CompareCountriesDto, CompareRegionsDto, CompareThemesDto } from './compare.dto';
+import { formatRegion } from '../../common/utils/format';
 
 @Injectable()
 export class CompareService {
@@ -174,8 +175,10 @@ export class CompareService {
         countryId: country.id,
         countryName: country.name,
         isoCode3: country.isoCode3,
+        isoCode: country.isoCode3,
+        iso3Code: country.isoCode3,
         flagEmoji: country.flagEmoji,
-        region: country.region,
+        region: formatRegion(country.region),
         youthIndexRank: ys?.rank ?? null,
         youthIndexScore: ys?.overallScore ?? null,
         indicators: countryIndicators,
@@ -247,7 +250,7 @@ export class CompareService {
         const entries = regionGroups.get(region) || [];
         if (entries.length === 0) {
           return {
-            region,
+            region: formatRegion(region),
             average: null,
             median: null,
             min: null,
@@ -266,7 +269,7 @@ export class CompareService {
           : vals[Math.floor(vals.length / 2)];
 
         return {
-          region,
+          region: formatRegion(region),
           average,
           median,
           min: { country: sorted[0].country, value: sorted[0].value },
@@ -447,7 +450,7 @@ export class CompareService {
     }
 
     return {
-      country: { name: country.name, isoCode3: country.isoCode3, flagEmoji: country.flagEmoji },
+      country: { name: country.name, isoCode3: country.isoCode3, isoCode: country.isoCode3, iso3Code: country.isoCode3, flagEmoji: country.flagEmoji, region: formatRegion(country.region) },
       year,
       themes: themeResults,
     };

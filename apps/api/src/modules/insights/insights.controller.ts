@@ -69,4 +69,15 @@ export class InsightsController {
   getNarrative(@Param('countryId') countryId: string) {
     return this.narrativeService.generateNarrative(countryId);
   }
+
+  /**
+   * Alias: frontend calls GET /insights/:countryId directly.
+   * Placed LAST so specific routes (status, anomalies, correlations, trend, narrative) match first.
+   */
+  @Public()
+  @Get(':countryId')
+  @ApiOperation({ summary: 'Alias — get AI insights for a country (frontend compat)' })
+  getCountryInsightsAlias(@Param('countryId') countryId: string) {
+    return this.insightsService.generateCountryInsights(countryId);
+  }
 }

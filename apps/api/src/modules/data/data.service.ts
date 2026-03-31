@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
+import { formatRegion, parseRegion } from '../../common/utils/format';
 import {
   DataValuesQueryDto,
   TimeSeriesQueryDto,
@@ -41,7 +42,7 @@ export class DataService {
     if (gender) where.gender = gender;
     if (ageGroup) where.ageGroup = ageGroup;
     if (themeId) where.indicator = { themeId };
-    if (region) where.country = { region };
+    if (region) where.country = { region: parseRegion(region) };
 
     if (yearStart || yearEnd) {
       where.year = {};
@@ -172,8 +173,10 @@ export class DataService {
         countryId: c.id,
         countryName: c.name,
         isoCode3: c.isoCode3,
+        isoCode: c.isoCode3,
+        iso3Code: c.isoCode3,
         flagEmoji: c.flagEmoji,
-        region: c.region,
+        region: formatRegion(c.region),
         value: valueMap.get(c.id) ?? null,
         year,
       })),
@@ -228,8 +231,10 @@ export class DataService {
           countryId: v.country.id,
           countryName: v.country.name,
           isoCode3: v.country.isoCode3,
+          isoCode: v.country.isoCode3,
+          iso3Code: v.country.isoCode3,
           flagEmoji: v.country.flagEmoji,
-          region: v.country.region,
+          region: formatRegion(v.country.region),
           values: [],
         });
       }
@@ -293,7 +298,7 @@ export class DataService {
     }
 
     const result = Array.from(grouped.values()).map((g) => ({
-      region: g.region,
+      region: formatRegion(g.region),
       indicatorId: g.indicatorId,
       indicatorName: g.indicatorName,
       unit: g.unit,
@@ -390,7 +395,7 @@ export class DataService {
     }
 
     return Array.from(regionData.entries()).map(([region, rd]) => ({
-      region,
+      region: formatRegion(region),
       countryCount: rd.countries.size,
       overallAverage: rd.values.length > 0
         ? Math.round((rd.values.reduce((a, b) => a + b, 0) / rd.values.length) * 100) / 100

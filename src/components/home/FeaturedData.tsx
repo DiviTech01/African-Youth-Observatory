@@ -1,100 +1,100 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ChartBar, ChartPie, Download } from 'lucide-react';
+import { BarChart3, PieChart, TrendingUp, ArrowRight, Download } from 'lucide-react';
+// African divider removed
+
+const featuredItems = [
+  {
+    icon: BarChart3,
+    title: 'Youth Unemployment Trends',
+    description: 'Analysis of youth unemployment rates across African regions from 2010-2023.',
+    color: 'from-green-500/20 to-green-500/5',
+    iconColor: 'text-green-400',
+    borderColor: 'border-green-500/20 hover:border-green-500/40',
+    link: '/explore?theme=employment',
+  },
+  {
+    icon: PieChart,
+    title: 'Education Access by Gender',
+    description: 'Comparative analysis of education access and completion rates by gender.',
+    color: 'from-blue-500/20 to-blue-500/5',
+    iconColor: 'text-blue-400',
+    borderColor: 'border-blue-500/20 hover:border-blue-500/40',
+    link: '/explore?theme=education',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Youth-led Entrepreneurship',
+    description: 'Emerging trends in youth entrepreneurship and business formation across Africa.',
+    color: 'from-orange-500/20 to-orange-500/5',
+    iconColor: 'text-orange-400',
+    borderColor: 'border-orange-500/20 hover:border-orange-500/40',
+    link: '/explore?theme=entrepreneurship',
+  },
+];
 
 const FeaturedData = () => {
   return (
-    <section className="py-8 md:py-12 bg-muted/50">
-      <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-3 md:space-y-4 text-center">
-          <div className="space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter md:text-4xl">
-              Featured Insights
-            </h2>
-            <p className="max-w-[700px] text-sm sm:text-base text-muted-foreground md:text-xl mx-auto">
-              Explore our latest visualizations and reports on African youth development.
-            </p>
-          </div>
+    <section className="relative py-16 md:py-24 bg-black overflow-hidden">
+      {/* Subtle radial glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/[0.02] rounded-full blur-3xl" />
+
+      <div className="container px-4 md:px-6 relative z-10">
+        <div className="flex flex-col items-center justify-center space-y-3 md:space-y-4 text-center mb-10 md:mb-14">
+          <h2
+            className="text-3xl sm:text-4xl font-semibold tracking-tighter md:text-5xl
+            bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40
+            bg-clip-text text-transparent"
+          >
+            Featured Insights
+          </h2>
+          <p className="max-w-[700px] text-sm sm:text-base text-[#A89070] md:text-lg">
+            Explore our latest visualizations and reports on African youth development.
+          </p>
         </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mt-6 md:mt-8">
-          <Card className="overflow-hidden">
-            <div className="aspect-video bg-pan-green-100 relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <ChartBar className="w-10 h-10 md:w-12 md:h-12 text-pan-green-500" />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredItems.map((item, index) => (
+            <Link
+              key={index}
+              to={item.link}
+              className={`group relative rounded-2xl border ${item.borderColor} bg-white/[0.03] backdrop-blur-sm p-6 transition-all duration-300 hover:-translate-y-1`}
+            >
+              {/* Gradient top accent */}
+              <div className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${item.color}`} />
+
+              {/* Icon */}
+              <div className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-4 group-hover:bg-white/10 transition-colors`}>
+                <item.icon className={`w-6 h-6 ${item.iconColor}`} />
               </div>
-            </div>
-            <CardContent className="p-4 md:p-6">
-              <h3 className="text-lg md:text-xl font-bold mb-2">Youth Unemployment Trends</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-3 md:mb-4">
-                Analysis of youth unemployment rates across African regions from 2010-2023.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="gap-1 text-xs">
-                  <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                  Download
-                </Button>
-                <Button size="sm" className="text-xs">
-                  View Data
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="overflow-hidden">
-            <div className="aspect-video bg-pan-blue-100 relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <ChartPie className="w-10 h-10 md:w-12 md:h-12 text-pan-blue-500" />
-              </div>
-            </div>
-            <CardContent className="p-4 md:p-6">
-              <h3 className="text-lg md:text-xl font-bold mb-2">Education Access by Gender</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-3 md:mb-4">
-                Comparative analysis of education access and completion rates by gender.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="gap-1 text-xs">
-                  <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                  Download
-                </Button>
-                <Button size="sm" className="text-xs">
-                  View Data
+
+              {/* Content */}
+              <h3 className="text-lg font-semibold text-white mb-2 tracking-tight">{item.title}</h3>
+              <p className="text-sm text-gray-400 mb-6 leading-relaxed">{item.description}</p>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500 group-hover:text-white transition-colors flex items-center gap-1">
+                  Explore
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </span>
+                <Button variant="ghost" size="sm" className="text-gray-500 hover:text-white h-8 px-2">
+                  <Download className="w-4 h-4" />
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="overflow-hidden sm:col-span-2 lg:col-span-1">
-            <div className="aspect-video bg-pan-orange-100 relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <ChartBar className="w-10 h-10 md:w-12 md:h-12 text-pan-orange-500" />
-              </div>
-            </div>
-            <CardContent className="p-4 md:p-6">
-              <h3 className="text-lg md:text-xl font-bold mb-2">Youth-led Entrepreneurship</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-3 md:mb-4">
-                Emerging trends in youth entrepreneurship and business formation.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="gap-1 text-xs">
-                  <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                  Download
-                </Button>
-                <Button size="sm" className="text-xs">
-                  View Data
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            </Link>
+          ))}
         </div>
-        
-        <div className="mt-8 md:mt-10 flex justify-center">
+
+        <div className="mt-10 md:mt-14 flex justify-center">
           <Link to="/reports">
-            <Button variant="outline" size="default" className="text-sm">
+            <Button
+              variant="outline"
+              className="border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 tracking-tight"
+            >
               View All Reports
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
         </div>

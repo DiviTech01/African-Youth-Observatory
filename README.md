@@ -1,73 +1,91 @@
-# Welcome to your Lovable project
+# African Youth Database (AYD)
 
-## Project info
+The definitive data intelligence platform for youth-disaggregated data across all 54 African countries.
 
-**URL**: https://lovable.dev/projects/df5a41f3-54bb-4cf2-93bb-c95d74b8d753
+## Features
 
-## How can I edit this code?
+- **Data Explorer** - Interactive maps, charts, and filters across 59+ indicators
+- **Youth Index** - Composite ranking of all 54 countries across 5 dimensions
+- **AI Insights** - Trend detection, anomaly alerts, and natural language queries
+- **Policy Monitor** - AYC compliance tracking and policy gap analysis
+- **Expert Directory** - Searchable database of African youth professionals
+- **Dashboard Builder** - Custom dashboards with save/share/embed
+- **Export Engine** - CSV, JSON, Excel, PDF with full metadata
+- **Live Feed** - Real-time data ticker and platform activity
+- **Embeddable Widgets** - Chart.js bar/line charts, stat cards, SVG maps for external sites
+- **Global Search** - Unified search across countries, indicators, themes, experts, dashboards
+- **Multilingual** - English, French, Arabic, Portuguese, Swahili
 
-There are several ways of editing your application.
+## Quick Start
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/df5a41f3-54bb-4cf2-93bb-c95d74b8d753) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+git clone https://github.com/DiviTech01/African-Youth-Database.git
+cd African-Youth-Database
+pnpm install
+pnpm setup   # Starts DB, seeds data, imports World Bank data
 ```
 
-**Edit a file directly in GitHub**
+Or manually:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+# 1. Start PostgreSQL
+docker compose up -d
 
-**Use GitHub Codespaces**
+# 2. Create schema + seed
+cd packages/database && npx prisma db push && cd ../..
+pnpm db:seed
+pnpm seed:policies
+pnpm seed:experts
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# 3. Import real data
+pnpm import:worldbank
 
-## What technologies are used for this project?
+# 4. Start servers
+cd apps/api && pnpm dev     # API on http://localhost:3001
+cd ../.. && pnpm dev        # Frontend on http://localhost:8080
+```
 
-This project is built with:
+**Admin login:** `admin@africanyouthdatabase.org` / `AYD@Admin2026!`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Tech Stack
 
-## How can I deploy this project?
+| Layer | Tech |
+|-------|------|
+| Frontend | React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui, Recharts, Framer Motion |
+| Backend | NestJS, TypeScript, Prisma ORM, PostgreSQL |
+| AI | Anthropic Claude API (with rule-based fallback) |
+| Auth | JWT + Passport.js, bcryptjs, RBAC (6 roles) |
+| Real-time | Socket.IO WebSocket gateway |
+| Rate Limiting | @nestjs/throttler |
 
-Simply open [Lovable](https://lovable.dev/projects/df5a41f3-54bb-4cf2-93bb-c95d74b8d753) and click on Share -> Publish.
+## API Documentation
 
-## Can I connect a custom domain to my Lovable project?
+Swagger UI: `http://localhost:3001/api/docs`
 
-Yes, you can!
+19 modules, 60+ endpoints:
+countries, indicators, data, youth-index, compare, policy-monitor, insights, nlq, experts, dashboards, export, embed, search, admin, live-feed, auth, platform.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Data Sources
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- World Bank Open Data (40+ indicators)
+- ILO STAT (employment, labor force)
+- UNESCO UIS (education)
+- African Union (policy data)
+- National Statistics Bureaus
+
+## Project Structure
+
+```
+.
+├── apps/api/          # NestJS backend (19 modules)
+├── packages/database/ # Prisma schema + migrations
+├── packages/shared/   # Shared TypeScript types
+├── src/               # React frontend (Vite)
+├── seed/              # JSON seed data (countries, themes, indicators, policies, experts)
+├── scripts/           # Import + seed scripts
+└── docker-compose.yml # PostgreSQL dev server
+```
+
+## License
+
+CC BY 4.0

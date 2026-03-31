@@ -138,8 +138,9 @@
     @apply border-border;
   }
 
-  html, body, #root {
-    @apply min-h-screen;
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
   }
 
   body {
@@ -214,4 +215,37 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground/50;
+}
+
+/* Hero animations */
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.8s ease-out forwards;
+  animation-delay: 0.2s;
+}
+
+.animate-fade-up {
+  animation: fade-up 1s ease-out forwards;
+  animation-delay: 0.4s;
 }

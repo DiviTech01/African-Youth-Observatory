@@ -11,10 +11,19 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
-  // CORS
+  // CORS — allow all dev servers + production
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: [
+      'http://localhost:8080',       // Vite dev server (Dev 2's port)
+      'http://localhost:5173',       // Vite default
+      'http://localhost:3000',       // Next.js default
+      process.env.CORS_ORIGIN || '',
+      'https://africanyouthdatabase.org',
+      'https://www.africanyouthdatabase.org',
+    ].filter(Boolean),
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Graceful shutdown
@@ -76,6 +85,7 @@ World Bank, ILO, UNESCO, national statistics bureaus`,
     .addTag('export', 'Data export (CSV, JSON, Excel, PDF)')
     .addTag('embed', 'Embeddable charts and widgets')
     .addTag('search', 'Global search across all entities')
+    .addTag('data-upload', 'Data contributor upload and management')
     .addTag('live-feed', 'Real-time data feed')
     .addTag('auth', 'Authentication and user management')
     .addTag('admin', 'Platform administration')
@@ -84,6 +94,13 @@ World Bank, ILO, UNESCO, national statistics bureaus`,
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
+
+  // Route aliases for frontend compatibility
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.post('/api/query/natural-language', (req: any, res: any, next: any) => {
+    req.url = '/api/nlq/query';
+    next();
+  });
 
   const port = process.env.API_PORT || 3001;
   await app.listen(port);

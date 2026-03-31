@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { ExportQueryDto } from './export.dto';
+import { formatRegion } from '../../common/utils/format';
 
 interface ExportRow {
   country: string;
@@ -85,7 +86,7 @@ export class ExportService {
     return values.map((v) => ({
       country: v.country.name,
       isoCode: v.country.isoCode3,
-      region: v.country.region,
+      region: formatRegion(v.country.region),
       indicator: v.indicator.name,
       theme: v.indicator.theme.name,
       year: v.year,

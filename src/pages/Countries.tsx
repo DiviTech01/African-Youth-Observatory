@@ -1,25 +1,22 @@
 
-import React, { useState } from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, ArrowLeft } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Search, ArrowLeft, ChevronRight, Globe, MapPin, Star } from 'lucide-react';
 import CountryProfile from '@/components/countries/CountryProfile';
+import CountryFlag from '@/components/CountryFlag';
+import { getCountryMeta } from '@/lib/country-flags';
+import { SparklineChart } from '@/components/SparklineChart';
+import { useUserPreferences } from '@/contexts/UserPreferencesContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { api } from '@/lib/api-client';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const countries = [
-  "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", 
-  "Burundi", "Cabo Verde", "Cameroon", "Central African Republic", "Chad", 
-  "Comoros", "Congo", "Côte d'Ivoire", "DRC", "Djibouti", "Egypt", "Equatorial Guinea", 
-  "Eritrea", "Eswatini", "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", 
-  "Guinea-Bissau", "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", 
-  "Malawi", "Mali", "Mauritania", "Mauritius", "Morocco", "Mozambique", 
-  "Namibia", "Niger", "Nigeria", "Rwanda", "São Tomé and Príncipe", "Senegal", 
-  "Seychelles", "Sierra Leone", "Somalia", "South Africa", "South Sudan", 
-  "Sudan", "Tanzania", "Togo", "Tunisia", "Uganda", "Zambia", "Zimbabwe"
-];
-
-const regionsMap: Record<string, string[]> = {
+// Fallback data in case API is not available
+const regionsMapFallback: Record<string, string[]> = {
   "North Africa": ["Algeria", "Egypt", "Libya", "Morocco", "Tunisia"],
   "West Africa": ["Benin", "Burkina Faso", "Cabo Verde", "Côte d'Ivoire", "Gambia", "Ghana", "Guinea", "Guinea-Bissau", "Liberia", "Mali", "Mauritania", "Niger", "Nigeria", "Senegal", "Sierra Leone", "Togo"],
   "Central Africa": ["Cameroon", "Central African Republic", "Chad", "Congo", "DRC", "Equatorial Guinea", "Gabon", "São Tomé and Príncipe"],
@@ -27,89 +24,255 @@ const regionsMap: Record<string, string[]> = {
   "Southern Africa": ["Angola", "Botswana", "Eswatini", "Lesotho", "Malawi", "Mozambique", "Namibia", "South Africa", "Zambia", "Zimbabwe"]
 };
 
+const regionColors: Record<string, string> = {
+  "North Africa": "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
+  "West Africa": "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
+  "Central Africa": "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+  "East Africa": "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30",
+  "Southern Africa": "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30",
+};
+
+const regionSparklineColors: Record<string, string> = {
+  "North Africa": "#3b82f6",
+  "West Africa": "#10b981",
+  "Central Africa": "#f59e0b",
+  "East Africa": "#a855f7",
+  "Southern Africa": "#f43f5e",
+};
+
+const allRegions = ["All", "North Africa", "West Africa", "Central Africa", "East Africa", "Southern Africa"];
+
+// Deterministic pseudo-random data points per country for sparkline
+function getSparklineData(country: string): number[] {
+  let seed = 0;
+  for (let i = 0; i < country.length; i++) seed += country.charCodeAt(i);
+  return Array.from({ length: 8 }, (_, i) => 20 + ((seed * (i + 1) * 7) % 80));
+}
+
 const Countries = () => {
+  const { t } = useLanguage();
+  const { preferences, trackCountryView } = useUserPreferences();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  
-  const filteredCountries = countries.filter((country) => 
-    country.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
+  const [activeRegion, setActiveRegion] = useState('All');
+
+  // Fetch countries from API
+  const { data: apiResponse, isLoading, isError } = useQuery({
+    queryKey: ['countries', { region: activeRegion === 'All' ? undefined : activeRegion, search: searchTerm || undefined }],
+    queryFn: () => api.countries.list({
+      region: activeRegion === 'All' ? undefined : activeRegion,
+      search: searchTerm || undefined,
+    }),
+  });
+
+  const filteredCountries = useMemo(() => {
+    // Use API data if available
+    const apiData = (apiResponse as any)?.data || apiResponse;
+    if (Array.isArray(apiData) && apiData.length > 0) {
+      let entries = apiData.map((c: any) => ({
+        country: c.name,
+        region: c.region || 'Unknown',
+        id: c.id,
+        capital: c.capital,
+        flagEmoji: c.flagEmoji,
+        isoCode3: c.isoCode3 || c.iso3Code,
+      }));
+
+      // Sort user's country to the top
+      if (preferences.myCountry) {
+        entries.sort((a: any, b: any) => {
+          const aIsMyCountry = a.country.toLowerCase() === preferences.myCountry!.toLowerCase();
+          const bIsMyCountry = b.country.toLowerCase() === preferences.myCountry!.toLowerCase();
+          if (aIsMyCountry && !bIsMyCountry) return -1;
+          if (!aIsMyCountry && bIsMyCountry) return 1;
+          return 0;
+        });
+      }
+      return entries;
+    }
+
+    // Fallback to hardcoded data
+    let entries: { country: string; region: string }[] = [];
+    const regionsToShow = activeRegion === 'All' ? Object.keys(regionsMapFallback) : [activeRegion];
+    for (const region of regionsToShow) {
+      for (const country of (regionsMapFallback[region] || [])) {
+        if (country.toLowerCase().includes(searchTerm.toLowerCase())) {
+          entries.push({ country, region });
+        }
+      }
+    }
+    if (preferences.myCountry) {
+      entries.sort((a, b) => {
+        const aIsMyCountry = a.country.toLowerCase() === preferences.myCountry!.toLowerCase();
+        const bIsMyCountry = b.country.toLowerCase() === preferences.myCountry!.toLowerCase();
+        if (aIsMyCountry && !bIsMyCountry) return -1;
+        if (!aIsMyCountry && bIsMyCountry) return 1;
+        return 0;
+      });
+    }
+    return entries;
+  }, [apiResponse, searchTerm, activeRegion, preferences.myCountry]);
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <div className="bg-muted/30 py-8 md:py-12">
-        <div className="container px-4 md:px-6">
+    <>
+      <div className="relative py-8 md:py-12 overflow-hidden">
+        <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        <div className="container px-4 md:px-6 relative z-10">
           <div className="flex flex-col gap-3 md:gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Country Profiles</h1>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Explore detailed youth data profiles for African countries.
+              <div className="flex items-center gap-2 mb-1">
+                <Globe className="h-6 w-6 text-[#D4A017]" />
+                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('countries.title')}</h1>
+              </div>
+              <p className="text-sm sm:text-base text-[#A89070]">
+                {t('countries.subtitle')}
               </p>
             </div>
-            
+
             <div className="flex w-full max-w-md mt-2 md:mt-4">
               <Input
                 type="search"
-                placeholder="Search countries..."
+                placeholder={t('countries.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="rounded-r-none text-sm"
+                className="rounded-r-none text-sm border-gray-800 bg-white/[0.03]"
               />
               <Button className="rounded-l-none px-3 sm:px-4">
                 <Search className="h-4 w-4" />
               </Button>
             </div>
+
+            {/* Region filter tabs */}
+            <div className="flex flex-wrap gap-2 mt-2">
+              {allRegions.map((region) => (
+                <Button
+                  key={region}
+                  variant={activeRegion === region ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveRegion(region)}
+                  className="text-xs sm:text-sm"
+                >
+                  {region === 'All' && <MapPin className="h-3 w-3 mr-1" />}
+                  {region}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-      
-      <main className="flex-grow py-6 md:py-8">
+
+      <div className="py-6 md:py-8">
         {selectedCountry ? (
           <div className="container px-4 md:px-6">
             <Button
               variant="outline"
               onClick={() => setSelectedCountry(null)}
-              className="mb-4 md:mb-6 gap-2 text-sm"
+              className="mb-4 md:mb-6 gap-2 text-sm border-gray-800"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Country List
             </Button>
-            
+
             <CountryProfile country={selectedCountry} />
           </div>
         ) : (
           <div className="container px-4 md:px-6">
-            <div className="grid gap-6 md:gap-8">
-              {Object.entries(regionsMap).map(([region, regionCountries]) => (
-                <div key={region}>
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 md:mb-4">{region}</h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
-                    {regionCountries
-                      .filter(country => filteredCountries.includes(country))
-                      .map((country) => (
-                        <Button
-                          key={country}
-                          variant="outline"
-                          onClick={() => setSelectedCountry(country)}
-                          className="h-auto py-3 sm:py-4 md:py-6 justify-start flex-col items-start text-left"
-                        >
-                          <span className="text-sm sm:text-base md:text-lg font-medium line-clamp-1">{country}</span>
-                          <span className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-                            Click to view
-                          </span>
-                        </Button>
-                      ))}
-                  </div>
+            {isLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                {Array.from({ length: 15 }).map((_, i) => (
+                  <Card key={i} className="rounded-2xl border border-gray-800 bg-white/[0.03]">
+                    <CardContent className="p-4 space-y-3">
+                      <Skeleton className="h-6 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-7 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredCountries.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Search className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p className="text-lg font-medium">No countries found</p>
+                <p className="text-sm mt-1">Try adjusting your search or region filter.</p>
+              </div>
+            ) : (
+              <>
+                {isError && (
+                  <Badge variant="secondary" className="mb-4 text-xs">Showing offline data</Badge>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                  {filteredCountries.map(({ country, region }: any) => {
+                    const sparklineData = getSparklineData(country);
+                    const isMyCountry = preferences.myCountry && country.toLowerCase() === preferences.myCountry.toLowerCase();
+                    return (
+                      <Card
+                        key={country}
+                        className={`hover-lift cursor-pointer group rounded-2xl border border-gray-800 bg-white/[0.03] hover:border-gray-600 transition-colors ${isMyCountry ? 'ring-2 ring-[#D4A017] border-[#D4A017]/50' : ''}`}
+                        onClick={() => {
+                          trackCountryView(country);
+                          setSelectedCountry(country);
+                        }}
+                      >
+                        <CardContent className="p-4 flex flex-col gap-2.5">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                              <CountryFlag country={country} size="md" />
+                              <span className="text-sm sm:text-base font-bold leading-tight line-clamp-1">
+                                {country}
+                              </span>
+                              {isMyCountry && <Star className="h-4 w-4 text-[#D4A017] fill-[#D4A017] flex-shrink-0" />}
+                            </div>
+                            {(() => {
+                              const meta = getCountryMeta(country);
+                              return meta ? (
+                                <>
+                                  <span className="text-[11px] text-gray-400">{meta.capital}</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {meta.languages.slice(0, 2).map((lang) => (
+                                      <Badge key={lang} variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                                        {lang}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </>
+                              ) : null;
+                            })()}
+                            <Badge
+                              variant="outline"
+                              className={`w-fit text-[10px] px-1.5 py-0 ${regionColors[region] || ''}`}
+                            >
+                              {region}
+                            </Badge>
+                          </div>
+
+                          {/* Sparkline chart */}
+                          <div className="mt-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                            <SparklineChart
+                              data={sparklineData}
+                              color={regionSparklineColors[region] || '#888'}
+                              width={100}
+                              height={28}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-[11px] sm:text-xs text-gray-500 font-medium group-hover:text-[#D4A017] transition-colors">
+                              View Profile
+                            </span>
+                            <ChevronRight className="h-3.5 w-3.5 text-gray-500 group-hover:text-[#D4A017] group-hover:translate-x-0.5 transition-all" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         )}
-      </main>
-      
-      <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -1,11 +1,10 @@
 
 import React from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Link } from 'react-router-dom';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, GraduationCap, Heart, Briefcase, BookOpen } from 'lucide-react';
+import { Users, GraduationCap, Heart, Briefcase, BookOpen, Vote, Lightbulb, Wheat, Scale } from 'lucide-react';
 
 const themes = [
   {
@@ -67,31 +66,80 @@ const themes = [
       { label: "Access to Finance", value: "23.4%" },
       { label: "Startup Formation", value: "3.2%" }
     ]
+  },
+  {
+    id: "civic-engagement",
+    title: "Civic Engagement",
+    description: "Youth participation in governance, civic processes, and civil society across Africa.",
+    icon: Vote,
+    color: "red",
+    stats: [
+      { label: "Voter Registration (Youth)", value: "42.8%" },
+      { label: "Youth in Parliament", value: "3.2%" },
+      { label: "Civil Society Orgs", value: "12,400+" }
+    ]
+  },
+  {
+    id: "innovation-technology",
+    title: "Innovation & Technology",
+    description: "Digital access, STEM participation, and technological innovation among African youth.",
+    icon: Lightbulb,
+    color: "blue",
+    stats: [
+      { label: "Internet Penetration", value: "33.8%" },
+      { label: "Mobile Ownership", value: "67.2%" },
+      { label: "STEM Enrollment", value: "14.5%" }
+    ]
+  },
+  {
+    id: "agriculture",
+    title: "Agriculture",
+    description: "Youth involvement in agriculture, land access, and food production across the continent.",
+    icon: Wheat,
+    color: "green",
+    stats: [
+      { label: "Youth in Agriculture", value: "28.4%" },
+      { label: "Arable Land Access", value: "12.1%" },
+      { label: "Productivity Index", value: "62.3" }
+    ]
+  },
+  {
+    id: "gender-equality",
+    title: "Gender Equality",
+    description: "Gender parity in education, workforce participation, and safety for African youth.",
+    icon: Scale,
+    color: "purple",
+    stats: [
+      { label: "GPI Education", value: "0.94" },
+      { label: "Women in Workforce", value: "38.7%" },
+      { label: "GBV Prevalence", value: "21.3%" }
+    ]
   }
 ];
 
 const Themes = () => {
+  const { t } = useLanguage();
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <div className="bg-muted/30 py-8 md:py-12">
-        <div className="container px-4 md:px-6">
+    <>
+      <div className="relative py-8 md:py-12 overflow-hidden">
+        <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        <div className="container px-4 md:px-6 relative z-10">
           <div className="flex flex-col gap-3 md:gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Thematic Areas</h1>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Explore our five core thematic areas of youth development in Africa.
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('themes.title')}</h1>
+              <p className="text-sm sm:text-base text-[#A89070]">
+                {t('themes.subtitle')}
               </p>
             </div>
           </div>
         </div>
       </div>
       
-      <main className="flex-grow py-6 md:py-8">
+      <div className="py-6 md:py-8">
         <div className="container px-4 md:px-6">
           <div className="grid gap-4 md:gap-6 lg:gap-8">
             {themes.map((theme) => (
-              <Card key={theme.id} className={`border-l-4 border-l-pan-${theme.color}-500`}>
+              <Card key={theme.id} className={`border-l-4 border-l-pan-${theme.color}-500 bg-white/[0.03] border-gray-800 rounded-2xl`}>
                 <CardContent className="p-4 md:p-6">
                   <div className="grid md:grid-cols-3 gap-4 md:gap-6">
                     <div className="md:col-span-2">
@@ -102,14 +150,14 @@ const Themes = () => {
                         <h2 className="text-xl sm:text-2xl font-bold">{theme.title}</h2>
                       </div>
                       
-                      <p className="text-sm sm:text-base text-muted-foreground mb-4 md:mb-6">
+                      <p className="text-sm sm:text-base text-gray-400 mb-4 md:mb-6">
                         {theme.description}
                       </p>
                       
                       <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
                         {theme.stats.map((stat, i) => (
                           <div key={i} className={`p-2 md:p-3 rounded-md bg-pan-${theme.color}-50`}>
-                            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground line-clamp-1">{stat.label}</p>
+                            <p className="text-[10px] sm:text-xs md:text-sm text-gray-400 line-clamp-1">{stat.label}</p>
                             <p className="text-base sm:text-lg md:text-xl font-bold">{stat.value}</p>
                           </div>
                         ))}
@@ -178,6 +226,30 @@ const Themes = () => {
                               </div>
                             </div>
                           )}
+
+                          {theme.id === "civic-engagement" && (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Vote className="w-24 h-24 md:w-32 md:h-32 text-pan-red-300" />
+                            </div>
+                          )}
+
+                          {theme.id === "innovation-technology" && (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Lightbulb className="w-24 h-24 md:w-32 md:h-32 text-pan-blue-300" />
+                            </div>
+                          )}
+
+                          {theme.id === "agriculture" && (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Wheat className="w-24 h-24 md:w-32 md:h-32 text-pan-green-300" />
+                            </div>
+                          )}
+
+                          {theme.id === "gender-equality" && (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Scale className="w-24 h-24 md:w-32 md:h-32 text-pan-purple-300" />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -187,10 +259,8 @@ const Themes = () => {
             ))}
           </div>
         </div>
-      </main>
-      
-      <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

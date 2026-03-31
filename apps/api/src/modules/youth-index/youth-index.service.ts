@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
+import { formatRegion, formatTier } from '../../common/utils/format';
 
 @Injectable()
 export class YouthIndexService {
@@ -41,18 +42,27 @@ export class YouthIndexService {
       countryId: r.countryId,
       countryName: r.country.name,
       isoCode3: r.country.isoCode3,
+      isoCode: r.country.isoCode3,
+      iso3Code: r.country.isoCode3,
       flagEmoji: r.country.flagEmoji,
-      region: r.country.region,
+      region: formatRegion(r.country.region),
       overallScore: r.overallScore,
       educationScore: r.educationScore,
       employmentScore: r.employmentScore,
       healthScore: r.healthScore,
       civicScore: r.civicScore,
       innovationScore: r.innovationScore,
+      dimensions: {
+        education: r.educationScore,
+        employment: r.employmentScore,
+        health: r.healthScore,
+        civic: r.civicScore,
+        innovation: r.innovationScore,
+      },
       previousRank: r.previousRank,
       rankChange: r.rankChange,
       percentile: r.percentile,
-      tier: r.tier,
+      tier: formatTier(r.tier),
     }));
 
     const scores = data.map((d) => d.overallScore);
@@ -89,7 +99,9 @@ export class YouthIndexService {
         id: countryId,
         name: scores[0].country.name,
         isoCode3: scores[0].country.isoCode3,
-        region: scores[0].country.region,
+        isoCode: scores[0].country.isoCode3,
+        iso3Code: scores[0].country.isoCode3,
+        region: formatRegion(scores[0].country.region),
         flagEmoji: scores[0].country.flagEmoji,
       },
       scores: scores.map((s) => ({
@@ -100,11 +112,18 @@ export class YouthIndexService {
         healthScore: s.healthScore,
         civicScore: s.civicScore,
         innovationScore: s.innovationScore,
+        dimensions: {
+          education: s.educationScore,
+          employment: s.employmentScore,
+          health: s.healthScore,
+          civic: s.civicScore,
+          innovation: s.innovationScore,
+        },
         rank: s.rank,
         previousRank: s.previousRank,
         rankChange: s.rankChange,
         percentile: s.percentile,
-        tier: s.tier,
+        tier: formatTier(s.tier),
       })),
       rankHistory: scores.map((s) => ({
         year: s.year,
@@ -131,15 +150,24 @@ export class YouthIndexService {
       countryId: r.countryId,
       countryName: r.country.name,
       isoCode3: r.country.isoCode3,
+      isoCode: r.country.isoCode3,
+      iso3Code: r.country.isoCode3,
       flagEmoji: r.country.flagEmoji,
-      region: r.country.region,
+      region: formatRegion(r.country.region),
       overallScore: r.overallScore,
       educationScore: r.educationScore,
       employmentScore: r.employmentScore,
       healthScore: r.healthScore,
       civicScore: r.civicScore,
       innovationScore: r.innovationScore,
-      tier: r.tier,
+      dimensions: {
+        education: r.educationScore,
+        employment: r.employmentScore,
+        health: r.healthScore,
+        civic: r.civicScore,
+        innovation: r.innovationScore,
+      },
+      tier: formatTier(r.tier),
     }));
   }
 
@@ -160,12 +188,14 @@ export class YouthIndexService {
       countryId: s.countryId,
       countryName: s.country.name,
       isoCode3: s.country.isoCode3,
+      isoCode: s.country.isoCode3,
+      iso3Code: s.country.isoCode3,
       flagEmoji: s.country.flagEmoji,
-      region: s.country.region,
+      region: formatRegion(s.country.region),
       overallScore: s.overallScore,
       previousRank: s.previousRank,
       rankChange: s.rankChange,
-      tier: s.tier,
+      tier: formatTier(s.tier),
     }));
   }
 }

@@ -276,6 +276,22 @@ async function main() {
   });
   console.log(`  ✅ Admin user created: ${adminUser.email}`);
 
+  // 6b. Seed data team contributor account
+  console.log('  👤 Seeding data contributor account...');
+  const contributorPasswordHash = await hashPassword('AYD@Data2026!');
+  const contributorUser = await prisma.user.upsert({
+    where: { email: 'data@africanyouthdatabase.org' },
+    update: {},
+    create: {
+      email: 'data@africanyouthdatabase.org',
+      name: 'AYD Data Team',
+      passwordHash: contributorPasswordHash,
+      role: 'CONTRIBUTOR',
+      organization: 'African Youth Database',
+    },
+  });
+  console.log(`  ✅ Contributor user created: ${contributorUser.email}`);
+
   // 7. Seed dashboard templates
   console.log('  📊 Seeding dashboard templates...');
   const templates = [

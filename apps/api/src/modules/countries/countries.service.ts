@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { ListCountriesDto, CountryStatsQueryDto } from './countries.dto';
+import { formatCountry, formatRegion, parseRegion } from '../../common/utils/format';
 
 @Injectable()
 export class CountriesService {
@@ -18,7 +19,7 @@ export class CountriesService {
     if (cached) return cached;
 
     const where: Record<string, unknown> = {};
-    if (region) where.region = region;
+    if (region) where.region = parseRegion(region);
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -42,8 +43,8 @@ export class CountriesService {
       this.prisma.country.count({ where }),
     ]);
 
-    // Serialize BigInt to number for JSON
-    const serialized = data.map((c) => ({
+    // Serialize BigInt to number for JSON + format for frontend
+    const serialized = data.map((c) => formatCountry({
       ...c,
       population: Number(c.population),
       youthPopulation: Number(c.youthPopulation),
@@ -102,7 +103,7 @@ export class CountriesService {
       themesMap.set(t.id, t);
     }
 
-    const result = {
+    const result = formatCountry({
       ...country,
       population: Number(country.population),
       youthPopulation: Number(country.youthPopulation),
@@ -113,7 +114,7 @@ export class CountriesService {
         latestDataYear: latestDataYear._max.year,
         availableThemes: Array.from(themesMap.values()),
       },
-    };
+    });
 
     this.cache.set(cacheKey, result, 3600);
     return result;
@@ -160,7 +161,9 @@ export class CountriesService {
         id: country.id,
         name: country.name,
         isoCode3: country.isoCode3,
-        region: country.region,
+        isoCode: country.isoCode2,
+        iso3Code: country.isoCode3,
+        region: formatRegion(country.region),
       },
       year,
       dataCompleteness: totalIndicators > 0
@@ -199,7 +202,7 @@ export class CountriesService {
         orderBy: { name: 'asc' },
       });
       result.push({
-        region: r.region,
+        region: formatRegion(r.region),
         countryCount: r._count.id,
         totalPopulation: Number(r._sum.population || 0),
         totalYouthPopulation: Number(r._sum.youthPopulation || 0),

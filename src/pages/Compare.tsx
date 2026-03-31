@@ -1,34 +1,28 @@
 
 import React from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import CountryComparison from '@/components/compare/CountryComparison';
-import { BarChart3 } from 'lucide-react';
 
 const Compare = () => {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      
-      <header className="gradient-hero py-8 md:py-12">
-        <div className="container px-4 md:px-6">
-          <div className="flex items-center gap-3 mb-2">
-            <BarChart3 className="h-8 w-8 text-primary" />
-            <h1 className="section-title">Compare Countries</h1>
+    <>
+      <div className="relative py-8 md:py-12 overflow-hidden">
+        <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+        <div className="relative z-10 container px-4 md:px-6">
+          <div className="flex flex-col gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">Compare Countries</h1>
+              <p className="text-[#A89070]">
+                Compare youth statistics across multiple African countries.
+              </p>
+            </div>
           </div>
-          <p className="section-description max-w-2xl">
-            Compare youth development indicators across multiple African countries. 
-            Analyze trends, identify gaps, and discover insights.
-          </p>
         </div>
-      </header>
-      
-      <main className="flex-grow">
+      </div>
+
+      <div className="py-8">
         <CountryComparison />
-      </main>
-      
-      <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

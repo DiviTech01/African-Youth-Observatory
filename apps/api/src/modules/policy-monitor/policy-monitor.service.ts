@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { ComplianceScorerService, ComplianceInput } from './compliance-scorer.service';
 import { PolicyRankingsDto } from './policy-monitor.dto';
+import { formatRegion, parseRegion } from '../../common/utils/format';
 
 @Injectable()
 export class PolicyMonitorService {
@@ -24,7 +25,7 @@ export class PolicyMonitorService {
 
     // Get all policies with country info
     const countryWhere: Record<string, unknown> = {};
-    if (region) countryWhere.region = region;
+    if (region) countryWhere.region = parseRegion(region);
 
     const policies = await this.prisma.countryPolicy.findMany({
       include: {
@@ -73,7 +74,9 @@ export class PolicyMonitorService {
         countryId: policy.country.id,
         countryName: policy.country.name,
         isoCode3: policy.country.isoCode3,
-        region: policy.country.region,
+        isoCode: policy.country.isoCode3,
+        iso3Code: policy.country.isoCode3,
+        region: formatRegion(policy.country.region),
         flagEmoji: policy.country.flagEmoji,
         policyName: policy.policyName,
         aycRatified: policy.aycRatified,
@@ -193,7 +196,9 @@ export class PolicyMonitorService {
         id: policy.country.id,
         name: policy.country.name,
         isoCode3: policy.country.isoCode3,
-        region: policy.country.region,
+        isoCode: policy.country.isoCode3,
+        iso3Code: policy.country.isoCode3,
+        region: formatRegion(policy.country.region),
         flagEmoji: policy.country.flagEmoji,
       },
       policy: {
@@ -327,7 +332,7 @@ export class PolicyMonitorService {
     }
 
     const regions = Array.from(regionStats.entries()).map(([region, stats]) => ({
-      region,
+      region: formatRegion(region),
       totalCountries: stats.total,
       aycRatified: stats.ratified,
       aycRatificationRate: stats.total > 0

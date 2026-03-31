@@ -1,14 +1,10 @@
 import React from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Database, Shield, Calculator, RefreshCw, CheckCircle } from 'lucide-react';
 
 const Methodology = () => {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      
+    <>
       <header className="gradient-hero py-8 md:py-12">
         <div className="container px-4 md:px-6">
           <div className="flex items-center gap-3 mb-2">
@@ -21,7 +17,7 @@ const Methodology = () => {
         </div>
       </header>
 
-      <main className="flex-grow py-6 md:py-8">
+      <div className="py-6 md:py-8">
         <div className="container px-4 md:px-6">
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Overview */}
@@ -202,10 +198,8 @@ const Methodology = () => {
             </Card>
           </div>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

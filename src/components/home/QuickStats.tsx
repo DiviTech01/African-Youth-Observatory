@@ -1,8 +1,8 @@
-
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Users, GraduationCap, Heart, Briefcase, BookOpen } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { GlowCard } from '@/components/ui/spotlight-card';
 
 const statsData = [
   {
@@ -10,7 +10,7 @@ const statsData = [
     value: '226M',
     description: 'African youth aged 15-24',
     trend: '+2.3%',
-    color: 'pan-green',
+    glowColor: 'green' as const,
     icon: Users,
     link: '/explore?theme=population'
   },
@@ -19,7 +19,7 @@ const statsData = [
     value: '63%',
     description: 'Secondary enrollment rate',
     trend: '+5.7%',
-    color: 'pan-blue',
+    glowColor: 'blue' as const,
     icon: GraduationCap,
     link: '/explore?theme=education'
   },
@@ -28,7 +28,7 @@ const statsData = [
     value: '72%',
     description: 'Access to healthcare',
     trend: '+3.1%',
-    color: 'pan-purple',
+    glowColor: 'purple' as const,
     icon: Heart,
     link: '/explore?theme=health'
   },
@@ -37,7 +37,7 @@ const statsData = [
     value: '42%',
     description: 'Youth labor participation',
     trend: '-1.2%',
-    color: 'pan-orange',
+    glowColor: 'orange' as const,
     icon: Briefcase,
     link: '/explore?theme=employment'
   },
@@ -46,61 +46,97 @@ const statsData = [
     value: '18%',
     description: 'Youth-led businesses',
     trend: '+4.5%',
-    color: 'pan-green',
+    glowColor: 'green' as const,
     icon: BookOpen,
     link: '/explore?theme=entrepreneurship'
   }
 ];
 
 const QuickStats = () => {
+  // Fetch real stats from API
+  const { data: platformStats } = useQuery({
+    queryKey: ['platform-stats'],
+    queryFn: () => fetch('/api/platform/stats').then(r => r.ok ? r.json() : null).catch(() => null),
+    staleTime: 60000,
+  });
+
+  // Override first stat with real data if available
+  if (platformStats) {
+    const countries = platformStats.countries || 54;
+    const indicators = platformStats.indicators || 59;
+    const dataPoints = platformStats.indicatorValues || 0;
+    statsData[0] = { ...statsData[0], value: `${countries}`, description: `Countries · ${indicators} indicators` };
+    if (dataPoints > 0) {
+      statsData[4] = { ...statsData[4], value: dataPoints > 1000 ? `${(dataPoints/1000).toFixed(0)}K` : String(dataPoints), description: 'Data points collected', title: 'Data Points' };
+    }
+  }
+
   return (
-    <section className="py-8 md:py-12">
-      <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-3 md:space-y-4 text-center">
-          <div className="space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tighter md:text-4xl">
-              Key Statistics
-            </h2>
-            <p className="max-w-[700px] text-sm sm:text-base text-muted-foreground md:text-xl mx-auto">
-              Explore essential data points on African youth across our five core thematic areas.
-            </p>
-          </div>
+    <section className="relative py-16 md:py-24 bg-black overflow-hidden">
+      {/* Grid BG - matching hero */}
+      <div
+        className="absolute inset-0 opacity-40 h-full w-full
+        bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)]
+        bg-[size:6rem_5rem]
+        [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_40%,transparent_100%)]"
+      />
+
+      <div className="container px-4 md:px-6 relative z-10">
+        <div className="flex flex-col items-center justify-center space-y-3 md:space-y-4 text-center mb-10 md:mb-14">
+          <h2
+            className="text-3xl sm:text-4xl font-semibold tracking-tighter md:text-5xl
+            bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40
+            bg-clip-text text-transparent"
+          >
+            Key Statistics
+          </h2>
+          <p className="max-w-[700px] text-sm sm:text-base text-[#A89070] md:text-lg">
+            Explore essential data points on African youth across our five core thematic areas.
+          </p>
         </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 mt-6 md:mt-8">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {statsData.map((stat, index) => (
             <Link key={index} to={stat.link} className="block group">
-              <Card className={`stat-card border-l-4 border-l-${stat.color}-500 group-hover:border-l-6 transition-all h-full`}>
-                <CardContent className="p-4 md:p-6">
-                  <div className="flex justify-between items-start">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">{stat.title}</p>
-                      <h3 className="text-xl sm:text-2xl font-bold">{stat.value}</h3>
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{stat.description}</p>
+              <GlowCard
+                glowColor={stat.glowColor}
+                customSize
+                className="w-full h-full !aspect-auto cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
+              >
+                <div className="relative z-10 flex flex-col justify-between h-full p-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs sm:text-sm font-medium text-gray-400 mb-1">{stat.title}</p>
+                      <h3 className="text-3xl sm:text-4xl font-bold text-white">{stat.value}</h3>
                     </div>
-                    <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-${stat.color}-100 text-${stat.color}-500 ml-2`}>
-                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10">
+                      <stat.icon className="w-5 h-5 text-white/80" />
                     </div>
                   </div>
-                  <div className="mt-3 md:mt-4 flex items-center text-xs">
-                    <span className={`inline-block px-2 py-1 rounded-full ${stat.trend.startsWith('+') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+
+                  <p className="text-xs text-gray-500 mt-3">{stat.description}</p>
+
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                      stat.trend.startsWith('+')
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-red-500/20 text-red-400'
+                    }`}>
                       {stat.trend} since 2020
                     </span>
                   </div>
-                  
-                  <div className="mt-3 md:mt-4 h-8 md:h-10">
-                    <div className="h-full w-full flex items-end">
-                      {[...Array(10)].map((_, i) => (
-                        <div 
-                          key={i} 
-                          className={`flex-1 mx-0.5 bg-${stat.color}-${200 + (i * 50)} rounded-t`}
-                          style={{ height: `${20 + Math.random() * 80}%` }}
-                        ></div>
-                      ))}
-                    </div>
+
+                  <div className="mt-3 h-8 flex items-end gap-[2px]">
+                    {[...Array(12)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 rounded-t bg-white/20 group-hover:bg-white/30 transition-colors"
+                        style={{ height: `${20 + Math.sin(i * 0.8 + index) * 30 + 30}%` }}
+                      />
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </GlowCard>
             </Link>
           ))}
         </div>
