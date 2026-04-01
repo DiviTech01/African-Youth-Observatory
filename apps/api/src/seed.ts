@@ -292,6 +292,28 @@ async function main() {
   });
   console.log(`  ✅ Contributor user created: ${contributorUser.email}`);
 
+  // 6c. Seed additional test accounts
+  console.log('  👤 Seeding test accounts...');
+  const testAccounts = [
+    { email: 'researcher@africanyouthdatabase.org', name: 'Test Researcher', role: 'RESEARCHER' as const, password: 'AYD@Research2026!' },
+    { email: 'demo@africanyouthdatabase.org', name: 'Demo User', role: 'REGISTERED' as const, password: 'AYD@Demo2026!' },
+  ];
+  for (const acct of testAccounts) {
+    const hash = await hashPassword(acct.password);
+    await prisma.user.upsert({
+      where: { email: acct.email },
+      update: {},
+      create: {
+        email: acct.email,
+        name: acct.name,
+        passwordHash: hash,
+        role: acct.role,
+        organization: 'African Youth Database',
+      },
+    });
+    console.log(`    ✅ ${acct.role}: ${acct.email}`);
+  }
+
   // 7. Seed dashboard templates
   console.log('  📊 Seeding dashboard templates...');
   const templates = [

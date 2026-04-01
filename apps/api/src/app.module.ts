@@ -1,6 +1,7 @@
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { RlsMiddleware } from './common/middleware/rls.middleware';
 import { PrismaModule } from './prisma/prisma.module';
 import { CountriesModule } from './modules/countries/countries.module';
 import { ThemesModule } from './modules/themes/themes.module';
@@ -81,4 +82,8 @@ import { CacheService } from './common/cache.service';
   ],
   exports: [CacheService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RlsMiddleware).forRoutes('*');
+  }
+}

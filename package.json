@@ -20,6 +20,7 @@
     "import:csv": "tsx scripts/import-csv.ts",
     "import:ilo": "tsx scripts/import-ilo.ts",
     "import:ayims": "tsx scripts/import-ayims.ts",
+    "smoke-test": "tsx scripts/smoke-test.ts",
     "seed:policies": "tsx scripts/seed-policies.ts",
     "seed:experts": "tsx scripts/seed-experts.ts",
     "setup": "bash scripts/setup.sh"
