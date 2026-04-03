@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { Shield, ChevronDown, ChevronUp, Download, CheckCircle, XCircle } from '
 import CountryFlag from '@/components/CountryFlag';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { api } from '@/lib/api-client';
 
 interface PolicyData {
   country: string;
@@ -331,13 +333,37 @@ const PolicyMonitor = () => {
   const { preferences } = useUserPreferences();
   const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
 
+  // Fetch real rankings from API
+  const { data: apiRankings, isError } = useQuery({
+    queryKey: ['policy-rankings'],
+    queryFn: () => api.policyMonitor.rankings(),
+  });
+
+  // Use API data or fallback to mock
+  const activePolicyData = useMemo(() => {
+    const apiData = (apiRankings as any)?.data || apiRankings;
+    if (Array.isArray(apiData) && apiData.length > 0) {
+      return apiData.map((r: any) => ({
+        country: r.countryName || r.country?.name || 'Unknown',
+        aycRatified: r.aycRatified ?? false,
+        nationalYouthPolicy: r.yearAdopted !== null,
+        policyYear: r.yearAdopted || null,
+        complianceScore: r.complianceScore ?? 0,
+        wpay: r.wpayCompliant ?? false,
+        aycArticles: [],
+        timelineEvents: [],
+      })) as PolicyData[];
+    }
+    return policyData;
+  }, [apiRankings]);
+
   const toggleExpand = (country: string) => {
     setExpandedCountry(prev => (prev === country ? null : country));
   };
 
-  const ratifiedCount = policyData.filter(d => d.aycRatified).length;
-  const withPolicyCount = policyData.filter(d => d.nationalYouthPolicy).length;
-  const avgScore = Math.round(policyData.reduce((sum, d) => sum + d.complianceScore, 0) / policyData.length);
+  const ratifiedCount = activePolicyData.filter(d => d.aycRatified).length;
+  const withPolicyCount = activePolicyData.filter(d => d.nationalYouthPolicy).length;
+  const avgScore = activePolicyData.length > 0 ? Math.round(activePolicyData.reduce((sum, d) => sum + d.complianceScore, 0) / activePolicyData.length) : 0;
 
   return (
     <>
@@ -368,13 +394,13 @@ const PolicyMonitor = () => {
           <div className="grid gap-4 md:grid-cols-4 mb-8">
             <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardContent className="p-4 text-center">
-                <p className="text-3xl font-bold text-primary">{ratifiedCount}/{policyData.length}</p>
+                <p className="text-3xl font-bold text-primary">{ratifiedCount}/{activePolicyData.length}</p>
                 <p className="text-sm text-gray-400 mt-1">AYC Ratified</p>
               </CardContent>
             </Card>
             <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardContent className="p-4 text-center">
-                <p className="text-3xl font-bold text-primary">{withPolicyCount}/{policyData.length}</p>
+                <p className="text-3xl font-bold text-primary">{withPolicyCount}/{activePolicyData.length}</p>
                 <p className="text-sm text-gray-400 mt-1">National Youth Policy</p>
               </CardContent>
             </Card>
@@ -386,7 +412,7 @@ const PolicyMonitor = () => {
             </Card>
             <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
               <CardContent className="p-4 text-center">
-                <p className="text-3xl font-bold text-primary">{policyData.filter(d => d.wpay).length}</p>
+                <p className="text-3xl font-bold text-primary">{activePolicyData.filter(d => d.wpay).length}</p>
                 <p className="text-sm text-gray-400 mt-1">WPAY Aligned</p>
               </CardContent>
             </Card>
@@ -415,7 +441,7 @@ const PolicyMonitor = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {policyData.map((item) => {
+                    {activePolicyData.map((item) => {
                       const isMyCountry = preferences.myCountry && item.country.toLowerCase() === preferences.myCountry.toLowerCase();
                       return (
                       <React.Fragment key={item.country}>

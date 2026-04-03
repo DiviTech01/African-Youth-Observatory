@@ -1,19 +1,16 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-} from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 
-export type UserRole = 'public' | 'registered' | 'premium' | 'admin';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+export type UserRole = 'PUBLIC' | 'REGISTERED' | 'RESEARCHER' | 'CONTRIBUTOR' | 'INSTITUTIONAL' | 'ADMIN';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  organization?: string;
+  avatar?: string;
 }
 
 interface AuthContextValue {
@@ -23,87 +20,116 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => void;
+  getToken: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const STORAGE_KEY = 'ayd_user';
-
-function loadUser(): User | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
-  } catch {
-    return null;
-  }
-}
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Hydrate from localStorage on mount
+  // Validate existing token on mount
   useEffect(() => {
-    const stored = loadUser();
-    if (stored) {
-      setUser(stored);
-    }
-    setIsLoading(false);
-  }, []);
-
-  const signIn = useCallback(async (email: string, _password: string) => {
-    setIsLoading(true);
-    // Simulate network delay
-    await new Promise((r) => setTimeout(r, 800));
-
-    const mockUser: User = {
-      id: crypto.randomUUID(),
-      name: email.split('@')[0],
-      email,
-      role: 'registered',
-    };
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(mockUser));
-    setUser(mockUser);
-    setIsLoading(false);
-  }, []);
-
-  const signUp = useCallback(
-    async (name: string, email: string, _password: string) => {
-      setIsLoading(true);
-      await new Promise((r) => setTimeout(r, 800));
-
-      const mockUser: User = {
-        id: crypto.randomUUID(),
-        name,
-        email,
-        role: 'registered',
-      };
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(mockUser));
-      setUser(mockUser);
+    const token = localStorage.getItem('ayd_token');
+    if (!token) {
       setIsLoading(false);
-    },
-    [],
-  );
+      return;
+    }
+    fetch(`${API_BASE}/auth/profile`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Invalid token');
+        return res.json();
+      })
+      .then(data => {
+        setUser({
+          id: data.id,
+          name: data.name || data.email.split('@')[0],
+          email: data.email,
+          role: (data.role || 'REGISTERED').toUpperCase() as UserRole,
+          organization: data.organization,
+          avatar: data.avatar,
+        });
+      })
+      .catch(() => {
+        localStorage.removeItem('ayd_token');
+        localStorage.removeItem('ayd_refresh_token');
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/signin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Invalid credentials');
+      }
+      const data = await res.json();
+      const accessToken = data.tokens?.accessToken || data.token;
+      const refreshToken = data.tokens?.refreshToken;
+      if (accessToken) localStorage.setItem('ayd_token', accessToken);
+      if (refreshToken) localStorage.setItem('ayd_refresh_token', refreshToken);
+      setUser({
+        id: data.user.id,
+        name: data.user.name || data.user.email.split('@')[0],
+        email: data.user.email,
+        role: (data.user.role || 'REGISTERED').toUpperCase() as UserRole,
+        organization: data.user.organization,
+        avatar: data.user.avatar,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const signUp = useCallback(async (name: string, email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Registration failed');
+      }
+      const data = await res.json();
+      const accessToken = data.tokens?.accessToken || data.token;
+      const refreshToken = data.tokens?.refreshToken;
+      if (accessToken) localStorage.setItem('ayd_token', accessToken);
+      if (refreshToken) localStorage.setItem('ayd_refresh_token', refreshToken);
+      setUser({
+        id: data.user.id,
+        name: data.user.name || name,
+        email: data.user.email,
+        role: (data.user.role || 'REGISTERED').toUpperCase() as UserRole,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const signOut = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('ayd_token');
+    localStorage.removeItem('ayd_refresh_token');
+    localStorage.removeItem('ayd_user');
     setUser(null);
   }, []);
 
+  const getToken = useCallback(() => localStorage.getItem('ayd_token'), []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({
-      user,
-      isAuthenticated: !!user,
-      isLoading,
-      signIn,
-      signUp,
-      signOut,
-    }),
-    [user, isLoading, signIn, signUp, signOut],
+    () => ({ user, isAuthenticated: !!user, isLoading, signIn, signUp, signOut, getToken }),
+    [user, isLoading, signIn, signUp, signOut, getToken],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -111,8 +137,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
   return ctx;
 }

@@ -1,14 +1,16 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Shield, Users, Globe, Database, Activity,
   Upload, RefreshCw, Trash2, FileText,
 } from 'lucide-react';
 
-// ── Mock Data ─────────────────────────────────────────────────────────────────
+// ── Mock fallback ────────────────────────────────────────────────────────────
 
-const stats = [
+const mockStats = [
   { label: 'Total Users', value: '12,847', icon: Users, change: '+3.2%' },
   { label: 'Countries with Data', value: '54', icon: Globe, change: '+2' },
   { label: 'Data Points', value: '1.4M', icon: Database, change: '+18K' },
@@ -34,6 +36,30 @@ const quickActions = [
 // ── Admin Page ────────────────────────────────────────────────────────────────
 
 const Admin = () => {
+  const token = localStorage.getItem('ayd_token');
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  // Fetch real platform stats
+  const { data: platformStats } = useQuery({
+    queryKey: ['platform-stats'],
+    queryFn: () => fetch('/api/platform/stats').then(r => r.ok ? r.json() : null).catch(() => null),
+  });
+
+  // Build stats from API or fallback
+  const stats = platformStats ? [
+    { label: 'Total Countries', value: String(platformStats.countries || 54), icon: Globe, change: 'Active' },
+    { label: 'Total Indicators', value: String(platformStats.indicators || 59), icon: Database, change: `${platformStats.themes || 9} themes` },
+    { label: 'Data Points', value: platformStats.indicatorValues ? (platformStats.indicatorValues > 1000 ? `${(platformStats.indicatorValues / 1000).toFixed(1)}K` : String(platformStats.indicatorValues)) : '—', icon: Activity, change: 'Live' },
+    { label: 'Users', value: String(platformStats.users || '—'), icon: Users, change: '' },
+  ] : mockStats;
+
+  const handleClearCache = async () => {
+    try {
+      await fetch('/api/platform/clear-cache', { method: 'POST', headers });
+    } catch { /* ignore */ }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -46,6 +72,7 @@ const Admin = () => {
               Manage data, users, and platform operations
             </p>
           </div>
+          {!platformStats && <Badge variant="secondary" className="ml-auto text-xs">Offline</Badge>}
         </div>
       </div>
 
@@ -101,6 +128,7 @@ const Admin = () => {
                   key={action.label}
                   variant={action.variant}
                   className="w-full justify-start gap-2"
+                  onClick={action.label === 'Clear Cache' ? handleClearCache : undefined}
                 >
                   <action.icon className="h-4 w-4" />
                   {action.label}

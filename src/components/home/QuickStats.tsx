@@ -1,4 +1,5 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Users, GraduationCap, Heart, Briefcase, BookOpen } from 'lucide-react';
 import { GlowCard } from '@/components/ui/spotlight-card';
@@ -52,6 +53,24 @@ const statsData = [
 ];
 
 const QuickStats = () => {
+  // Fetch real stats from API
+  const { data: platformStats } = useQuery({
+    queryKey: ['platform-stats'],
+    queryFn: () => fetch('/api/platform/stats').then(r => r.ok ? r.json() : null).catch(() => null),
+    staleTime: 60000,
+  });
+
+  // Override first stat with real data if available
+  if (platformStats) {
+    const countries = platformStats.countries || 54;
+    const indicators = platformStats.indicators || 59;
+    const dataPoints = platformStats.indicatorValues || 0;
+    statsData[0] = { ...statsData[0], value: `${countries}`, description: `Countries · ${indicators} indicators` };
+    if (dataPoints > 0) {
+      statsData[4] = { ...statsData[4], value: dataPoints > 1000 ? `${(dataPoints/1000).toFixed(0)}K` : String(dataPoints), description: 'Data points collected', title: 'Data Points' };
+    }
+  }
+
   return (
     <section className="relative py-16 md:py-24 bg-black overflow-hidden">
       {/* Grid BG - matching hero */}

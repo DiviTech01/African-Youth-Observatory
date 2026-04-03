@@ -93,25 +93,48 @@ const NaturalLanguageQuery = () => {
   }, [clearTyping]);
 
   const handleQuery = useCallback(
-    (q: string) => {
+    async (q: string) => {
       clearTyping();
       setLastQuery(q);
       setDisplayedText('');
       setShowChart(false);
       setIsTyping(true);
 
-      const matchedResult = queryDatabase[q] ?? {
-        narrative: `Based on the available data, your query "${q}" returned relevant insights from the African Youth Database. The data suggests significant variation across countries and regions. For more precise results, try one of the suggested queries below.`,
-        chartData: [
-          { name: 'North Africa', value: 68 },
-          { name: 'West Africa', value: 54 },
-          { name: 'East Africa', value: 62 },
-          { name: 'Central Africa', value: 41 },
-          { name: 'Southern Africa', value: 71 },
-        ],
-        chartLabel: 'Regional Index Score',
-        followUps: exampleQueries,
-      };
+      // Try API first, fallback to mock
+      const apiBase = import.meta.env.VITE_API_URL || '/api';
+      let matchedResult: QueryResult;
+      try {
+        const res = await fetch(`${apiBase}/nlq/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          matchedResult = {
+            narrative: data.answer || data.narrative || 'No answer available.',
+            chartData: data.chartData?.data || data.visualization?.data || [],
+            chartLabel: data.chartData?.label || data.visualization?.title || 'Data',
+            followUps: data.followUpQuestions || data.followUps || exampleQueries,
+          };
+        } else {
+          throw new Error('API error');
+        }
+      } catch {
+        // Fallback to mock database
+        matchedResult = queryDatabase[q] ?? {
+          narrative: `Based on the available data, your query "${q}" returned relevant insights from the African Youth Database. The data suggests significant variation across countries and regions. For more precise results, try one of the suggested queries below.`,
+          chartData: [
+            { name: 'North Africa', value: 68 },
+            { name: 'West Africa', value: 54 },
+            { name: 'East Africa', value: 62 },
+            { name: 'Central Africa', value: 41 },
+            { name: 'Southern Africa', value: 71 },
+          ],
+          chartLabel: 'Regional Index Score',
+          followUps: exampleQueries,
+        };
+      }
 
       setResult(matchedResult);
 

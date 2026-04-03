@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Search, Menu, X, LogOut, LayoutDashboard, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,28 @@ import { WhatsNew } from '@/components/WhatsNew';
 const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Search API
+  const { data: searchResults } = useQuery({
+    queryKey: ['search', searchQuery],
+    queryFn: () => fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&limit=5`).then(r => r.ok ? r.json() : null).catch(() => null),
+    enabled: searchQuery.length >= 2,
+  });
+
+  const hasResults = searchResults && searchResults.totalResults > 0;
+
+  // Close search dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchQuery('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, signOut } = useAuth();
@@ -93,20 +116,51 @@ const Navbar = () => {
 
         <div className="flex items-center gap-1 sm:gap-2">
           {isSearchOpen ? (
-            <div className="flex items-center relative animate-fade-in">
+            <div ref={searchRef} className="flex items-center relative animate-fade-in">
               <Input
                 type="search"
                 placeholder={t('nav.search')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-[160px] sm:w-[200px] lg:w-[250px] text-sm"
+                autoFocus
               />
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={toggleSearch}
+                onClick={() => { toggleSearch(); setSearchQuery(''); }}
                 className="absolute right-0 h-8 w-8"
               >
                 <X className="h-4 w-4" />
               </Button>
+              {/* Search Results Dropdown */}
+              {hasResults && (
+                <div className="absolute top-full right-0 mt-1 w-[280px] sm:w-[320px] max-h-[400px] overflow-y-auto rounded-lg border border-gray-700 bg-black/95 backdrop-blur-md shadow-lg z-50">
+                  {(['countries', 'indicators', 'themes', 'experts', 'dashboards'] as const).map((type) => {
+                    const items = searchResults?.results?.[type];
+                    if (!items?.length) return null;
+                    return (
+                      <div key={type}>
+                        <p className="text-[10px] uppercase text-gray-500 px-3 pt-2 pb-1 font-medium">{type}</p>
+                        {items.map((hit: any) => (
+                          <Link
+                            key={hit.id}
+                            to={hit.url}
+                            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/[0.06] transition-colors"
+                            onClick={() => { setSearchQuery(''); setIsSearchOpen(false); }}
+                          >
+                            {hit.icon && <span>{hit.icon}</span>}
+                            <div className="min-w-0">
+                              <p className="truncate font-medium">{hit.title}</p>
+                              {hit.subtitle && <p className="text-xs text-gray-500 truncate">{hit.subtitle}</p>}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : (
             <Button

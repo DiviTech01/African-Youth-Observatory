@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,8 +11,10 @@ import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Responsi
 import CountryFlag from '@/components/CountryFlag';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { api } from '@/lib/api-client';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const indexData = [
+const mockIndexData = [
   { rank: 1, country: "Mauritius", score: 78.4, change: 2, education: 85.2, employment: 71.3, health: 82.1, civic: 74.8 },
   { rank: 2, country: "Seychelles", score: 76.2, change: 0, education: 82.4, employment: 69.8, health: 79.5, civic: 73.2 },
   { rank: 3, country: "Tunisia", score: 72.8, change: 1, education: 79.1, employment: 62.4, health: 78.3, civic: 71.5 },
@@ -51,7 +54,32 @@ const YouthIndex = () => {
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [sortField, setSortField] = useState<SortField>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [selectedCountry, setSelectedCountry] = useState<typeof indexData[0] | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<any>(null);
+
+  // Fetch rankings from API
+  const { data: apiRankings, isLoading, isError } = useQuery({
+    queryKey: ['youth-index', selectedYear],
+    queryFn: () => api.youthIndex.rankings({ year: parseInt(selectedYear) }),
+  });
+
+  // Transform API data to match UI format, fallback to mock
+  const indexData = useMemo(() => {
+    const apiData = (apiRankings as any)?.data || apiRankings;
+    if (Array.isArray(apiData) && apiData.length > 0) {
+      return apiData.map((r: any) => ({
+        rank: r.rank,
+        country: r.countryName || r.country?.name,
+        score: r.overallScore,
+        change: r.rankChange || 0,
+        education: r.dimensions?.education ?? r.educationScore ?? 0,
+        employment: r.dimensions?.employment ?? r.employmentScore ?? 0,
+        health: r.dimensions?.health ?? r.healthScore ?? 0,
+        civic: r.dimensions?.civic ?? r.civicScore ?? 0,
+        tier: r.tier,
+      }));
+    }
+    return mockIndexData;
+  }, [apiRankings]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

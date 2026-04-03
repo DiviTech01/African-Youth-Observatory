@@ -40,6 +40,8 @@ const Settings = lazy(() => import("./pages/Settings"));
 const Glossary = lazy(() => import("./pages/resources/Glossary"));
 const FAQ = lazy(() => import("./pages/resources/FAQ"));
 const Methodology = lazy(() => import("./pages/resources/Methodology"));
+const CountryProfilePage = lazy(() => import("./pages/CountryProfilePage"));
+const DataUpload = lazy(() => import("./pages/DataUpload"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,6 +79,7 @@ const App = () => (
               <Route path="/compare" element={<PublicLayout><PageTransition><Compare /></PageTransition></PublicLayout>} />
               <Route path="/themes" element={<PublicLayout><PageTransition><Themes /></PageTransition></PublicLayout>} />
               <Route path="/countries" element={<PublicLayout><PageTransition><Countries /></PageTransition></PublicLayout>} />
+              <Route path="/countries/:id" element={<PublicLayout><PageTransition><CountryProfilePage /></PageTransition></PublicLayout>} />
               <Route path="/about" element={<PublicLayout><PageTransition><About /></PageTransition></PublicLayout>} />
               <Route path="/reports" element={<PublicLayout><PageTransition><Reports /></PageTransition></PublicLayout>} />
               <Route path="/contact" element={<PublicLayout><PageTransition><Contact /></PageTransition></PublicLayout>} />
@@ -93,6 +96,7 @@ const App = () => (
               <Route path="/dashboard" element={<DashboardLayout><PageTransition><Dashboard /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/explore" element={<DashboardLayout><PageTransition><Explore /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/countries" element={<DashboardLayout><PageTransition><Countries /></PageTransition></DashboardLayout>} />
+              <Route path="/dashboard/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/youth-index" element={<DashboardLayout><PageTransition><YouthIndex /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/compare" element={<DashboardLayout><PageTransition><Compare /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/insights" element={<DashboardLayout><PageTransition><Insights /></PageTransition></DashboardLayout>} />
@@ -102,6 +106,7 @@ const App = () => (
               <Route path="/dashboard/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
               <Route path="/settings" element={<DashboardLayout><PageTransition><Settings /></PageTransition></DashboardLayout>} />
               <Route path="/admin" element={<DashboardLayout><PageTransition><Admin /></PageTransition></DashboardLayout>} />
+              <Route path="/dashboard/data-upload" element={<DashboardLayout><PageTransition><DataUpload /></PageTransition></DashboardLayout>} />
 
               {/* Catch-all */}
               <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />

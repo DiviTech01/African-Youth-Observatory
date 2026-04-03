@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,8 +12,11 @@ import { getCountryMeta } from '@/lib/country-flags';
 import { SparklineChart } from '@/components/SparklineChart';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { api } from '@/lib/api-client';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const regionsMap: Record<string, string[]> = {
+// Fallback data in case API is not available
+const regionsMapFallback: Record<string, string[]> = {
   "North Africa": ["Algeria", "Egypt", "Libya", "Morocco", "Tunisia"],
   "West Africa": ["Benin", "Burkina Faso", "Cabo Verde", "Côte d'Ivoire", "Gambia", "Ghana", "Guinea", "Guinea-Bissau", "Liberia", "Mali", "Mauritania", "Niger", "Nigeria", "Senegal", "Sierra Leone", "Togo"],
   "Central Africa": ["Cameroon", "Central African Republic", "Chad", "Congo", "DRC", "Equatorial Guinea", "Gabon", "São Tomé and Príncipe"],
@@ -28,14 +32,6 @@ const regionColors: Record<string, string> = {
   "Southern Africa": "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30",
 };
 
-const regionBarColors: Record<string, string[]> = {
-  "North Africa": ["bg-blue-400", "bg-blue-500", "bg-blue-300", "bg-blue-600", "bg-blue-400", "bg-blue-500"],
-  "West Africa": ["bg-emerald-400", "bg-emerald-500", "bg-emerald-300", "bg-emerald-600", "bg-emerald-400", "bg-emerald-500"],
-  "Central Africa": ["bg-amber-400", "bg-amber-500", "bg-amber-300", "bg-amber-600", "bg-amber-400", "bg-amber-500"],
-  "East Africa": ["bg-purple-400", "bg-purple-500", "bg-purple-300", "bg-purple-600", "bg-purple-400", "bg-purple-500"],
-  "Southern Africa": ["bg-rose-400", "bg-rose-500", "bg-rose-300", "bg-rose-600", "bg-rose-400", "bg-rose-500"],
-};
-
 const regionSparklineColors: Record<string, string> = {
   "North Africa": "#3b82f6",
   "West Africa": "#10b981",
@@ -44,7 +40,7 @@ const regionSparklineColors: Record<string, string> = {
   "Southern Africa": "#f43f5e",
 };
 
-const allRegions = ["All", ...Object.keys(regionsMap)];
+const allRegions = ["All", "North Africa", "West Africa", "Central Africa", "East Africa", "Southern Africa"];
 
 // Deterministic pseudo-random data points per country for sparkline
 function getSparklineData(country: string): number[] {
@@ -60,21 +56,51 @@ const Countries = () => {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [activeRegion, setActiveRegion] = useState('All');
 
+  // Fetch countries from API
+  const { data: apiResponse, isLoading, isError } = useQuery({
+    queryKey: ['countries', { region: activeRegion === 'All' ? undefined : activeRegion, search: searchTerm || undefined }],
+    queryFn: () => api.countries.list({
+      region: activeRegion === 'All' ? undefined : activeRegion,
+      search: searchTerm || undefined,
+    }),
+  });
+
   const filteredCountries = useMemo(() => {
+    // Use API data if available
+    const apiData = (apiResponse as any)?.data || apiResponse;
+    if (Array.isArray(apiData) && apiData.length > 0) {
+      let entries = apiData.map((c: any) => ({
+        country: c.name,
+        region: c.region || 'Unknown',
+        id: c.id,
+        capital: c.capital,
+        flagEmoji: c.flagEmoji,
+        isoCode3: c.isoCode3 || c.iso3Code,
+      }));
+
+      // Sort user's country to the top
+      if (preferences.myCountry) {
+        entries.sort((a: any, b: any) => {
+          const aIsMyCountry = a.country.toLowerCase() === preferences.myCountry!.toLowerCase();
+          const bIsMyCountry = b.country.toLowerCase() === preferences.myCountry!.toLowerCase();
+          if (aIsMyCountry && !bIsMyCountry) return -1;
+          if (!aIsMyCountry && bIsMyCountry) return 1;
+          return 0;
+        });
+      }
+      return entries;
+    }
+
+    // Fallback to hardcoded data
     let entries: { country: string; region: string }[] = [];
-
-    const regionsToShow = activeRegion === 'All'
-      ? Object.keys(regionsMap)
-      : [activeRegion];
-
+    const regionsToShow = activeRegion === 'All' ? Object.keys(regionsMapFallback) : [activeRegion];
     for (const region of regionsToShow) {
-      for (const country of regionsMap[region]) {
+      for (const country of (regionsMapFallback[region] || [])) {
         if (country.toLowerCase().includes(searchTerm.toLowerCase())) {
           entries.push({ country, region });
         }
       }
     }
-    // Sort user's country to the top if set
     if (preferences.myCountry) {
       entries.sort((a, b) => {
         const aIsMyCountry = a.country.toLowerCase() === preferences.myCountry!.toLowerCase();
@@ -85,7 +111,7 @@ const Countries = () => {
       });
     }
     return entries;
-  }, [searchTerm, activeRegion, preferences.myCountry]);
+  }, [apiResponse, searchTerm, activeRegion, preferences.myCountry]);
 
   return (
     <>
@@ -151,79 +177,97 @@ const Countries = () => {
           </div>
         ) : (
           <div className="container px-4 md:px-6">
-            {filteredCountries.length === 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                {Array.from({ length: 15 }).map((_, i) => (
+                  <Card key={i} className="rounded-2xl border border-gray-800 bg-white/[0.03]">
+                    <CardContent className="p-4 space-y-3">
+                      <Skeleton className="h-6 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-7 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredCountries.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <Search className="h-10 w-10 mx-auto mb-3 opacity-40" />
                 <p className="text-lg font-medium">No countries found</p>
                 <p className="text-sm mt-1">Try adjusting your search or region filter.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                {filteredCountries.map(({ country, region }) => {
-                  const sparklineData = getSparklineData(country);
-                  const isMyCountry = preferences.myCountry && country.toLowerCase() === preferences.myCountry.toLowerCase();
-                  return (
-                    <Card
-                      key={country}
-                      className={`hover-lift cursor-pointer group rounded-2xl border border-gray-800 bg-white/[0.03] hover:border-gray-600 transition-colors ${isMyCountry ? 'ring-2 ring-[#D4A017] border-[#D4A017]/50' : ''}`}
-                      onClick={() => {
-                        trackCountryView(country);
-                        setSelectedCountry(country);
-                      }}
-                    >
-                      <CardContent className="p-4 flex flex-col gap-2.5">
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex items-center gap-2">
-                            <CountryFlag country={country} size="md" />
-                            <span className="text-sm sm:text-base font-bold leading-tight line-clamp-1">
-                              {country}
-                            </span>
-                            {isMyCountry && <Star className="h-4 w-4 text-[#D4A017] fill-[#D4A017] flex-shrink-0" />}
+              <>
+                {isError && (
+                  <Badge variant="secondary" className="mb-4 text-xs">Showing offline data</Badge>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                  {filteredCountries.map(({ country, region }: any) => {
+                    const sparklineData = getSparklineData(country);
+                    const isMyCountry = preferences.myCountry && country.toLowerCase() === preferences.myCountry.toLowerCase();
+                    return (
+                      <Card
+                        key={country}
+                        className={`hover-lift cursor-pointer group rounded-2xl border border-gray-800 bg-white/[0.03] hover:border-gray-600 transition-colors ${isMyCountry ? 'ring-2 ring-[#D4A017] border-[#D4A017]/50' : ''}`}
+                        onClick={() => {
+                          trackCountryView(country);
+                          setSelectedCountry(country);
+                        }}
+                      >
+                        <CardContent className="p-4 flex flex-col gap-2.5">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                              <CountryFlag country={country} size="md" />
+                              <span className="text-sm sm:text-base font-bold leading-tight line-clamp-1">
+                                {country}
+                              </span>
+                              {isMyCountry && <Star className="h-4 w-4 text-[#D4A017] fill-[#D4A017] flex-shrink-0" />}
+                            </div>
+                            {(() => {
+                              const meta = getCountryMeta(country);
+                              return meta ? (
+                                <>
+                                  <span className="text-[11px] text-gray-400">{meta.capital}</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {meta.languages.slice(0, 2).map((lang) => (
+                                      <Badge key={lang} variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                                        {lang}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </>
+                              ) : null;
+                            })()}
+                            <Badge
+                              variant="outline"
+                              className={`w-fit text-[10px] px-1.5 py-0 ${regionColors[region] || ''}`}
+                            >
+                              {region}
+                            </Badge>
                           </div>
-                          {(() => {
-                            const meta = getCountryMeta(country);
-                            return meta ? (
-                              <>
-                                <span className="text-[11px] text-gray-400">{meta.capital}</span>
-                                <div className="flex flex-wrap gap-1">
-                                  {meta.languages.slice(0, 2).map((lang) => (
-                                    <Badge key={lang} variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                                      {lang}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </>
-                            ) : null;
-                          })()}
-                          <Badge
-                            variant="outline"
-                            className={`w-fit text-[10px] px-1.5 py-0 ${regionColors[region]}`}
-                          >
-                            {region}
-                          </Badge>
-                        </div>
 
-                        {/* Sparkline chart */}
-                        <div className="mt-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                          <SparklineChart
-                            data={sparklineData}
-                            color={regionSparklineColors[region]}
-                            width={100}
-                            height={28}
-                          />
-                        </div>
+                          {/* Sparkline chart */}
+                          <div className="mt-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                            <SparklineChart
+                              data={sparklineData}
+                              color={regionSparklineColors[region] || '#888'}
+                              width={100}
+                              height={28}
+                            />
+                          </div>
 
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-[11px] sm:text-xs text-gray-500 font-medium group-hover:text-[#D4A017] transition-colors">
-                            View Profile
-                          </span>
-                          <ChevronRight className="h-3.5 w-3.5 text-gray-500 group-hover:text-[#D4A017] group-hover:translate-x-0.5 transition-all" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-[11px] sm:text-xs text-gray-500 font-medium group-hover:text-[#D4A017] transition-colors">
+                              View Profile
+                            </span>
+                            <ChevronRight className="h-3.5 w-3.5 text-gray-500 group-hover:text-[#D4A017] group-hover:translate-x-0.5 transition-all" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}

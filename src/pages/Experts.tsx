@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,8 @@ import { Users, Search, UserPlus, MapPin, Briefcase, Globe } from 'lucide-react'
 import { Label } from '@/components/ui/label';
 import CountryFlag from '@/components/CountryFlag';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { api } from '@/lib/api-client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Expert {
   id: number;
@@ -126,9 +129,11 @@ const experts: Expert[] = [
   },
 ];
 
-const allCountries = [...new Set(experts.map((e) => e.country))].sort();
-const allSpecializations = [...new Set(experts.flatMap((e) => e.specializations))].sort();
-const allLanguages = [...new Set(experts.flatMap((e) => e.languages))].sort();
+const mockCountries = [...new Set(experts.map((e) => e.country))].sort();
+const mockSpecializations = [...new Set(experts.flatMap((e) => e.specializations))].sort();
+const mockLanguages = [...new Set(experts.flatMap((e) => e.languages))].sort();
+
+const avatarColors = ['bg-pan-green-500', 'bg-pan-blue-500', 'bg-pan-gold-500', 'bg-pan-red-500', 'bg-purple-500', 'bg-teal-500', 'bg-indigo-500', 'bg-rose-500', 'bg-cyan-500'];
 
 const Experts = () => {
   const { t } = useLanguage();
@@ -138,19 +143,48 @@ const Experts = () => {
   const [langFilter, setLangFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Fetch experts from API
+  const { data: apiExperts, isLoading, isError } = useQuery({
+    queryKey: ['experts', { search: search || undefined }],
+    queryFn: () => api.experts.list({ search: search || undefined }),
+  });
+
+  // Merge API data with mock fallback
+  const allExperts = useMemo(() => {
+    const apiData = (apiExperts as any)?.data || apiExperts;
+    if (Array.isArray(apiData) && apiData.length > 0) {
+      return apiData.map((e: any, i: number) => ({
+        id: e.id || i,
+        name: e.name,
+        initials: e.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
+        title: e.title,
+        organization: e.organization || '',
+        country: e.country?.name || e.country || '',
+        specializations: e.specializations || [],
+        languages: e.languages || [],
+        color: avatarColors[i % avatarColors.length],
+      }));
+    }
+    return experts;
+  }, [apiExperts]);
+
+  const allCountries = useMemo(() => [...new Set(allExperts.map((e: any) => e.country))].sort() as string[], [allExperts]);
+  const allSpecializations = useMemo(() => [...new Set(allExperts.flatMap((e: any) => e.specializations))].sort() as string[], [allExperts]);
+  const allLanguages = useMemo(() => [...new Set(allExperts.flatMap((e: any) => e.languages))].sort() as string[], [allExperts]);
+
   const filtered = useMemo(() => {
-    return experts.filter((e) => {
+    return allExperts.filter((e: any) => {
       const matchSearch =
         !search ||
         e.name.toLowerCase().includes(search.toLowerCase()) ||
-        e.organization.toLowerCase().includes(search.toLowerCase()) ||
-        e.specializations.some((s) => s.toLowerCase().includes(search.toLowerCase()));
+        (e.organization || '').toLowerCase().includes(search.toLowerCase()) ||
+        e.specializations.some((s: string) => s.toLowerCase().includes(search.toLowerCase()));
       const matchCountry = countryFilter === 'all' || e.country === countryFilter;
       const matchSpec = specFilter === 'all' || e.specializations.includes(specFilter);
       const matchLang = langFilter === 'all' || e.languages.includes(langFilter);
       return matchSearch && matchCountry && matchSpec && matchLang;
     });
-  }, [search, countryFilter, specFilter, langFilter]);
+  }, [allExperts, search, countryFilter, specFilter, langFilter]);
 
   return (
     <>
@@ -314,7 +348,8 @@ const Experts = () => {
 
           {/* Results count */}
           <p className="text-sm text-gray-400 mb-4">
-            Showing {filtered.length} of {experts.length} experts
+            {isLoading ? 'Loading experts...' : `Showing ${filtered.length} of ${allExperts.length} experts`}
+            {isError && <Badge variant="secondary" className="ml-2 text-xs">Offline</Badge>}
           </p>
 
           {/* Expert Grid */}

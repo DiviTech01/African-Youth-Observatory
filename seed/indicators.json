@@ -1,0 +1,592 @@
+[
+  {
+    "name": "Youth Literacy Rate",
+    "slug": "youth-literacy-rate",
+    "description": "Percentage of people aged 15-24 who can read and write a short simple statement about their everyday life",
+    "unit": "PERCENTAGE",
+    "source": "UNESCO Institute for Statistics",
+    "methodology": "Household surveys and census data",
+    "frequency": "annual",
+    "themeSlug": "education"
+  },
+  {
+    "name": "Secondary School Net Enrollment Rate",
+    "slug": "secondary-school-net-enrollment-rate",
+    "description": "Ratio of children of official secondary school age enrolled in secondary school to the total population of the official secondary school age",
+    "unit": "PERCENTAGE",
+    "source": "UNESCO Institute for Statistics",
+    "methodology": "Administrative data from national education ministries",
+    "frequency": "annual",
+    "themeSlug": "education"
+  },
+  {
+    "name": "Tertiary Education Gross Enrollment Rate",
+    "slug": "tertiary-education-gross-enrollment-rate",
+    "description": "Total enrollment in tertiary education regardless of age expressed as a percentage of the eligible official school-age population",
+    "unit": "PERCENTAGE",
+    "source": "UNESCO Institute for Statistics",
+    "methodology": "Administrative data from higher education institutions",
+    "frequency": "annual",
+    "themeSlug": "education"
+  },
+  {
+    "name": "STEM Graduates as Share of Total Graduates",
+    "slug": "stem-graduates-share",
+    "description": "Percentage of tertiary graduates from science, technology, engineering, and mathematics programmes",
+    "unit": "PERCENTAGE",
+    "source": "UNESCO Institute for Statistics",
+    "methodology": "Administrative data from higher education institutions",
+    "frequency": "annual",
+    "themeSlug": "education"
+  },
+  {
+    "name": "Youth Not in Education, Employment or Training (NEET)",
+    "slug": "youth-neet-rate",
+    "description": "Proportion of youth aged 15-24 not in education, employment, or training",
+    "unit": "PERCENTAGE",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys and household surveys",
+    "frequency": "annual",
+    "themeSlug": "education"
+  },
+  {
+    "name": "Primary Completion Rate",
+    "slug": "primary-completion-rate",
+    "description": "Total number of new entrants in the last grade of primary education regardless of age expressed as a percentage of the total population of the theoretical entrance age to the last grade of primary",
+    "unit": "PERCENTAGE",
+    "source": "UNESCO Institute for Statistics",
+    "methodology": "Administrative data from national education ministries",
+    "frequency": "annual",
+    "themeSlug": "education"
+  },
+  {
+    "name": "Mean Years of Schooling",
+    "slug": "mean-years-of-schooling",
+    "description": "Average number of completed years of education of a country's population aged 25 years and older",
+    "unit": "NUMBER",
+    "source": "UNDP Human Development Report",
+    "methodology": "Census and household survey data combined with education attainment distributions",
+    "frequency": "annual",
+    "themeSlug": "education"
+  },
+  {
+    "name": "Youth Unemployment Rate (15-24)",
+    "slug": "youth-unemployment-rate",
+    "description": "Share of the labor force aged 15-24 without work but available for and seeking employment",
+    "unit": "PERCENTAGE",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys using ILO standard definitions",
+    "frequency": "annual",
+    "themeSlug": "employment-entrepreneurship"
+  },
+  {
+    "name": "Youth Labor Force Participation Rate",
+    "slug": "youth-labor-force-participation-rate",
+    "description": "Proportion of youth population aged 15-24 that is economically active (employed or unemployed and seeking work)",
+    "unit": "PERCENTAGE",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys",
+    "frequency": "annual",
+    "themeSlug": "employment-entrepreneurship"
+  },
+  {
+    "name": "Youth Self-Employment Rate",
+    "slug": "youth-self-employment-rate",
+    "description": "Percentage of employed youth aged 15-24 who are own-account workers or employers",
+    "unit": "PERCENTAGE",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys and establishment surveys",
+    "frequency": "annual",
+    "themeSlug": "employment-entrepreneurship"
+  },
+  {
+    "name": "Informal Employment Rate",
+    "slug": "informal-employment-rate",
+    "description": "Proportion of total employment that is in the informal sector, including employment in unregistered enterprises and without social protection",
+    "unit": "PERCENTAGE",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys using the ILO conceptual framework for informal employment",
+    "frequency": "annual",
+    "themeSlug": "employment-entrepreneurship"
+  },
+  {
+    "name": "Youth Entrepreneurship Rate",
+    "slug": "youth-entrepreneurship-rate",
+    "description": "Percentage of youth aged 18-34 who are either nascent entrepreneurs or owner-managers of new businesses",
+    "unit": "PERCENTAGE",
+    "source": "Global Entrepreneurship Monitor (GEM)",
+    "methodology": "Adult Population Survey (APS) conducted annually across participating countries",
+    "frequency": "annual",
+    "themeSlug": "employment-entrepreneurship"
+  },
+  {
+    "name": "Share of Youth in Wage Employment",
+    "slug": "youth-wage-employment-share",
+    "description": "Proportion of employed youth aged 15-24 in paid employment (wage and salaried workers)",
+    "unit": "PERCENTAGE",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys",
+    "frequency": "annual",
+    "themeSlug": "employment-entrepreneurship"
+  },
+  {
+    "name": "Youth Working Poverty Rate",
+    "slug": "youth-working-poverty-rate",
+    "description": "Percentage of employed youth aged 15-24 living below the international poverty line (USD 2.15/day PPP)",
+    "unit": "PERCENTAGE",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys combined with household income/expenditure surveys",
+    "frequency": "annual",
+    "themeSlug": "employment-entrepreneurship"
+  },
+  {
+    "name": "Youth Mortality Rate (15-24)",
+    "slug": "youth-mortality-rate",
+    "description": "Probability of dying between the ages of 15 and 24 per 1,000 youth population",
+    "unit": "NUMBER",
+    "source": "World Health Organization (WHO)",
+    "methodology": "Civil registration data, household surveys, and demographic models",
+    "frequency": "annual",
+    "themeSlug": "health"
+  },
+  {
+    "name": "Adolescent Fertility Rate",
+    "slug": "adolescent-fertility-rate",
+    "description": "Number of births per 1,000 women aged 15-19",
+    "unit": "NUMBER",
+    "source": "World Bank / UN Population Division",
+    "methodology": "Civil registration systems, censuses, and household surveys (DHS, MICS)",
+    "frequency": "annual",
+    "themeSlug": "health"
+  },
+  {
+    "name": "HIV Prevalence Rate (15-24)",
+    "slug": "hiv-prevalence-rate-youth",
+    "description": "Percentage of people aged 15-24 who are living with HIV",
+    "unit": "PERCENTAGE",
+    "source": "UNAIDS",
+    "methodology": "Sentinel surveillance, population-based surveys, and epidemiological modelling (Spectrum/EPP)",
+    "frequency": "annual",
+    "themeSlug": "health"
+  },
+  {
+    "name": "Youth with Access to Healthcare",
+    "slug": "youth-healthcare-access",
+    "description": "Percentage of youth aged 15-24 who report being able to access essential health services when needed",
+    "unit": "PERCENTAGE",
+    "source": "World Health Organization (WHO)",
+    "methodology": "Household surveys including DHS and MICS",
+    "frequency": "annual",
+    "themeSlug": "health"
+  },
+  {
+    "name": "Stunting Prevalence (Under 5)",
+    "slug": "stunting-prevalence-under-5",
+    "description": "Percentage of children under 5 years whose height-for-age is more than two standard deviations below the WHO median",
+    "unit": "PERCENTAGE",
+    "source": "UNICEF / WHO / World Bank Joint Malnutrition Estimates",
+    "methodology": "Nationally representative household surveys (DHS, MICS, national nutrition surveys)",
+    "frequency": "annual",
+    "themeSlug": "health"
+  },
+  {
+    "name": "Mental Health Service Coverage",
+    "slug": "mental-health-service-coverage",
+    "description": "Proportion of people with mental disorders who receive treatment, measured through mental health service utilization data",
+    "unit": "PERCENTAGE",
+    "source": "World Health Organization (WHO) Mental Health Atlas",
+    "methodology": "National mental health information systems and facility-based surveys",
+    "frequency": "biennial",
+    "themeSlug": "health"
+  },
+  {
+    "name": "Contraceptive Prevalence Rate (15-24)",
+    "slug": "contraceptive-prevalence-rate-youth",
+    "description": "Percentage of women aged 15-24 who are using or whose partners are using a contraceptive method",
+    "unit": "PERCENTAGE",
+    "source": "UNFPA / DHS Program",
+    "methodology": "Demographic and Health Surveys (DHS) and Multiple Indicator Cluster Surveys (MICS)",
+    "frequency": "annual",
+    "themeSlug": "health"
+  },
+  {
+    "name": "Youth Voter Turnout",
+    "slug": "youth-voter-turnout",
+    "description": "Percentage of registered voters aged 18-35 who cast ballots in the most recent national election",
+    "unit": "PERCENTAGE",
+    "source": "International IDEA / National Electoral Commissions",
+    "methodology": "Electoral records disaggregated by age group",
+    "frequency": "periodic",
+    "themeSlug": "civic-engagement-governance"
+  },
+  {
+    "name": "Youth Seats in Parliament",
+    "slug": "youth-seats-in-parliament",
+    "description": "Percentage of members of parliament under the age of 35",
+    "unit": "PERCENTAGE",
+    "source": "Inter-Parliamentary Union (IPU)",
+    "methodology": "Surveys of national parliaments and parliamentary records",
+    "frequency": "annual",
+    "themeSlug": "civic-engagement-governance"
+  },
+  {
+    "name": "Civil Society Organization Participation Rate",
+    "slug": "cso-participation-rate",
+    "description": "Percentage of youth aged 15-35 who actively participate in civil society organizations or community groups",
+    "unit": "PERCENTAGE",
+    "source": "Afrobarometer",
+    "methodology": "Nationally representative household surveys across African countries",
+    "frequency": "biennial",
+    "themeSlug": "civic-engagement-governance"
+  },
+  {
+    "name": "Youth Trust in Government Index",
+    "slug": "youth-trust-in-government-index",
+    "description": "Composite index measuring youth confidence in national government institutions on a scale of 0-100",
+    "unit": "INDEX",
+    "source": "Afrobarometer",
+    "methodology": "Nationally representative face-to-face surveys measuring trust in institutions",
+    "frequency": "biennial",
+    "themeSlug": "civic-engagement-governance"
+  },
+  {
+    "name": "Freedom of Association Score",
+    "slug": "freedom-of-association-score",
+    "description": "Score measuring the extent to which citizens can freely form and join organizations on a scale of 0-1",
+    "unit": "INDEX",
+    "source": "V-Dem Institute",
+    "methodology": "Expert-coded assessments triangulated with factual data and validated through inter-coder reliability tests",
+    "frequency": "annual",
+    "themeSlug": "civic-engagement-governance"
+  },
+  {
+    "name": "Youth Political Participation Index",
+    "slug": "youth-political-participation-index",
+    "description": "Composite measure of youth engagement across voting, campaigning, protests, and civic dialogue on a scale of 0-100",
+    "unit": "INDEX",
+    "source": "African Union / Mo Ibrahim Foundation",
+    "methodology": "Composite index combining survey data and administrative records",
+    "frequency": "annual",
+    "themeSlug": "civic-engagement-governance"
+  },
+  {
+    "name": "Internet Penetration Rate",
+    "slug": "internet-penetration-rate",
+    "description": "Percentage of the population using the internet",
+    "unit": "PERCENTAGE",
+    "source": "International Telecommunication Union (ITU)",
+    "methodology": "National administrative data from telecom regulators and household surveys",
+    "frequency": "annual",
+    "themeSlug": "innovation-technology"
+  },
+  {
+    "name": "Mobile Cellular Subscriptions per 100",
+    "slug": "mobile-cellular-subscriptions",
+    "description": "Number of active mobile cellular subscriptions per 100 inhabitants",
+    "unit": "NUMBER",
+    "source": "International Telecommunication Union (ITU)",
+    "methodology": "Administrative data from telecommunications operators and regulators",
+    "frequency": "annual",
+    "themeSlug": "innovation-technology"
+  },
+  {
+    "name": "Youth Digital Literacy Rate",
+    "slug": "youth-digital-literacy-rate",
+    "description": "Percentage of youth aged 15-24 who have performed at least one of nine computer-related activities in the last three months",
+    "unit": "PERCENTAGE",
+    "source": "International Telecommunication Union (ITU)",
+    "methodology": "Household surveys measuring ICT skills based on the ITU ICT Skills Framework",
+    "frequency": "annual",
+    "themeSlug": "innovation-technology"
+  },
+  {
+    "name": "Tech Startup Density per Million",
+    "slug": "tech-startup-density",
+    "description": "Number of registered technology startups per million inhabitants",
+    "unit": "NUMBER",
+    "source": "Partech Africa / Briter Bridges",
+    "methodology": "Startup ecosystem mapping and database tracking of tech ventures receiving funding",
+    "frequency": "annual",
+    "themeSlug": "innovation-technology"
+  },
+  {
+    "name": "ICT Development Index",
+    "slug": "ict-development-index",
+    "description": "Composite index measuring ICT access, use, and skills on a scale of 0-10",
+    "unit": "INDEX",
+    "source": "International Telecommunication Union (ITU)",
+    "methodology": "Composite of 11 indicators covering ICT access, ICT use, and ICT skills dimensions",
+    "frequency": "annual",
+    "themeSlug": "innovation-technology"
+  },
+  {
+    "name": "Mobile Broadband Subscriptions per 100",
+    "slug": "mobile-broadband-subscriptions",
+    "description": "Number of active mobile broadband subscriptions per 100 inhabitants",
+    "unit": "NUMBER",
+    "source": "International Telecommunication Union (ITU)",
+    "methodology": "Administrative data from telecommunications operators and regulators",
+    "frequency": "annual",
+    "themeSlug": "innovation-technology"
+  },
+  {
+    "name": "Fixed Broadband Subscriptions per 100",
+    "slug": "fixed-broadband-subscriptions",
+    "description": "Number of fixed broadband subscriptions per 100 inhabitants",
+    "unit": "NUMBER",
+    "source": "International Telecommunication Union (ITU)",
+    "methodology": "Administrative data from telecommunications operators and regulators",
+    "frequency": "annual",
+    "themeSlug": "innovation-technology"
+  },
+  {
+    "name": "Youth Employment in Agriculture",
+    "slug": "youth-employment-in-agriculture",
+    "description": "Percentage of employed youth aged 15-24 working in the agricultural sector",
+    "unit": "PERCENTAGE",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys using ISIC classification of economic activities",
+    "frequency": "annual",
+    "themeSlug": "agriculture"
+  },
+  {
+    "name": "Youth Land Ownership Rate",
+    "slug": "youth-land-ownership-rate",
+    "description": "Percentage of youth aged 15-35 who own or have secure rights to agricultural land",
+    "unit": "PERCENTAGE",
+    "source": "FAO / World Bank",
+    "methodology": "Household surveys including LSMS-ISA and DHS land modules",
+    "frequency": "periodic",
+    "themeSlug": "agriculture"
+  },
+  {
+    "name": "Agricultural Productivity Index",
+    "slug": "agricultural-productivity-index",
+    "description": "Agricultural value added per worker in constant 2015 USD, indexed to continental average",
+    "unit": "INDEX",
+    "source": "FAO / World Bank",
+    "methodology": "National accounts data combined with employment estimates from labour force surveys",
+    "frequency": "annual",
+    "themeSlug": "agriculture"
+  },
+  {
+    "name": "Agribusiness Youth Participation Rate",
+    "slug": "agribusiness-youth-participation-rate",
+    "description": "Percentage of youth aged 15-35 engaged in agricultural value chain activities beyond primary production",
+    "unit": "PERCENTAGE",
+    "source": "African Development Bank (AfDB)",
+    "methodology": "Enterprise surveys and youth livelihood assessments",
+    "frequency": "annual",
+    "themeSlug": "agriculture"
+  },
+  {
+    "name": "Food Security Index",
+    "slug": "food-security-index",
+    "description": "Composite index measuring food affordability, availability, quality and safety, and natural resources and resilience on a scale of 0-100",
+    "unit": "INDEX",
+    "source": "Global Food Security Index (Economist Impact)",
+    "methodology": "Composite of quantitative and qualitative indicators weighted by expert assessment",
+    "frequency": "annual",
+    "themeSlug": "agriculture"
+  },
+  {
+    "name": "Cereal Yield per Hectare",
+    "slug": "cereal-yield-per-hectare",
+    "description": "Cereal crop production per hectare of harvested land in kilograms",
+    "unit": "NUMBER",
+    "source": "FAO",
+    "methodology": "National agricultural statistics and production estimates",
+    "frequency": "annual",
+    "themeSlug": "agriculture"
+  },
+  {
+    "name": "Gender Parity Index (Education)",
+    "slug": "gender-parity-index-education",
+    "description": "Ratio of female to male gross enrollment rates at secondary and tertiary education levels",
+    "unit": "INDEX",
+    "source": "UNESCO Institute for Statistics",
+    "methodology": "Administrative data from national education systems, calculated as female GER divided by male GER",
+    "frequency": "annual",
+    "themeSlug": "gender-equality"
+  },
+  {
+    "name": "Female Youth Unemployment Gap",
+    "slug": "female-youth-unemployment-gap",
+    "description": "Difference in percentage points between female and male youth unemployment rates (aged 15-24)",
+    "unit": "NUMBER",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys with gender-disaggregated analysis",
+    "frequency": "annual",
+    "themeSlug": "gender-equality"
+  },
+  {
+    "name": "Female Labor Force Participation Rate",
+    "slug": "female-labor-force-participation-rate",
+    "description": "Proportion of female population aged 15+ that is economically active",
+    "unit": "PERCENTAGE",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys using ILO standard definitions",
+    "frequency": "annual",
+    "themeSlug": "gender-equality"
+  },
+  {
+    "name": "Women in STEM",
+    "slug": "women-in-stem",
+    "description": "Percentage of female graduates from STEM programmes at the tertiary level",
+    "unit": "PERCENTAGE",
+    "source": "UNESCO Institute for Statistics",
+    "methodology": "Administrative data from higher education institutions disaggregated by field of study and sex",
+    "frequency": "annual",
+    "themeSlug": "gender-equality"
+  },
+  {
+    "name": "Adolescent Marriage Rate",
+    "slug": "adolescent-marriage-rate",
+    "description": "Percentage of women aged 20-24 who were first married or in union before age 18",
+    "unit": "PERCENTAGE",
+    "source": "UNICEF",
+    "methodology": "Demographic and Health Surveys (DHS) and Multiple Indicator Cluster Surveys (MICS)",
+    "frequency": "periodic",
+    "themeSlug": "gender-equality"
+  },
+  {
+    "name": "Gender-Based Violence Prevalence",
+    "slug": "gender-based-violence-prevalence",
+    "description": "Percentage of women and girls aged 15-49 who have experienced physical or sexual violence by an intimate partner in the past 12 months",
+    "unit": "PERCENTAGE",
+    "source": "WHO / UNICEF",
+    "methodology": "Nationally representative population-based surveys (DHS domestic violence module)",
+    "frequency": "periodic",
+    "themeSlug": "gender-equality"
+  },
+  {
+    "name": "Maternal Mortality Ratio",
+    "slug": "maternal-mortality-ratio",
+    "description": "Number of maternal deaths per 100,000 live births",
+    "unit": "NUMBER",
+    "source": "WHO / UNICEF / UNFPA / World Bank",
+    "methodology": "Bayesian maternal mortality estimation model using civil registration, surveys, and census data",
+    "frequency": "annual",
+    "themeSlug": "gender-equality"
+  },
+  {
+    "name": "Youth Bank Account Ownership",
+    "slug": "youth-bank-account-ownership",
+    "description": "Percentage of youth aged 15-24 who report having an account at a financial institution",
+    "unit": "PERCENTAGE",
+    "source": "World Bank Global Findex Database",
+    "methodology": "Nationally representative surveys of approximately 1,000 adults per country conducted by Gallup",
+    "frequency": "triennial",
+    "themeSlug": "financial-inclusion"
+  },
+  {
+    "name": "Mobile Money Account Penetration",
+    "slug": "mobile-money-account-penetration",
+    "description": "Percentage of the population aged 15+ who have used a mobile money service in the past 12 months",
+    "unit": "PERCENTAGE",
+    "source": "World Bank Global Findex Database / GSMA",
+    "methodology": "Nationally representative surveys combined with GSMA mobile money deployment tracker",
+    "frequency": "annual",
+    "themeSlug": "financial-inclusion"
+  },
+  {
+    "name": "Youth Access to Credit",
+    "slug": "youth-access-to-credit",
+    "description": "Percentage of youth aged 15-24 who borrowed from a formal financial institution in the past year",
+    "unit": "PERCENTAGE",
+    "source": "World Bank Global Findex Database",
+    "methodology": "Nationally representative household surveys",
+    "frequency": "triennial",
+    "themeSlug": "financial-inclusion"
+  },
+  {
+    "name": "Youth Savings Rate",
+    "slug": "youth-savings-rate",
+    "description": "Percentage of youth aged 15-24 who saved money in the past 12 months at a financial institution or using a mobile money account",
+    "unit": "PERCENTAGE",
+    "source": "World Bank Global Findex Database",
+    "methodology": "Nationally representative household surveys",
+    "frequency": "triennial",
+    "themeSlug": "financial-inclusion"
+  },
+  {
+    "name": "Financial Literacy Rate",
+    "slug": "financial-literacy-rate",
+    "description": "Percentage of adults who correctly answer at least three out of four financial literacy questions on risk diversification, inflation, numeracy, and compound interest",
+    "unit": "PERCENTAGE",
+    "source": "S&P Global FinLit Survey / World Bank",
+    "methodology": "Nationally representative surveys using standardized financial literacy questions",
+    "frequency": "periodic",
+    "themeSlug": "financial-inclusion"
+  },
+  {
+    "name": "Insurance Coverage Rate",
+    "slug": "insurance-coverage-rate",
+    "description": "Percentage of the adult population with at least one type of insurance policy (life, health, or agricultural)",
+    "unit": "PERCENTAGE",
+    "source": "Access to Insurance Initiative (A2ii) / World Bank",
+    "methodology": "Insurance supervisor data and household surveys",
+    "frequency": "annual",
+    "themeSlug": "financial-inclusion"
+  },
+  {
+    "name": "Youth Engagement in Environmental Action",
+    "slug": "youth-engagement-environmental-action",
+    "description": "Percentage of youth aged 15-35 who have participated in environmental conservation or climate action activities in the past year",
+    "unit": "PERCENTAGE",
+    "source": "UNEP / Afrobarometer",
+    "methodology": "Nationally representative surveys and environmental participation assessments",
+    "frequency": "biennial",
+    "themeSlug": "environment-climate"
+  },
+  {
+    "name": "Renewable Energy Access Rate",
+    "slug": "renewable-energy-access-rate",
+    "description": "Share of the population with access to electricity from renewable energy sources",
+    "unit": "PERCENTAGE",
+    "source": "International Renewable Energy Agency (IRENA) / World Bank",
+    "methodology": "National energy statistics, household surveys, and geospatial electrification data",
+    "frequency": "annual",
+    "themeSlug": "environment-climate"
+  },
+  {
+    "name": "Green Jobs Share",
+    "slug": "green-jobs-share",
+    "description": "Percentage of total employment in sectors classified as contributing to environmental sustainability",
+    "unit": "PERCENTAGE",
+    "source": "International Labour Organization (ILO)",
+    "methodology": "Labour force surveys cross-classified with environmental goods and services sector definitions",
+    "frequency": "annual",
+    "themeSlug": "environment-climate"
+  },
+  {
+    "name": "Carbon Emissions per Capita",
+    "slug": "carbon-emissions-per-capita",
+    "description": "Total carbon dioxide emissions from fossil fuels and cement production per capita in metric tonnes",
+    "unit": "NUMBER",
+    "source": "Global Carbon Project / World Bank",
+    "methodology": "National fossil fuel consumption data, cement production statistics, and population estimates",
+    "frequency": "annual",
+    "themeSlug": "environment-climate"
+  },
+  {
+    "name": "Environmental Education Coverage",
+    "slug": "environmental-education-coverage",
+    "description": "Percentage of secondary schools with environmental education integrated into their curriculum",
+    "unit": "PERCENTAGE",
+    "source": "UNESCO",
+    "methodology": "National curriculum reviews and school surveys on environmental and sustainability education",
+    "frequency": "periodic",
+    "themeSlug": "environment-climate"
+  },
+  {
+    "name": "Climate Vulnerability Index",
+    "slug": "climate-vulnerability-index",
+    "description": "Composite index measuring a country's exposure, sensitivity, and adaptive capacity to climate change on a scale of 0-100",
+    "unit": "INDEX",
+    "source": "Notre Dame Global Adaptation Initiative (ND-GAIN)",
+    "methodology": "Composite of 45 indicators across food, water, health, ecosystem services, human habitat, and infrastructure sectors",
+    "frequency": "annual",
+    "themeSlug": "environment-climate"
+  }
+]

@@ -1,7 +1,7 @@
 // API Client utility for AYD Platform
 // Wraps fetch with typed responses, error handling, and base URL configuration
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // ─── Shared Types (API Contract) ─────────────────────────────────────────────
 
@@ -322,17 +322,28 @@ export const api = {
   // Auth
   auth: {
     signIn: (email: string, password: string) =>
-      request<{ token: string; user: { id: string; email: string; name: string; role: string } }>('/auth/signin', {
+      request<{
+        tokens: { accessToken: string; refreshToken: string };
+        user: { id: string; email: string; name: string | null; role: string; organization: string | null };
+      }>('/auth/signin', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       }),
     signUp: (data: { name: string; email: string; password: string }) =>
-      request<{ token: string; user: { id: string; email: string; name: string; role: string } }>('/auth/signup', {
+      request<{
+        tokens: { accessToken: string; refreshToken: string };
+        user: { id: string; email: string; name: string | null; role: string; organization: string | null };
+      }>('/auth/signup', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    me: () =>
-      request<{ id: string; email: string; name: string; role: string }>('/auth/me'),
+    profile: () =>
+      request<{ id: string; email: string; name: string | null; role: string; organization: string | null }>('/auth/profile'),
+    updateProfile: (data: { name?: string; organization?: string }) =>
+      request<{ id: string; email: string; name: string | null; role: string; organization: string | null }>('/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
   },
 
   // Reports

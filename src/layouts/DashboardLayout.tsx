@@ -19,6 +19,7 @@ import {
   Shield,
   MessageSquare,
   ShieldCheck,
+  Upload,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
@@ -33,6 +34,7 @@ const sidebarLinks = [
   { to: '/dashboard/policy-monitor', label: 'Policy Monitor', icon: Shield },
   { to: '/dashboard/experts', label: 'Experts', icon: Users },
   { to: '/dashboard/reports', label: 'Reports', icon: BookOpen },
+  { to: '/dashboard/data-upload', label: 'Upload Data', icon: Upload },
   { to: '/admin', label: 'Admin', icon: ShieldCheck },
 ];
 
