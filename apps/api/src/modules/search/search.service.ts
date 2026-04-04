@@ -67,7 +67,7 @@ export class SearchService {
           { isoCode3: { equals: q, mode: 'insensitive' } },
         ],
       },
-      select: { id: true, name: true, isoCode3: true, region: true, capital: true, flagEmoji: true },
+      select: { id: true, name: true, isoCode2: true, isoCode3: true, region: true, capital: true, flagEmoji: true },
       take: limit * 2, // fetch extra for re-ranking
     });
 

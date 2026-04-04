@@ -150,8 +150,8 @@ export class DashboardsService {
         title: `Copy of ${original.title}`,
         description: original.description,
         isPublic: false,
-        layout: original.layout as Record<string, unknown>,
-        widgets: original.widgets as Record<string, unknown>[],
+        layout: original.layout as any,
+        widgets: original.widgets as any,
         userId: newUserId,
       },
     });

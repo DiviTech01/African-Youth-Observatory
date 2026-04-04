@@ -92,8 +92,8 @@ World Bank, ILO, UNESCO, national statistics bureaus`,
     .addTag('platform', 'Platform stats and health checks')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  const document = SwaggerModule.createDocument(app as any, config);
+  SwaggerModule.setup('api/docs', app as any, document);
 
   // Route aliases for frontend compatibility
   const expressApp = app.getHttpAdapter().getInstance();

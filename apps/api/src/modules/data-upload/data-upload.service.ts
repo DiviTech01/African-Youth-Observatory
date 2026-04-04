@@ -63,7 +63,7 @@ interface UploadJob {
     indicatorId: string;
     year: number;
     value: number;
-    gender: string;
+    gender: import('@prisma/client').GenderType;
     ageGroup: string;
     source: string;
   }[];
@@ -231,7 +231,7 @@ export class DataUploadService {
         }
 
         const year = mapping.year || config.year || new Date().getFullYear();
-        const gender = mapping.gender || 'TOTAL';
+        const gender = (mapping.gender || 'TOTAL') as import('@prisma/client').GenderType;
         const ageGroup = mapping.ageGroup || '15-24';
 
         parsedValues!.push({

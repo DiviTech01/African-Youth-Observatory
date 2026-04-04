@@ -231,8 +231,6 @@ export class DataService {
           countryId: v.country.id,
           countryName: v.country.name,
           isoCode3: v.country.isoCode3,
-          isoCode: v.country.isoCode3,
-          iso3Code: v.country.isoCode3,
           flagEmoji: v.country.flagEmoji,
           region: formatRegion(v.country.region),
           values: [],
