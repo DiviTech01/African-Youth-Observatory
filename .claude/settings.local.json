@@ -9,7 +9,8 @@
       "Bash(find . -type f -name *PROGRESS* -o -name *TRACKER* -o -name *LOG* -o -name *ACTIVITY* -o -name *DEVELOPMENT*)",
       "Bash(npx tsc:*)",
       "Bash(npx vite:*)",
-      "WebFetch(domain:21st.dev)"
+      "WebFetch(domain:21st.dev)",
+      "Bash(npx prisma:*)"
     ]
   }
 }
