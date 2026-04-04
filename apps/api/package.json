@@ -4,7 +4,6 @@
   "version": "0.1.0",
   "description": "AYD Backend API — NestJS + Prisma",
   "scripts": {
-    "prebuild": "prisma generate",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js",
