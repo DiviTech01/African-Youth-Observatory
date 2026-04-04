@@ -7,7 +7,7 @@
     "dev": "nest start --watch",
     "start": "nest start",
     "build": "nest build",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "seed": "ts-node -r tsconfig-paths/register src/seed.ts",
     "clean": "rm -rf dist node_modules"
