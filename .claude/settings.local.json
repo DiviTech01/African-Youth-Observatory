@@ -10,7 +10,10 @@
       "Bash(npx tsc:*)",
       "Bash(npx vite:*)",
       "WebFetch(domain:21st.dev)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(cd:*)",
+      "Bash(curl -k https://african-youth-observatory.onrender.com/api/health)",
+      "Bash(curl -k https://african-youth-observatory.onrender.com/)"
     ]
   }
 }

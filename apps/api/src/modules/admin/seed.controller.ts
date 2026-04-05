@@ -1,8 +1,9 @@
 import { Controller, Post } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import * as bcrypt from 'bcryptjs';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const bcrypt = require('bcryptjs');
 
-@Controller('api/seed')
+@Controller('seed')
 export class SeedController {
   constructor(private prisma: PrismaService) {}
 
@@ -121,10 +122,9 @@ export class SeedController {
       const title = titles[i % titles.length];
       try {
         await this.prisma.expert.upsert({
-          where: { id: `expert-${i}` },
+          where: { email: `expert${i + 1}@ayd-research.org` },
           update: {},
           create: {
-            id: `expert-${i}`,
             name: `Dr. Expert ${i + 1}`,
             email: `expert${i + 1}@ayd-research.org`,
             title: `${title} - ${spec}`,
