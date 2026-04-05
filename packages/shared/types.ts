@@ -521,22 +521,54 @@ export interface IndicatorCorrelation {
 export interface NlqRequest {
   question: string;
   language?: string;
+  countryId?: string;
 }
 
 export interface NlqResponse {
   question: string;
   answer: string;
-  data: Record<string, unknown>[];
-  visualization: {
-    type: 'bar_chart' | 'line_chart' | 'stat_card' | 'scatter_plot' | 'grouped_bar' | 'radar';
-    title: string;
-    xAxis?: string;
-    yAxis?: string;
-  };
+  data?: Record<string, unknown>[];
+  keyFindings: string[];
+  dataCitations: AiDataCitation[];
+  visualization: AiVisualization | null;
   followUpQuestions: string[];
-  intent: string;
+  confidence: number;
+  dataAvailability: 'full' | 'partial' | 'limited';
+  intent?: string;
   source: 'ai' | 'rule-based';
   processingTime: number;
+}
+
+// ---- AI Intelligence Types ----
+
+export interface AiAnswer {
+  answer: string;
+  keyFindings: string[];
+  dataCitations: AiDataCitation[];
+  visualization: AiVisualization | null;
+  followUpQuestions: string[];
+  confidence: number;
+  dataAvailability: 'full' | 'partial' | 'limited';
+  source: 'ai' | 'rule-based';
+  processingTime?: number;
+}
+
+export interface AiDataCitation {
+  indicator: string;
+  country?: string;
+  value: number;
+  year: number;
+  source?: string;
+}
+
+export interface AiVisualization {
+  type: 'bar_chart' | 'line_chart' | 'radar_chart' | 'pie_chart' | 'scatter_plot' | 'table' | 'stat_cards';
+  title: string;
+  data: any[];
+  xAxis?: string;
+  yAxis?: string;
+  headers?: string[];
+  rows?: string[][];
 }
 
 // ---- Country Narrative Types ----

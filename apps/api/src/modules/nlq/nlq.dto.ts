@@ -15,4 +15,9 @@ export class NlqQueryDto {
   @IsOptional()
   @IsString()
   language?: string = 'en';
+
+  @ApiPropertyOptional({ description: 'Country ID for country-scoped queries' })
+  @IsOptional()
+  @IsString()
+  countryId?: string;
 }

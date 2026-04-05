@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,9 @@ import {
   Globe,
   Scale,
   Megaphone,
+  Sparkles,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CountryFlag from '@/components/CountryFlag';
@@ -1037,8 +1040,92 @@ const CountryProfile = ({ country }: CountryProfileProps) => {
           </motion.div>
         </TabsContent>
       </Tabs>
+
+      {/* AI Chat — Ask about this country */}
+      <CountryAiChat country={country} />
     </div>
   );
 };
+
+function CountryAiChat({ country }: { country: string }) {
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [source, setSource] = useState<'ai' | 'rule-based' | null>(null);
+
+  const handleAsk = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!question.trim() || loading) return;
+
+    setLoading(true);
+    setAnswer('');
+    setSource(null);
+
+    const apiBase = (import.meta as any).env?.VITE_API_URL || '/api';
+    try {
+      const res = await fetch(`${apiBase}/nlq/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: question.trim(), countryId: country }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAnswer(data.answer || 'No answer available.');
+        setSource(data.source || 'rule-based');
+      } else {
+        setAnswer('Unable to get a response. Please try again.');
+        setSource('rule-based');
+      }
+    } catch {
+      setAnswer('Unable to connect to the AI service. Please try again later.');
+      setSource('rule-based');
+    } finally {
+      setLoading(false);
+    }
+  }, [question, loading, country]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.2 }}
+      className="mt-6"
+    >
+      <Card>
+        <CardContent className="pt-5 pb-4 px-5">
+          <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Ask about {country}
+          </h3>
+          <form onSubmit={handleAsk} className="flex gap-2">
+            <input
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder={`e.g., "What are ${country}'s biggest challenges?"`}
+              className="flex-1 rounded-lg border bg-background/60 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              disabled={loading}
+            />
+            <Button type="submit" size="sm" disabled={loading || !question.trim()} className="gap-1.5">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Ask
+            </Button>
+          </form>
+          {answer && (
+            <div className="mt-4">
+              {source && (
+                <Badge variant="secondary" className="text-xs mb-2">
+                  {source === 'ai' ? 'AI-powered' : 'Rule-based'}
+                </Badge>
+              )}
+              <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                {answer}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
 
 export default CountryProfile;
