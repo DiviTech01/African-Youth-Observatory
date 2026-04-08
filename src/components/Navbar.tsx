@@ -34,7 +34,7 @@ const Navbar = () => {
   // Search API
   const { data: searchResults } = useQuery({
     queryKey: ['search', searchQuery],
-    queryFn: () => fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&limit=5`).then(r => r.ok ? r.json() : null).catch(() => null),
+    queryFn: () => fetch(`${import.meta.env.VITE_API_URL || '/api'}/search?q=${encodeURIComponent(searchQuery)}&limit=5`).then(r => r.ok ? r.json() : null).catch(() => null),
     enabled: searchQuery.length >= 2,
   });
 

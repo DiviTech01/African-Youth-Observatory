@@ -43,7 +43,7 @@ const Admin = () => {
   // Fetch real platform stats
   const { data: platformStats } = useQuery({
     queryKey: ['platform-stats'],
-    queryFn: () => fetch('/api/platform/stats').then(r => r.ok ? r.json() : null).catch(() => null),
+    queryFn: () => fetch(`${import.meta.env.VITE_API_URL || '/api'}/platform/stats`).then(r => r.ok ? r.json() : null).catch(() => null),
   });
 
   // Build stats from API or fallback
@@ -56,7 +56,7 @@ const Admin = () => {
 
   const handleClearCache = async () => {
     try {
-      await fetch('/api/platform/clear-cache', { method: 'POST', headers });
+      await fetch(`${import.meta.env.VITE_API_URL || '/api'}/platform/clear-cache`, { method: 'POST', headers });
     } catch { /* ignore */ }
   };
 

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const API = '/api/data-upload';
+const API = `${import.meta.env.VITE_API_URL || '/api'}/data-upload`;
 const token = () => localStorage.getItem('ayd_token');
 const authHeaders = (): Record<string, string> => {
   const t = token();

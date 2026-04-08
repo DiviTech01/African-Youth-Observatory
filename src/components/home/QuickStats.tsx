@@ -56,7 +56,7 @@ const QuickStats = () => {
   // Fetch real stats from API
   const { data: platformStats } = useQuery({
     queryKey: ['platform-stats'],
-    queryFn: () => fetch('/api/platform/stats').then(r => r.ok ? r.json() : null).catch(() => null),
+    queryFn: () => fetch(`${import.meta.env.VITE_API_URL || '/api'}/platform/stats`).then(r => r.ok ? r.json() : null).catch(() => null),
     staleTime: 60000,
   });
 
