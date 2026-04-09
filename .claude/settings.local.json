@@ -14,7 +14,8 @@
       "Bash(cd:*)",
       "Bash(curl -k https://african-youth-observatory.onrender.com/api/health)",
       "Bash(curl -k https://african-youth-observatory.onrender.com/)",
-      "Bash(npm list:*)"
+      "Bash(npm list:*)",
+      "Bash(npx wrangler:*)"
     ]
   }
 }
