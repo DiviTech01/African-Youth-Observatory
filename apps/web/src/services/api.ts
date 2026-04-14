@@ -26,8 +26,11 @@ import type {
 // BASE URL
 // ============================================
 
-const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)
-  ?? (import.meta.env.PROD
+const _envApiUrl = import.meta.env.VITE_API_URL as string | undefined;
+// Only use the env var if it's a full URL (not a relative path like /api)
+const BASE_URL = (_envApiUrl && _envApiUrl.startsWith('http'))
+  ? _envApiUrl
+  : (import.meta.env.PROD
     ? 'https://african-youth-observatory.onrender.com/api'
     : '/api');
 

@@ -5,8 +5,11 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)
-  ?? (import.meta.env.PROD
+const _envUrl = import.meta.env.VITE_API_URL as string | undefined;
+// Only use the env var if it's a full URL (not a relative path like /api)
+const API_BASE = (_envUrl && _envUrl.startsWith('http'))
+  ? _envUrl
+  : (import.meta.env.PROD
     ? 'https://african-youth-observatory.onrender.com/api'
     : '/api');
 
