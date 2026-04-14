@@ -26,7 +26,10 @@ import type {
 // BASE URL
 // ============================================
 
-const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)
+  ?? (import.meta.env.PROD
+    ? 'https://african-youth-observatory.onrender.com/api'
+    : '/api');
 
 // ============================================
 // HTTP HELPERS

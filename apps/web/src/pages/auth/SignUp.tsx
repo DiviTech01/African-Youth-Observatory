@@ -17,6 +17,7 @@ import {
   Check
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -29,6 +30,7 @@ const SignUp = () => {
   });
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signUp } = useAuth();
 
   const passwordRequirements = [
     { label: 'At least 8 characters', met: formData.password.length >= 8 },
@@ -45,24 +47,27 @@ const SignUp = () => {
     e.preventDefault();
     if (!formData.acceptTerms) {
       toast({
-        title: "Terms Required",
-        description: "Please accept the terms and conditions to continue.",
-        variant: "destructive",
+        title: 'Terms Required',
+        description: 'Please accept the terms and conditions to continue.',
+        variant: 'destructive',
       });
       return;
     }
 
     setIsLoading(true);
-
-    // Simulate signup - will be replaced with actual auth
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Account created!",
-        description: "Welcome to African Youth Database.",
-      });
+    try {
+      await signUp(formData.name, formData.email, formData.password);
+      toast({ title: 'Account created!', description: 'Welcome to African Youth Database.' });
       navigate('/');
-    }, 1500);
+    } catch (err) {
+      toast({
+        title: 'Sign up failed',
+        description: err instanceof Error ? err.message : 'Could not create account. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

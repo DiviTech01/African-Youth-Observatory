@@ -20,6 +20,7 @@ async function bootstrap() {
       process.env.CORS_ORIGIN || '',
       'https://africanyouthdatabase.org',
       'https://www.africanyouthdatabase.org',
+      'https://african-youth-observatory.pages.dev',  // Cloudflare Pages
     ].filter(Boolean),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
