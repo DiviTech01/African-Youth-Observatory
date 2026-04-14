@@ -1,6 +1,6 @@
 // ============================================
 // AFRICAN YOUTH DATABASE - API SERVICE
-// Centralized data fetching & state management
+// Real HTTP calls to the NestJS backend
 // ============================================
 
 import type {
@@ -22,106 +22,139 @@ import type {
   GenderType,
 } from '@/types';
 
-import {
-  AFRICAN_COUNTRIES,
-  THEMES,
-  INDICATORS,
-  REGIONS,
-  getCountryById,
-  getCountryByIsoCode,
-  getCountriesByRegion,
-  getThemeById,
-  getIndicatorById,
-  getIndicatorsByTheme,
-} from '@/types';
-
-import {
-  getIndicatorValues,
-  generateYouthIndexData,
-  getIndicatorValuesByCountry,
-  getIndicatorValuesByIndicator,
-  getTimeSeriesData,
-  getComparisonData,
-  getMapData,
-  getCountryStats,
-  getThemeStats,
-  getPlatformStats,
-  compareCountries,
-  formatTimeSeriesForChart,
-  formatBarChartData,
-  formatRegionalData,
-} from '@/types';
-
 // ============================================
-// SIMULATED API DELAY
+// BASE URL
 // ============================================
 
-const simulateDelay = (ms: number = 300): Promise<void> => 
-  new Promise(resolve => setTimeout(resolve, ms));
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+
+// ============================================
+// HTTP HELPERS
+// ============================================
+
+async function get<T>(path: string, params?: Record<string, string | number | boolean | null | undefined>): Promise<T> {
+  const url = new URL(`${BASE_URL}${path}`, window.location.origin);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== null && v !== undefined && v !== '') {
+        url.searchParams.set(k, String(v));
+      }
+    }
+  }
+  const res = await fetch(url.toString(), {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}: ${res.statusText} (${path})`);
+  }
+  return res.json() as Promise<T>;
+}
+
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}: ${res.statusText} (${path})`);
+  }
+  return res.json() as Promise<T>;
+}
+
+// ============================================
+// RESPONSE SHAPE ADAPTERS
+// ============================================
+
+// Backend returns { data: T[], total, page, pageSize } for lists
+type PagedResponse<T> = { data: T[]; total: number; page: number; pageSize: number; totalPages: number };
+
+// Youth index entry from backend
+interface ApiYouthIndex {
+  rank: number;
+  countryId: string;
+  countryName: string;
+  isoCode3: string;
+  flagEmoji?: string;
+  region: string;
+  overallScore: number;
+  educationScore: number;
+  employmentScore: number;
+  healthScore: number;
+  civicScore: number;
+  innovationScore: number;
+  previousRank: number;
+  rankChange: number;
+  percentile: number;
+  tier: string;
+}
+
+// Normalize backend youth index → frontend YouthIndex shape
+function normalizeYouthIndex(r: ApiYouthIndex): YouthIndex {
+  return {
+    countryId: r.countryId,
+    rank: r.rank,
+    indexScore: r.overallScore,
+    educationScore: r.educationScore,
+    healthScore: r.healthScore,
+    employmentScore: r.employmentScore,
+    civicScore: r.civicScore,
+    innovationScore: r.innovationScore,
+    previousRank: r.previousRank,
+    rankChange: r.rankChange ?? 0,
+    percentile: r.percentile ?? 0,
+    tier: (r.tier ?? 'medium') as YouthIndex['tier'],
+    year: 0, // filled by caller
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
 
 // ============================================
 // COUNTRY API
 // ============================================
 
 export const countryApi = {
-  /**
-   * Get all African countries
-   */
   async getAll(): Promise<Country[]> {
-    await simulateDelay(100);
-    return AFRICAN_COUNTRIES;
+    const res = await get<PagedResponse<Country>>('/countries', { pageSize: 54 });
+    return res.data;
   },
 
-  /**
-   * Get country by ID
-   */
   async getById(id: string): Promise<Country | null> {
-    await simulateDelay(50);
-    return getCountryById(id) ?? null;
+    try {
+      return await get<Country>(`/countries/${id}`);
+    } catch {
+      return null;
+    }
   },
 
-  /**
-   * Get country by ISO code (2 or 3 letter)
-   */
   async getByIsoCode(isoCode: string): Promise<Country | null> {
-    await simulateDelay(50);
-    return getCountryByIsoCode(isoCode) ?? null;
+    const all = await countryApi.getAll();
+    return all.find(c =>
+      c.isoCode?.toLowerCase() === isoCode.toLowerCase() ||
+      (c as unknown as Record<string, unknown>).isoCode3?.toString().toLowerCase() === isoCode.toLowerCase() ||
+      (c as unknown as Record<string, unknown>).isoCode2?.toString().toLowerCase() === isoCode.toLowerCase()
+    ) ?? null;
   },
 
-  /**
-   * Get countries by region
-   */
   async getByRegion(region: RegionType): Promise<Country[]> {
-    await simulateDelay(100);
-    return getCountriesByRegion(region);
+    const res = await get<PagedResponse<Country>>('/countries', { region, pageSize: 54 });
+    return res.data;
   },
 
-  /**
-   * Search countries by name
-   */
   async search(query: string): Promise<Country[]> {
-    await simulateDelay(100);
-    const lowerQuery = query.toLowerCase();
-    return AFRICAN_COUNTRIES.filter(c => 
-      c.name.toLowerCase().includes(lowerQuery) ||
-      c.isoCode.toLowerCase().includes(lowerQuery)
-    );
+    const res = await get<PagedResponse<Country>>('/countries', { search: query, pageSize: 54 });
+    return res.data;
   },
 
-  /**
-   * Get country statistics
-   */
   async getStats(countryId: string, year?: number): Promise<CountryStats> {
-    await simulateDelay(200);
-    return getCountryStats(countryId, year);
+    return get<CountryStats>(`/countries/${countryId}/stats`, year ? { year } : undefined);
   },
 
-  /**
-   * Get all regions
-   */
-  async getRegions(): Promise<typeof REGIONS> {
-    await simulateDelay(50);
-    return REGIONS;
+  async getRegions(): Promise<{ name: string; countries: number }[]> {
+    return get('/countries/regions');
   },
 };
 
@@ -130,28 +163,21 @@ export const countryApi = {
 // ============================================
 
 export const themeApi = {
-  /**
-   * Get all themes
-   */
   async getAll(): Promise<Theme[]> {
-    await simulateDelay(100);
-    return THEMES;
+    const res = await get<PagedResponse<Theme> | Theme[]>('/themes');
+    return Array.isArray(res) ? res : (res as PagedResponse<Theme>).data;
   },
 
-  /**
-   * Get theme by ID
-   */
   async getById(id: string): Promise<Theme | null> {
-    await simulateDelay(50);
-    return getThemeById(id) ?? null;
+    try {
+      return await get<Theme>(`/themes/${id}`);
+    } catch {
+      return null;
+    }
   },
 
-  /**
-   * Get theme statistics
-   */
   async getStats(themeId: string, year?: number): Promise<ThemeStats> {
-    await simulateDelay(200);
-    return getThemeStats(themeId, year);
+    return get<ThemeStats>(`/themes/${themeId}/stats`, year ? { year } : undefined);
   },
 };
 
@@ -160,42 +186,27 @@ export const themeApi = {
 // ============================================
 
 export const indicatorApi = {
-  /**
-   * Get all indicators
-   */
   async getAll(): Promise<Indicator[]> {
-    await simulateDelay(100);
-    return INDICATORS;
+    const res = await get<PagedResponse<Indicator> | Indicator[]>('/indicators', { pageSize: 200 });
+    return Array.isArray(res) ? res : (res as PagedResponse<Indicator>).data;
   },
 
-  /**
-   * Get indicator by ID
-   */
   async getById(id: string): Promise<Indicator | null> {
-    await simulateDelay(50);
-    return getIndicatorById(id) ?? null;
+    try {
+      return await get<Indicator>(`/indicators/${id}`);
+    } catch {
+      return null;
+    }
   },
 
-  /**
-   * Get indicators by theme
-   */
   async getByTheme(themeId: string): Promise<Indicator[]> {
-    await simulateDelay(100);
-    return getIndicatorsByTheme(themeId);
+    const res = await get<PagedResponse<Indicator> | Indicator[]>('/indicators', { themeId, pageSize: 100 });
+    return Array.isArray(res) ? res : (res as PagedResponse<Indicator>).data;
   },
 
-  /**
-   * Search indicators
-   */
   async search(query: string): Promise<Indicator[]> {
-    await simulateDelay(100);
-    const lowerQuery = query.toLowerCase();
-    return INDICATORS.filter(i => 
-      i.name.toLowerCase().includes(lowerQuery) ||
-      i.shortName.toLowerCase().includes(lowerQuery) ||
-      i.code.toLowerCase().includes(lowerQuery) ||
-      i.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
-    );
+    const res = await get<PagedResponse<Indicator> | Indicator[]>('/indicators', { search: query, pageSize: 100 });
+    return Array.isArray(res) ? res : (res as PagedResponse<Indicator>).data;
   },
 };
 
@@ -204,94 +215,86 @@ export const indicatorApi = {
 // ============================================
 
 export const dataApi = {
-  /**
-   * Get indicator values with filters
-   */
   async getIndicatorValues(filters: DataFilters): Promise<IndicatorValue[]> {
-    await simulateDelay(300);
-    let values = getIndicatorValues();
-
-    if (filters.countryIds?.length) {
-      values = values.filter(v => filters.countryIds!.includes(v.countryId));
-    }
-    if (filters.indicatorIds?.length) {
-      values = values.filter(v => filters.indicatorIds!.includes(v.indicatorId));
-    }
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      pageSize: 500,
+    };
+    if (filters.countryIds?.length === 1) params.countryId = filters.countryIds[0];
+    if (filters.countryIds && filters.countryIds.length > 1) params.countryIds = filters.countryIds.join(',');
+    if (filters.indicatorIds?.length === 1) params.indicatorId = filters.indicatorIds[0];
     if (filters.yearRange) {
-      values = values.filter(v => 
-        v.year >= filters.yearRange![0] && v.year <= filters.yearRange![1]
-      );
+      params.yearStart = filters.yearRange[0];
+      params.yearEnd = filters.yearRange[1];
     }
-    if (filters.gender) {
-      values = values.filter(v => v.gender === filters.gender);
-    }
-
-    return values;
+    if (filters.gender) params.gender = filters.gender;
+    const res = await get<PagedResponse<IndicatorValue>>('/data/values', params);
+    return res.data;
   },
 
-  /**
-   * Get time series for a country and indicator
-   */
   async getTimeSeries(
-    countryId: string, 
+    countryId: string,
     indicatorId: string,
     yearRange?: [number, number]
   ): Promise<IndicatorTimeSeries> {
-    await simulateDelay(200);
-    return getTimeSeriesData(countryId, indicatorId, yearRange);
+    const params: Record<string, string | number | undefined> = { countryId, indicatorId };
+    if (yearRange) { params.yearStart = yearRange[0]; params.yearEnd = yearRange[1]; }
+    return get<IndicatorTimeSeries>('/data/timeseries', params);
   },
 
-  /**
-   * Get comparison chart data for multiple countries
-   */
   async getComparisonData(
     countryIds: string[],
     indicatorId: string,
     year?: number
   ): Promise<ChartDataPoint[]> {
-    await simulateDelay(200);
-    return getComparisonData(countryIds, indicatorId, year);
+    const params: Record<string, string | number | undefined> = {
+      countryIds: countryIds.join(','),
+      indicatorId,
+    };
+    if (year) params.year = year;
+    const res = await get<ChartDataPoint[] | { data: ChartDataPoint[] }>('/data/comparison', params);
+    return Array.isArray(res) ? res : (res as { data: ChartDataPoint[] }).data;
   },
 
-  /**
-   * Get map visualization data
-   */
   async getMapData(indicatorId: string, year?: number): Promise<MapDataPoint[]> {
-    await simulateDelay(300);
-    return getMapData(indicatorId, year);
+    const params: Record<string, string | number | undefined> = { indicatorId };
+    if (year) params.year = year;
+    const res = await get<{ data: MapDataPoint[] } | MapDataPoint[]>('/data/map', params);
+    return Array.isArray(res) ? res : (res as { data: MapDataPoint[] }).data;
   },
 
-  /**
-   * Get formatted time series for charts
-   */
   async getChartTimeSeries(
     countryIds: string[],
     indicatorId: string,
     yearRange?: [number, number]
   ): Promise<TimeSeriesDataPoint[]> {
-    await simulateDelay(200);
-    return formatTimeSeriesForChart(countryIds, indicatorId, yearRange);
+    const params: Record<string, string | number | undefined> = {
+      countryIds: countryIds.join(','),
+      indicatorId,
+    };
+    if (yearRange) { params.yearStart = yearRange[0]; params.yearEnd = yearRange[1]; }
+    const res = await get<TimeSeriesDataPoint[] | { data: TimeSeriesDataPoint[] }>('/data/timeseries', params);
+    return Array.isArray(res) ? res : (res as { data: TimeSeriesDataPoint[] }).data;
   },
 
-  /**
-   * Get bar chart data (top/bottom countries)
-   */
   async getBarChartData(
     indicatorId: string,
     year?: number,
     limit?: number,
     sortOrder?: 'asc' | 'desc'
   ): Promise<ChartDataPoint[]> {
-    await simulateDelay(200);
-    return formatBarChartData(indicatorId, year, limit, sortOrder);
+    const params: Record<string, string | number | undefined> = { indicatorId };
+    if (year) params.year = year;
+    if (limit) params.limit = limit;
+    if (sortOrder) params.sortOrder = sortOrder;
+    const res = await get<ChartDataPoint[] | { data: ChartDataPoint[] }>('/data/bar-chart', params);
+    return Array.isArray(res) ? res : (res as { data: ChartDataPoint[] }).data;
   },
 
-  /**
-   * Get regional average data
-   */
   async getRegionalData(indicatorId: string, year?: number): Promise<ChartDataPoint[]> {
-    await simulateDelay(200);
-    return formatRegionalData(indicatorId, year);
+    const params: Record<string, string | number | undefined> = { indicatorId };
+    if (year) params.year = year;
+    const res = await get<ChartDataPoint[] | { data: ChartDataPoint[] }>('/data/regional-averages', params);
+    return Array.isArray(res) ? res : (res as { data: ChartDataPoint[] }).data;
   },
 };
 
@@ -300,59 +303,43 @@ export const dataApi = {
 // ============================================
 
 export const youthIndexApi = {
-  /**
-   * Get youth index rankings for a year
-   */
   async getRankings(year: number = 2024): Promise<YouthIndex[]> {
-    await simulateDelay(300);
-    return generateYouthIndexData(year);
+    const res = await get<{ data: ApiYouthIndex[] } | ApiYouthIndex[]>('/youth-index/rankings', { year });
+    const raw = Array.isArray(res) ? res : (res as { data: ApiYouthIndex[] }).data;
+    return raw.map(r => ({ ...normalizeYouthIndex(r), year }));
   },
 
-  /**
-   * Get youth index for a specific country
-   */
   async getByCountry(countryId: string, year?: number): Promise<YouthIndex | null> {
-    await simulateDelay(200);
-    const rankings = generateYouthIndexData(year);
-    return rankings.find(r => r.countryId === countryId) ?? null;
-  },
-
-  /**
-   * Get youth index history for a country
-   */
-  async getHistory(countryId: string): Promise<YouthIndex[]> {
-    await simulateDelay(400);
-    const history: YouthIndex[] = [];
-    
-    for (let year = 2015; year <= 2024; year++) {
-      const rankings = generateYouthIndexData(year);
-      const countryRanking = rankings.find(r => r.countryId === countryId);
-      if (countryRanking) {
-        history.push(countryRanking);
-      }
+    try {
+      const res = await get<ApiYouthIndex | { data: ApiYouthIndex }>(`/youth-index/${countryId}`, year ? { year } : undefined);
+      const raw = ('overallScore' in res) ? res as ApiYouthIndex : (res as { data: ApiYouthIndex }).data;
+      return { ...normalizeYouthIndex(raw), year: year ?? 2024 };
+    } catch {
+      return null;
     }
-    
-    return history;
   },
 
-  /**
-   * Get top performers
-   */
-  async getTopPerformers(limit: number = 10, year?: number): Promise<YouthIndex[]> {
-    await simulateDelay(200);
-    const rankings = generateYouthIndexData(year);
-    return rankings.slice(0, limit);
+  async getHistory(countryId: string): Promise<YouthIndex[]> {
+    // Backend doesn't have a dedicated history endpoint — fetch across available years
+    const years = [2006, 2016, 2025];
+    const results = await Promise.allSettled(
+      years.map(yr => youthIndexApi.getByCountry(countryId, yr))
+    );
+    return results
+      .filter((r): r is PromiseFulfilledResult<YouthIndex | null> => r.status === 'fulfilled' && r.value !== null)
+      .map(r => r.value as YouthIndex);
   },
 
-  /**
-   * Get most improved countries
-   */
-  async getMostImproved(limit: number = 10, year?: number): Promise<YouthIndex[]> {
-    await simulateDelay(200);
-    const rankings = generateYouthIndexData(year);
-    return [...rankings]
-      .sort((a, b) => b.rankChange - a.rankChange)
-      .slice(0, limit);
+  async getTopPerformers(limit: number = 10, year: number = 2024): Promise<YouthIndex[]> {
+    const res = await get<{ data: ApiYouthIndex[] } | ApiYouthIndex[]>(`/youth-index/top/${limit}`, { year });
+    const raw = Array.isArray(res) ? res : (res as { data: ApiYouthIndex[] }).data;
+    return raw.map(r => ({ ...normalizeYouthIndex(r), year }));
+  },
+
+  async getMostImproved(limit: number = 10, year: number = 2024): Promise<YouthIndex[]> {
+    const res = await get<{ data: ApiYouthIndex[] } | ApiYouthIndex[]>(`/youth-index/most-improved/${limit}`, { year });
+    const raw = Array.isArray(res) ? res : (res as { data: ApiYouthIndex[] }).data;
+    return raw.map(r => ({ ...normalizeYouthIndex(r), year }));
   },
 };
 
@@ -361,16 +348,12 @@ export const youthIndexApi = {
 // ============================================
 
 export const comparisonApi = {
-  /**
-   * Compare multiple countries across indicators
-   */
   async compareCountries(
     countryIds: string[],
     indicatorIds: string[],
     year?: number
   ): Promise<CountryComparison> {
-    await simulateDelay(300);
-    return compareCountries(countryIds, indicatorIds, year);
+    return post<CountryComparison>('/compare/countries', { countryIds, indicatorIds, year });
   },
 };
 
@@ -379,12 +362,8 @@ export const comparisonApi = {
 // ============================================
 
 export const platformApi = {
-  /**
-   * Get platform-wide statistics
-   */
   async getStats(): Promise<PlatformStats> {
-    await simulateDelay(100);
-    return getPlatformStats();
+    return get<PlatformStats>('/platform/stats');
   },
 };
 

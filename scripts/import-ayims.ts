@@ -94,9 +94,10 @@ const COLUMN_MAP: ColumnMapping[] = [
 
 const COUNTRY_NAME_ALIASES: Record<string, string> = {
   'cape verde': 'Cabo Verde',
-  'ivory coast': "Côte d'Ivoire",
-  "cote d'ivoire": "Côte d'Ivoire",
-  'côte d\'ivoire': "Côte d'Ivoire",
+  // Côte d'Ivoire — DB stores without accents: "Cote d'Ivoire"
+  'ivory coast': "Cote d'Ivoire",
+  "cote d'ivoire": "Cote d'Ivoire",
+  "côte d'ivoire": "Cote d'Ivoire",
   'dr congo': 'DR Congo',
   'democratic republic of the congo': 'DR Congo',
   'democratic republic of congo': 'DR Congo',
@@ -107,12 +108,16 @@ const COUNTRY_NAME_ALIASES: Record<string, string> = {
   'congo, rep.': 'Congo',
   'republic of the congo': 'Congo',
   'republic of congo': 'Congo',
+  // Eswatini — DB stores as "Eswatini"
   'swaziland': 'Eswatini',
+  'eswatini (swaziland)': 'Eswatini',
   'guinea bissau': 'Guinea-Bissau',
-  'são tomé & príncipe': 'São Tomé and Príncipe',
-  'sao tome and principe': 'São Tomé and Príncipe',
-  'sao tome & principe': 'São Tomé and Príncipe',
-  'são tomé and príncipe': 'São Tomé and Príncipe',
+  // São Tomé — DB stores without accents: "Sao Tome and Principe"
+  'são tomé & príncipe': 'Sao Tome and Principe',
+  'sao tome and principe': 'Sao Tome and Principe',
+  'sao tome & principe': 'Sao Tome and Principe',
+  'são tomé and príncipe': 'Sao Tome and Principe',
+  'sao tomé and príncipe': 'Sao Tome and Principe',
   'south sudan (2011+)': 'South Sudan',
   'gambia': 'Gambia',
   'the gambia': 'Gambia',
@@ -241,7 +246,10 @@ async function main() {
         continue;
       }
 
-      let countryValues = 0;
+      const batchRecords: Array<{
+        countryId: string; indicatorId: string; year: number; value: number;
+        gender: string; ageGroup: string; source: string; confidence: number; isEstimate: boolean;
+      }> = [];
 
       for (const mapping of COLUMN_MAP) {
         if (mapping.skip || !mapping.slug) continue;
@@ -258,53 +266,32 @@ async function main() {
 
         const finalValue = mapping.multiply ? num * mapping.multiply : num;
 
-        try {
-          await prisma.indicatorValue.upsert({
-            where: {
-              countryId_indicatorId_year_gender_ageGroup: {
-                countryId: dbCountry.id,
-                indicatorId,
-                year,
-                gender: mapping.gender,
-                ageGroup: AGE_GROUP,
-              },
-            },
-            update: {
-              value: finalValue,
-              source: SOURCE,
-              confidence: CONFIDENCE,
-              isEstimate: false,
-            },
-            create: {
-              countryId: dbCountry.id,
-              indicatorId,
-              year,
-              value: finalValue,
-              gender: mapping.gender,
-              ageGroup: AGE_GROUP,
-              source: SOURCE,
-              confidence: CONFIDENCE,
-              isEstimate: false,
-            },
-          });
+        batchRecords.push({
+          countryId: dbCountry.id,
+          indicatorId,
+          year,
+          value: finalValue,
+          gender: mapping.gender,
+          ageGroup: AGE_GROUP,
+          source: SOURCE,
+          confidence: CONFIDENCE,
+          isEstimate: false,
+        });
 
-          countryValues++;
-
-          // Track per theme
-          const t = mapping.themeSlug;
-          themeCount[t] = (themeCount[t] || 0) + 1;
-        } catch (err: any) {
-          // Silently skip constraint errors
-          if (!err.message?.includes('Unique constraint')) {
-            console.warn(`    ✗ Error for ${dbCountry.name}/${mapping.slug}: ${err.message}`);
-          }
-        }
+        // Track per theme
+        const t = mapping.themeSlug;
+        themeCount[t] = (themeCount[t] || 0) + 1;
       }
 
-      if (countryValues > 0) {
-        console.log(`    ${dbCountry.name}: ${countryValues} values imported`);
+      if (batchRecords.length > 0) {
+        const result = await prisma.indicatorValue.createMany({
+          data: batchRecords,
+          skipDuplicates: true,
+        });
+        const countryValues = result.count;
+        console.log(`    ${dbCountry.name}: ${countryValues} values imported (${batchRecords.length - countryValues} skipped as duplicates)`);
         yearValues += countryValues;
-        yearCountries++;
+        if (countryValues > 0) yearCountries++;
       }
     }
 

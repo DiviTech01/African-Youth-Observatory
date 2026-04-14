@@ -3,16 +3,10 @@
 // Generate intelligent insights from youth data
 // ============================================
 
-import { 
-  AFRICAN_COUNTRIES, 
-  THEMES, 
-  INDICATORS,
+import {
   getCountryById,
-  getIndicatorById,
-  type Country,
-  type RegionType 
+  type YouthIndex,
 } from '@/types';
-import { generateYouthIndexData } from '@/types/mockData';
 
 // ============================================
 // TYPES
@@ -69,12 +63,11 @@ export interface InsightSummary {
 // ============================================
 
 /**
- * Generate AI insights based on current data
+ * Generate AI insights from real YouthIndex data
  */
-export const generateInsights = (year: number = 2024): AIInsight[] => {
+export const generateInsights = (youthIndexData: YouthIndex[], year: number = 2024): AIInsight[] => {
+  if (!youthIndexData || youthIndexData.length === 0) return [];
   const insights: AIInsight[] = [];
-  const youthIndexData = generateYouthIndexData(year);
-  const prevYearData = generateYouthIndexData(year - 1);
   
   // Sort by score
   const topPerformers = [...youthIndexData].slice(0, 5);
@@ -378,32 +371,32 @@ export const generateInsights = (year: number = 2024): AIInsight[] => {
 /**
  * Get insights filtered by category
  */
-export const getInsightsByCategory = (category: InsightCategory, year?: number): AIInsight[] => {
-  const allInsights = generateInsights(year);
+export const getInsightsByCategory = (youthIndexData: YouthIndex[], category: InsightCategory, year?: number): AIInsight[] => {
+  const allInsights = generateInsights(youthIndexData, year);
   return allInsights.filter(insight => insight.category === category);
 };
 
 /**
  * Get insights filtered by type
  */
-export const getInsightsByType = (type: InsightType, year?: number): AIInsight[] => {
-  const allInsights = generateInsights(year);
+export const getInsightsByType = (youthIndexData: YouthIndex[], type: InsightType, year?: number): AIInsight[] => {
+  const allInsights = generateInsights(youthIndexData, year);
   return allInsights.filter(insight => insight.type === type);
 };
 
 /**
  * Get high priority insights
  */
-export const getHighPriorityInsights = (year?: number): AIInsight[] => {
-  const allInsights = generateInsights(year);
+export const getHighPriorityInsights = (youthIndexData: YouthIndex[], year?: number): AIInsight[] => {
+  const allInsights = generateInsights(youthIndexData, year);
   return allInsights.filter(insight => insight.priority === 'high');
 };
 
 /**
  * Get insight summary statistics
  */
-export const getInsightSummary = (year?: number): InsightSummary => {
-  const allInsights = generateInsights(year);
+export const getInsightSummary = (youthIndexData: YouthIndex[], year?: number): InsightSummary => {
+  const allInsights = generateInsights(youthIndexData, year);
   return {
     totalInsights: allInsights.length,
     highPriority: allInsights.filter(i => i.priority === 'high').length,
@@ -417,9 +410,8 @@ export const getInsightSummary = (year?: number): InsightSummary => {
 /**
  * Generate country-specific insights
  */
-export const getCountryInsights = (countryId: string, year: number = 2024): AIInsight[] => {
+export const getCountryInsights = (countryId: string, youthIndexData: YouthIndex[], year: number = 2024): AIInsight[] => {
   const insights: AIInsight[] = [];
-  const youthIndexData = generateYouthIndexData(year);
   const countryData = youthIndexData.find(yi => yi.countryId === countryId);
   const country = getCountryById(countryId);
   

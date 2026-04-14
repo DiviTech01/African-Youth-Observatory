@@ -54,6 +54,9 @@ export class PolicyMonitorService {
     // Get data availability per country
     const dataAvailability = await this.getDataAvailabilityMap(year);
 
+    // Get AYC composite policy index scores
+    const aycScoreMap = await this.getAycCompositeScoreMap();
+
     // Score each country
     const scored = policies.map((policy) => {
       const input: ComplianceInput = {
@@ -66,6 +69,7 @@ export class PolicyMonitorService {
         policyStatus: policy.status,
         youthIndexScore: youthScoreMap.get(policy.countryId) ?? null,
         dataAvailability: dataAvailability.get(policy.countryId) ?? 0,
+        aycPolicyIndexScore: aycScoreMap.get(policy.countryId) ?? null,
       };
 
       const result = this.scorer.score(input, year);
@@ -177,6 +181,8 @@ export class PolicyMonitorService {
       ? countryDataPoints.length / totalIndicators
       : 0;
 
+    const aycScoreMap = await this.getAycCompositeScoreMap();
+
     const input: ComplianceInput = {
       aycRatified: policy.aycRatified,
       aycRatifiedYear: policy.aycRatifiedYear,
@@ -187,6 +193,7 @@ export class PolicyMonitorService {
       policyStatus: policy.status,
       youthIndexScore: youthScore?.overallScore ?? null,
       dataAvailability,
+      aycPolicyIndexScore: aycScoreMap.get(countryId) ?? null,
     };
 
     const complianceResult = this.scorer.score(input, youthScore?.year ?? 2023);
@@ -248,6 +255,7 @@ export class PolicyMonitorService {
     });
     const youthScoreMap = new Map(youthScores.map((s) => [s.countryId, s.overallScore]));
     const dataAvailability = await this.getDataAvailabilityMap(2023);
+    const aycScoreMap = await this.getAycCompositeScoreMap();
 
     let updated = 0;
 
@@ -262,6 +270,7 @@ export class PolicyMonitorService {
         policyStatus: policy.status,
         youthIndexScore: youthScoreMap.get(policy.countryId) ?? null,
         dataAvailability: dataAvailability.get(policy.countryId) ?? 0,
+        aycPolicyIndexScore: aycScoreMap.get(policy.countryId) ?? null,
       };
 
       const result = this.scorer.score(input, 2023);
@@ -377,6 +386,36 @@ export class PolicyMonitorService {
 
     this.cache.set(cacheKey, result, 600);
     return result;
+  }
+
+  /**
+   * Helper: Fetch AYC composite policy index scores (0-100) per country.
+   * Returns an empty map if the indicator does not exist yet (import not run).
+   */
+  private async getAycCompositeScoreMap(): Promise<Map<string, number>> {
+    const indicator = await this.prisma.indicator.findFirst({
+      where: { slug: 'ayc-composite-policy-index' },
+      select: { id: true },
+    });
+    if (!indicator) return new Map();
+
+    const values = await this.prisma.indicatorValue.findMany({
+      where: {
+        indicatorId: indicator.id,
+        gender: 'TOTAL',
+      },
+      orderBy: { year: 'desc' },
+      select: { countryId: true, value: true, year: true },
+    });
+
+    // Keep only the most-recent value per country
+    const map = new Map<string, number>();
+    for (const v of values) {
+      if (!map.has(v.countryId)) {
+        map.set(v.countryId, v.value);
+      }
+    }
+    return map;
   }
 
   /**

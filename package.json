@@ -25,6 +25,8 @@
     "smoke-test": "tsx scripts/smoke-test.ts",
     "seed:policies": "tsx scripts/seed-policies.ts",
     "seed:experts": "tsx scripts/seed-experts.ts",
+    "import:ayc-scorecard": "tsx scripts/import-ayc-scorecard.ts",
+    "compute:youth-index": "tsx scripts/compute-youth-index.ts",
     "setup": "bash scripts/setup.sh"
   },
   "dependencies": {

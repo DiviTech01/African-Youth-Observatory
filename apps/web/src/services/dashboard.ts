@@ -3,8 +3,7 @@
 // Customizable dashboard configuration and management
 // ============================================
 
-import { generateYouthIndexData } from '@/types/mockData';
-import { AFRICAN_COUNTRIES, THEMES, INDICATORS } from '@/types';
+import { AFRICAN_COUNTRIES, THEMES, INDICATORS, type YouthIndex } from '@/types';
 
 // ============================================
 // TYPES
@@ -484,11 +483,11 @@ export interface WidgetData {
 }
 
 // Generate data for a widget based on its type and config
-export function getWidgetData(widget: DashboardWidget): WidgetData {
+// Pass real youthIndexData from the API; widgets that need it will be empty until data arrives
+export function getWidgetData(widget: DashboardWidget, youthIndexData: YouthIndex[] = []): WidgetData {
   const year = widget.config.year || 2024;
-  const youthIndexData = generateYouthIndexData();
   const indicators = INDICATORS;
-  
+
   const yearData = youthIndexData.filter(d => d.year === year);
   const sortedByScore = [...yearData].sort((a, b) => b.indexScore - a.indexScore);
   
@@ -673,13 +672,13 @@ export function getWidgetData(widget: DashboardWidget): WidgetData {
 }
 
 // Get data for all widgets in a dashboard
-export function getDashboardData(dashboardId: string): Map<string, WidgetData> {
+export function getDashboardData(dashboardId: string, youthIndexData: YouthIndex[] = []): Map<string, WidgetData> {
   const dashboard = getDashboard(dashboardId);
   if (!dashboard) return new Map();
-  
+
   const dataMap = new Map<string, WidgetData>();
   for (const widget of dashboard.widgets) {
-    dataMap.set(widget.id, getWidgetData(widget));
+    dataMap.set(widget.id, getWidgetData(widget, youthIndexData));
   }
   return dataMap;
 }

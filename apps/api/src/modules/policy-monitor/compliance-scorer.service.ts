@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
  * AYC Compliance Scoring Engine
  *
  * Scores each country's youth policy compliance on a 0–100 scale
- * across 7 weighted components:
+ * across 7 weighted base components, plus an optional 8th:
  *
  *   1. AYC Ratification           (20%) — Has the country ratified the African Youth Charter?
  *   2. National Youth Policy      (20%) — Does the country have an adopted national youth policy?
@@ -13,6 +13,11 @@ import { Injectable } from '@nestjs/common';
  *   5. Policy Status              (10%) — Is the policy currently active?
  *   6. Youth Index Performance    (10%) — Country's Youth Index score (normalized 0–100)
  *   7. Data Availability          (10%) — How many indicators have data for this country?
+ *   8. AYC Policy Index           (15%) — PACSDA composite policy index score (when available)
+ *
+ * When aycPolicyIndexScore is null the 8 existing base weights apply unchanged (total = 1.0).
+ * When aycPolicyIndexScore is present the 7 base weights are scaled by 0.85 and the 8th
+ * component contributes the remaining 0.15, keeping the total at 1.0.
  */
 
 export interface ComplianceInput {
@@ -23,8 +28,9 @@ export interface ComplianceInput {
   yearRevised: number | null;
   wpayCompliant: boolean;
   policyStatus: string;
-  youthIndexScore: number | null; // 0-100 overall score
-  dataAvailability: number; // 0-1 ratio of indicators with data
+  youthIndexScore: number | null;      // 0-100 overall score
+  dataAvailability: number;            // 0-1 ratio of indicators with data
+  aycPolicyIndexScore: number | null;  // 0-100 composite from AYC Scorecard, null if not in dataset
 }
 
 export interface ComplianceResult {
@@ -37,20 +43,27 @@ export interface ComplianceResult {
     policyStatus: number;
     youthIndexPerformance: number;
     dataAvailability: number;
+    aycPolicyIndex: number;
   };
   tier: 'EXEMPLARY' | 'STRONG' | 'MODERATE' | 'DEVELOPING' | 'MINIMAL';
   recommendations: string[];
 }
 
-const WEIGHTS = {
-  aycRatification: 0.20,
+// Base weights for the 7 original components (sum = 1.0)
+const BASE_WEIGHTS = {
+  aycRatification:     0.20,
   nationalYouthPolicy: 0.20,
-  policyCurrency: 0.15,
-  wpayCompliance: 0.15,
-  policyStatus: 0.10,
+  policyCurrency:      0.15,
+  wpayCompliance:      0.15,
+  policyStatus:        0.10,
   youthIndexPerformance: 0.10,
-  dataAvailability: 0.10,
+  dataAvailability:    0.10,
 };
+
+// Weight allocated to the AYC Policy Index when data is present.
+// The 7 base weights are scaled by (1 - AYC_INDEX_WEIGHT) so the total stays 1.0.
+const AYC_INDEX_WEIGHT = 0.15;
+const BASE_SCALE_WITH_AYC = 1 - AYC_INDEX_WEIGHT; // 0.85
 
 @Injectable()
 export class ComplianceScorerService {
@@ -58,25 +71,33 @@ export class ComplianceScorerService {
    * Compute the compliance score for a single country.
    */
   score(input: ComplianceInput, referenceYear: number = 2023): ComplianceResult {
+    const hasAyc = input.aycPolicyIndexScore !== null && input.aycPolicyIndexScore !== undefined;
+
     const components = {
-      aycRatification: this.scoreAycRatification(input),
-      nationalYouthPolicy: this.scoreNationalPolicy(input),
-      policyCurrency: this.scorePolicyCurrency(input, referenceYear),
-      wpayCompliance: this.scoreWpayCompliance(input),
-      policyStatus: this.scorePolicyStatus(input),
+      aycRatification:      this.scoreAycRatification(input),
+      nationalYouthPolicy:  this.scoreNationalPolicy(input),
+      policyCurrency:       this.scorePolicyCurrency(input, referenceYear),
+      wpayCompliance:       this.scoreWpayCompliance(input),
+      policyStatus:         this.scorePolicyStatus(input),
       youthIndexPerformance: this.scoreYouthIndex(input),
-      dataAvailability: this.scoreDataAvailability(input),
+      dataAvailability:     this.scoreDataAvailability(input),
+      aycPolicyIndex:       hasAyc ? Math.min(100, Math.max(0, input.aycPolicyIndexScore!)) : 0,
     };
 
+    // When AYC data is present: base weights × 0.85, AYC gets 0.15
+    // When not present: base weights × 1.0, AYC contributes 0
+    const scale = hasAyc ? BASE_SCALE_WITH_AYC : 1.0;
+
     const overallScore = Math.round(
-      (components.aycRatification * WEIGHTS.aycRatification +
-        components.nationalYouthPolicy * WEIGHTS.nationalYouthPolicy +
-        components.policyCurrency * WEIGHTS.policyCurrency +
-        components.wpayCompliance * WEIGHTS.wpayCompliance +
-        components.policyStatus * WEIGHTS.policyStatus +
-        components.youthIndexPerformance * WEIGHTS.youthIndexPerformance +
-        components.dataAvailability * WEIGHTS.dataAvailability) *
-        100,
+      (components.aycRatification      * BASE_WEIGHTS.aycRatification      * scale +
+       components.nationalYouthPolicy  * BASE_WEIGHTS.nationalYouthPolicy  * scale +
+       components.policyCurrency       * BASE_WEIGHTS.policyCurrency       * scale +
+       components.wpayCompliance       * BASE_WEIGHTS.wpayCompliance       * scale +
+       components.policyStatus         * BASE_WEIGHTS.policyStatus         * scale +
+       components.youthIndexPerformance * BASE_WEIGHTS.youthIndexPerformance * scale +
+       components.dataAvailability     * BASE_WEIGHTS.dataAvailability     * scale +
+       components.aycPolicyIndex       * (hasAyc ? AYC_INDEX_WEIGHT : 0)) *
+      100,
     ) / 100;
 
     const tier = this.assignTier(overallScore);
@@ -172,6 +193,10 @@ export class ComplianceScorerService {
 
     if (components.dataAvailability < 50) {
       recs.push('Improve youth data collection and reporting to enable evidence-based policymaking.');
+    }
+
+    if (input.aycPolicyIndexScore !== null && components.aycPolicyIndex < 50) {
+      recs.push('Strengthen policy instruments across key AYC dimensions (economic inclusion, digital innovation, green transition).');
     }
 
     return recs;

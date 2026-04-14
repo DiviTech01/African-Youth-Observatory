@@ -4,6 +4,7 @@
 // ============================================
 
 import React, { useState, useMemo } from 'react';
+import { useYouthIndexRankings } from '@/hooks/useData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -202,23 +203,26 @@ interface InsightsDashboardProps {
   countryId?: string;
 }
 
-export const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ 
+export const InsightsDashboard: React.FC<InsightsDashboardProps> = ({
   year = 2024,
-  countryId 
+  countryId
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const allInsights = useMemo(() => {
-    if (countryId) {
-      return getCountryInsights(countryId, year);
-    }
-    return generateInsights(year);
-  }, [year, countryId]);
+  const { data: rankings = [] } = useYouthIndexRankings(year);
 
-  const summary = useMemo(() => getInsightSummary(year), [year]);
-  const highPriority = useMemo(() => getHighPriorityInsights(year), [year]);
+  const allInsights = useMemo(() => {
+    if (!rankings.length) return [];
+    if (countryId) {
+      return getCountryInsights(countryId, rankings, year);
+    }
+    return generateInsights(rankings, year);
+  }, [rankings, year, countryId]);
+
+  const summary = useMemo(() => getInsightSummary(rankings, year), [rankings, year]);
+  const highPriority = useMemo(() => getHighPriorityInsights(rankings, year), [rankings, year]);
 
   const filteredInsights = useMemo(() => {
     let filtered = allInsights;
@@ -412,16 +416,18 @@ interface QuickInsightsProps {
   year?: number;
 }
 
-export const QuickInsights: React.FC<QuickInsightsProps> = ({ 
+export const QuickInsights: React.FC<QuickInsightsProps> = ({
   limit = 3,
-  year = 2024 
+  year = 2024
 }) => {
+  const { data: rankings = [] } = useYouthIndexRankings(year);
+
   const insights = useMemo(() => {
-    const all = generateInsights(year);
-    return all
+    if (!rankings.length) return [];
+    return generateInsights(rankings, year)
       .filter(i => i.priority === 'high')
       .slice(0, limit);
-  }, [year, limit]);
+  }, [rankings, year, limit]);
 
   return (
     <Card>
