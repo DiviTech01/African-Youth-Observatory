@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const _viteUrl = import.meta.env.VITE_API_URL as string | undefined;
+const API_BASE = (_viteUrl && _viteUrl.startsWith('http'))
+  ? _viteUrl
+  : (import.meta.env.PROD ? 'https://african-youth-observatory.onrender.com/api' : '/api');
 
 export type UserRole = 'PUBLIC' | 'REGISTERED' | 'RESEARCHER' | 'CONTRIBUTOR' | 'INSTITUTIONAL' | 'ADMIN';
 
