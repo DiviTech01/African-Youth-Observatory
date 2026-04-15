@@ -21,6 +21,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useExportGuard } from '@/hooks/useExportGuard';
+import { GuestInviteModal } from '@/components/GuestInviteModal';
 
 type ExportFormat = 'csv' | 'json' | 'excel' | 'pdf';
 
@@ -74,6 +76,7 @@ const ExportDialog = ({ trigger, filters }: ExportDialogProps) => {
   const [isExporting, setIsExporting] = useState(false);
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { guard, inviteOpen, setInviteOpen, inviteAction } = useExportGuard();
 
   const activeFilters = filters
     ? Object.entries(filters).filter(
@@ -98,22 +101,22 @@ const ExportDialog = ({ trigger, filters }: ExportDialogProps) => {
     return labels[key] || key;
   };
 
-  const handleExport = async () => {
+  const runExport = async () => {
     setIsExporting(true);
-
-    // Simulate export process
     await new Promise((resolve) => setTimeout(resolve, 1800));
-
     setIsExporting(false);
     setOpen(false);
-
     toast({
       title: 'Export complete',
       description: `Your data has been exported as ${selectedFormat.toUpperCase()} successfully.`,
     });
   };
 
+  const handleExport = () => guard(runExport, 'export');
+
   return (
+    <>
+    <GuestInviteModal open={inviteOpen} onOpenChange={setInviteOpen} action={inviteAction} />
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
@@ -237,6 +240,7 @@ const ExportDialog = ({ trigger, filters }: ExportDialogProps) => {
         </Button>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
 

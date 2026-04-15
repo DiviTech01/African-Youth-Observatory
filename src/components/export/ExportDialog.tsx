@@ -4,6 +4,8 @@
 // ============================================
 
 import { useState } from 'react';
+import { useExportGuard } from '@/hooks/useExportGuard';
+import { GuestInviteModal } from '@/components/GuestInviteModal';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -77,8 +79,9 @@ export const ExportDialog = ({
   const [format, setFormat] = useState<ExportFormat>('csv');
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState(false);
+  const { guard, inviteOpen, setInviteOpen, inviteAction } = useExportGuard();
 
-  const handleExport = async () => {
+  const runExport = async () => {
     setExporting(true);
     try {
       await onExport(format);
@@ -94,7 +97,11 @@ export const ExportDialog = ({
     }
   };
 
+  const handleExport = () => guard(runExport, 'export');
+
   return (
+    <>
+    <GuestInviteModal open={inviteOpen} onOpenChange={setInviteOpen} action={inviteAction} />
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
@@ -163,6 +170,7 @@ export const ExportDialog = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
 
@@ -176,29 +184,34 @@ export const QuickExportDropdown = ({
   trigger,
   disabled = false
 }: QuickExportDropdownProps) => {
+  const { guard, inviteOpen, setInviteOpen, inviteAction } = useExportGuard();
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm" disabled={disabled}>
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {formatOptions.map((option) => (
-          <DropdownMenuItem
-            key={option.value}
-            onClick={() => onExport(option.value)}
-            className="cursor-pointer"
-          >
-            {option.icon}
-            <span className="ml-2">Export as {option.label}</span>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <GuestInviteModal open={inviteOpen} onOpenChange={setInviteOpen} action={inviteAction} />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          {trigger || (
+            <Button variant="outline" size="sm" disabled={disabled}>
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {formatOptions.map((option) => (
+            <DropdownMenuItem
+              key={option.value}
+              onClick={() => guard(() => onExport(option.value), 'export')}
+              className="cursor-pointer"
+            >
+              {option.icon}
+              <span className="ml-2">Export as {option.label}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 };
 
