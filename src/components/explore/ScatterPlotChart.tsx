@@ -16,8 +16,8 @@ interface ScatterPlotChartProps {
 }
 
 const CHART_COLORS = {
-  primary: 'hsl(var(--chart-1))',
-  secondary: 'hsl(var(--chart-2))',
+  primary: '#22C55E',
+  secondary: '#14B8A6',
 };
 
 interface DataPoint {
@@ -56,17 +56,19 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload as DataPoint;
   return (
-    <div
-      className="rounded-md px-3 py-2 text-xs shadow-lg border"
-      style={{
-        backgroundColor: 'hsl(var(--popover))',
-        color: 'hsl(var(--popover-foreground))',
-        borderColor: 'hsl(var(--border))',
-      }}
-    >
-      <p className="font-semibold mb-1">{point.country}</p>
-      <p>Education Spending: {point.x}%</p>
-      <p>Literacy Rate: {point.y}%</p>
+    <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-2xl px-4 py-3 min-w-[170px]">
+      <p className="text-xs font-semibold text-white mb-1.5">{point.country}</p>
+      <div className="space-y-1 text-[11px]">
+        <div className="flex justify-between gap-4">
+          <span className="text-gray-400">Education Spending</span>
+          <span className="font-semibold text-emerald-400">{point.x}%</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-gray-400">Literacy Rate</span>
+          <span className="font-semibold text-amber-400">{point.y}%</span>
+        </div>
+      </div>
+      <div className="mt-2 h-[2px] rounded-full bg-gradient-to-r from-emerald-500/40 via-amber-500/30 to-transparent" />
     </div>
   );
 };
@@ -79,18 +81,18 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps> = ({
   const data = useMemo(() => generateMockScatterData(), []);
 
   return (
-    <div className="border rounded-lg p-6 bg-card">
-      <h3 className="text-xl font-bold mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground mb-4">
+    <div className="rounded-2xl border border-gray-800/60 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-6">
+      <h3 className="text-xl font-bold mb-1 text-white">{title}</h3>
+      <p className="text-xs text-gray-500 mb-5">
         Correlation between education investment and youth literacy across 20 African countries
       </p>
 
-      <div className="min-h-[380px]">
+      <div className="min-h-[380px] rounded-xl bg-black/20 border border-gray-800/30 p-4">
         <ResponsiveContainer width="100%" height={380}>
           <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 10 }}>
             <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="hsl(var(--border))"
+              stroke="rgba(255,255,255,0.04)"
+              strokeDasharray="0"
               vertical={false}
             />
             <XAxis
@@ -98,14 +100,14 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps> = ({
               dataKey="x"
               name={xLabel}
               unit="%"
-              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.4)' }}
               tickLine={false}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
+              axisLine={false}
               label={{
                 value: xLabel,
                 position: 'insideBottom',
                 offset: -18,
-                style: { fontSize: 12, fill: 'hsl(var(--muted-foreground))' },
+                style: { fontSize: 11, fill: 'rgba(255,255,255,0.3)' },
               }}
             />
             <YAxis
@@ -113,7 +115,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps> = ({
               dataKey="y"
               name={yLabel}
               unit="%"
-              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.3)' }}
               tickLine={false}
               axisLine={false}
               width={50}
@@ -122,24 +124,24 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps> = ({
                 angle: -90,
                 position: 'insideLeft',
                 offset: 5,
-                style: { fontSize: 12, fill: 'hsl(var(--muted-foreground))' },
+                style: { fontSize: 11, fill: 'rgba(255,255,255,0.3)' },
               }}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeDasharray: '4 4' }} />
             <Scatter
               data={data}
               fill={CHART_COLORS.primary}
-              stroke={CHART_COLORS.secondary}
-              strokeWidth={1}
-              r={6}
+              stroke="rgba(255,255,255,0.15)"
+              strokeWidth={1.5}
+              r={7}
             />
           </ScatterChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-4 p-4 bg-muted rounded-md">
-        <h4 className="font-medium mb-1 text-sm">Insight</h4>
-        <p className="text-sm text-muted-foreground">
+      <div className="mt-5 flex items-start gap-2 px-3 py-2.5 bg-white/[0.02] border border-gray-800/30 rounded-lg">
+        <div className="w-1 h-full min-h-[20px] rounded-full bg-gradient-to-b from-emerald-500/40 to-transparent flex-shrink-0 mt-0.5" />
+        <p className="text-[11px] text-gray-500 leading-relaxed">
           Countries with higher education spending as a share of GDP tend to achieve higher youth literacy rates,
           though regional factors and policy effectiveness also play a significant role.
         </p>

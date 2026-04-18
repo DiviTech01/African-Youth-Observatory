@@ -87,12 +87,13 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, title = 'Youth Develo
   chartData.forEach((d) => lookup.set(`${d.country}||${d.indicator}`, d.value));
 
   return (
-    <div className="border rounded-lg p-6 bg-card">
-      <h3 className="text-xl font-bold mb-4">{title}</h3>
+    <div className="rounded-2xl border border-gray-800/60 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-6">
+      <h3 className="text-xl font-bold mb-1 text-white">{title}</h3>
+      <p className="text-xs text-gray-500 mb-5">Comparative performance across key indicators</p>
 
       <div className="overflow-x-auto">
         <div
-          className="inline-grid gap-[2px]"
+          className="inline-grid gap-[3px]"
           style={{
             gridTemplateColumns: `140px repeat(${indicators.length}, minmax(100px, 1fr))`,
           }}
@@ -102,7 +103,7 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, title = 'Youth Develo
           {indicators.map((ind) => (
             <div
               key={ind}
-              className="h-10 flex items-center justify-center text-xs font-semibold text-muted-foreground px-1 text-center"
+              className="h-10 flex items-center justify-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 text-center"
             >
               {ind}
             </div>
@@ -111,7 +112,7 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, title = 'Youth Develo
           {/* Data rows */}
           {countries.map((country) => (
             <React.Fragment key={country}>
-              <div className="h-10 flex items-center text-sm font-medium pr-3 truncate">
+              <div className="h-10 flex items-center text-xs font-medium pr-3 truncate text-gray-300">
                 {country}
               </div>
               {indicators.map((ind) => {
@@ -120,13 +121,17 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, title = 'Youth Develo
                 return (
                   <div
                     key={`${country}-${ind}`}
-                    className="h-10 rounded-sm flex items-center justify-center text-xs font-bold cursor-default transition-transform hover:scale-105 relative"
-                    style={{ backgroundColor: bg, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}
+                    className="h-10 rounded-md flex items-center justify-center text-xs font-bold cursor-default transition-all duration-200 hover:scale-105 hover:shadow-lg hover:z-10 relative"
+                    style={{ backgroundColor: bg, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.5)', opacity: 0.85 }}
                     onMouseEnter={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       setTooltip({ country, indicator: ind, value: val, x: rect.left + rect.width / 2, y: rect.top });
+                      (e.currentTarget as HTMLElement).style.opacity = '1';
                     }}
-                    onMouseLeave={() => setTooltip(null)}
+                    onMouseLeave={(e) => {
+                      setTooltip(null);
+                      (e.currentTarget as HTMLElement).style.opacity = '0.85';
+                    }}
                   >
                     {val}
                   </div>
@@ -140,27 +145,27 @@ const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, title = 'Youth Develo
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="fixed z-50 pointer-events-none px-3 py-2 rounded-md text-xs shadow-lg border"
+          className="fixed z-50 pointer-events-none bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-2xl px-4 py-2.5"
           style={{
             left: tooltip.x,
             top: tooltip.y - 8,
             transform: 'translate(-50%, -100%)',
-            backgroundColor: 'hsl(var(--popover))',
-            color: 'hsl(var(--popover-foreground))',
-            borderColor: 'hsl(var(--border))',
           }}
         >
-          <span className="font-semibold">{tooltip.country}</span> - {tooltip.indicator}
-          <br />
-          Value: <span className="font-bold">{tooltip.value}</span>
+          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-0.5">{tooltip.indicator}</p>
+          <p className="text-sm text-white">
+            <span className="font-semibold">{tooltip.country}</span>
+            <span className="mx-1.5 text-gray-600">·</span>
+            <span className="font-bold text-emerald-400">{tooltip.value}</span>
+          </p>
         </div>
       )}
 
       {/* Legend */}
-      <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
+      <div className="flex items-center gap-2 mt-5 text-[10px] text-gray-500">
         <span>Low</span>
         <div
-          className="h-3 flex-1 max-w-[200px] rounded-sm"
+          className="h-2 flex-1 max-w-[200px] rounded-full"
           style={{
             background: 'linear-gradient(to right, rgb(220, 60, 50), rgb(220, 220, 50), rgb(50, 190, 80))',
           }}

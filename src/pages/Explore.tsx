@@ -89,7 +89,7 @@ const Explore = () => {
                   Click on a country to view its youth data.
                 </p>
                 <div className="h-[300px] sm:h-[350px] md:h-[400px]">
-                  <AfricaMap onCountrySelect={handleCountrySelect} />
+                  <AfricaMap onCountrySelect={handleCountrySelect} selectedCountry={selectedCountry} />
                 </div>
               </div>
 

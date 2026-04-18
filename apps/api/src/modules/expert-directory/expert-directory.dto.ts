@@ -139,4 +139,14 @@ export class UpdateExpertDto {
   @Type(() => Boolean)
   @IsBoolean()
   verified?: boolean;
+
+  @ApiPropertyOptional({ description: 'Approval status: PENDING, APPROVED, REJECTED (admin only)' })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({ description: 'Reason for rejection (admin only)' })
+  @IsOptional()
+  @IsString()
+  rejectionReason?: string;
 }

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============ GEOGRAPHY ============
@@ -176,31 +177,40 @@ model CountryPolicy {
 // ============ EXPERTS ============
 
 model Expert {
-  id              String   @id @default(cuid())
+  id              String       @id @default(cuid())
   name            String
-  email           String?  @unique
+  email           String?      @unique
   title           String
   organization    String?
   countryId       String
   specializations String[]
   languages       String[]
   bio             String?
-  verified        Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  verified        Boolean      @default(false)
+  status          ExpertStatus @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now()) @updatedAt
 
   country Country @relation(fields: [countryId], references: [id])
 
   @@index([countryId])
+  @@index([status])
+}
+
+enum ExpertStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // ============ USERS ============
 
 model User {
-  id           String    @id @default(cuid())
+  id           String    @id  // UUID from Supabase auth.users
   email        String    @unique
   name         String?
-  passwordHash String?
-  role         UserRole  @default(PUBLIC)
+  role         UserRole  @default(REGISTERED)
   organization String?
   avatar       String?
   lastLogin    DateTime?

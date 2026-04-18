@@ -178,7 +178,7 @@ const Countries = () => {
         ) : (
           <div className="container px-4 md:px-6">
             {isLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                 {Array.from({ length: 15 }).map((_, i) => (
                   <Card key={i} className="rounded-2xl border border-gray-800 bg-white/[0.03]">
                     <CardContent className="p-4 space-y-3">
@@ -201,7 +201,7 @@ const Countries = () => {
                 {isError && (
                   <Badge variant="secondary" className="mb-4 text-xs">Showing offline data</Badge>
                 )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                   {filteredCountries.map(({ country, region }: any) => {
                     const sparklineData = getSparklineData(country);
                     const isMyCountry = preferences.myCountry && country.toLowerCase() === preferences.myCountry.toLowerCase();
@@ -214,14 +214,14 @@ const Countries = () => {
                           setSelectedCountry(country);
                         }}
                       >
-                        <CardContent className="p-4 flex flex-col gap-2.5">
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-2">
+                        <CardContent className="p-2.5 sm:p-4 flex flex-col gap-1.5 sm:gap-2.5">
+                          <div className="flex flex-col gap-1 sm:gap-1.5">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
                               <CountryFlag country={country} size="md" />
-                              <span className="text-sm sm:text-base font-bold leading-tight line-clamp-1">
+                              <span className="text-xs sm:text-base font-bold leading-tight line-clamp-1">
                                 {country}
                               </span>
-                              {isMyCountry && <Star className="h-4 w-4 text-[#D4A017] fill-[#D4A017] flex-shrink-0" />}
+                              {isMyCountry && <Star className="h-3 w-3 sm:h-4 sm:w-4 text-[#D4A017] fill-[#D4A017] flex-shrink-0" />}
                             </div>
                             {(() => {
                               const meta = getCountryMeta(country);

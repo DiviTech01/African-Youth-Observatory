@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, BarChart3, ChevronDown, ChevronUp, Brain, Cpu, TrendingUp } from 'lucide-react';
+import { Sparkles, BarChart3, ChevronDown, ChevronUp, Brain, Cpu, TrendingUp, Send, Download } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { ClaudeChatInput } from '@/components/ui/claude-style-ai-input';
-import type { FileWithPreview, PastedContent } from '@/components/ui/claude-style-ai-input';
 
 interface AiVisualization {
   type: 'bar_chart' | 'line_chart' | 'radar_chart' | 'pie_chart' | 'scatter_plot' | 'table' | 'stat_cards';
@@ -42,11 +40,6 @@ const suggestedQuestions = [
   "Which 5 African countries have the highest Youth Index scores and why?",
   "Compare Nigeria and Kenya across education, employment, and health indicators",
   "What are the biggest data gaps in Southern Africa?",
-  "How has youth unemployment changed in North Africa since 2010?",
-  "Which countries have the best AYC compliance and what policies do they have?",
-  "What is the correlation between education spending and youth literacy across Africa?",
-  "Show me the top 10 countries for internet penetration among youth",
-  "What are Rwanda's strengths and weaknesses in the Youth Index?",
 ];
 
 function renderMarkdown(text: string): string {
@@ -71,53 +64,95 @@ function SourceBadge({ source }: { source: 'ai' | 'rule-based' }) {
   return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 gap-1"><Cpu className="h-3 w-3" />Rule-based</Badge>;
 }
 
-function VisualizationRenderer({ viz }: { viz: AiVisualization }) {
-  const tooltipStyle = {
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #333',
-    borderRadius: '8px',
-    color: '#fff',
-  };
+/** Download an SVG element as a .svg file */
+function downloadVisualizationSvg(containerId: string, filename: string) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const svg = container.querySelector('svg');
+  if (!svg) return;
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  // Apply a dark background so it looks the same when opened externally
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '100%');
+  bg.setAttribute('height', '100%');
+  bg.setAttribute('fill', '#0a0a0a');
+  clone.insertBefore(bg, clone.firstChild);
+  const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}.svg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
+/** Custom glass-morphism tooltip for Recharts */
+function GlassTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="backdrop-blur-md bg-black/70 border border-white/10 rounded-lg px-3 py-2 shadow-xl">
+      <p className="text-xs font-medium text-gray-300 mb-1">{label}</p>
+      {payload.map((entry: any, i: number) => (
+        <p key={i} className="text-sm font-semibold" style={{ color: entry.color || '#D4A017' }}>
+          {entry.name ?? 'Value'}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function VisualizationRenderer({ viz, id }: { viz: AiVisualization; id: string }) {
   switch (viz.type) {
     case 'bar_chart':
       return (
-        <ResponsiveContainer width="100%" height={250}>
-          <BarChart data={viz.data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-            <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#888' }} />
-            <YAxis tick={{ fontSize: 11, fill: '#888' }} label={viz.yAxis ? { value: viz.yAxis, angle: -90, position: 'insideLeft', style: { fill: '#888', fontSize: 11 } } : undefined} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Bar dataKey="value" fill="#D4A017" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <div id={id}>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={viz.data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#888' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#888' }} label={viz.yAxis ? { value: viz.yAxis, angle: -90, position: 'insideLeft', style: { fill: '#888', fontSize: 11 } } : undefined} />
+              <Tooltip content={<GlassTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#888' }} />
+              <Bar dataKey="value" fill="#D4A017" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       );
     case 'line_chart':
       return (
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={viz.data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-            <XAxis dataKey={viz.data[0]?.year !== undefined ? 'year' : 'name'} tick={{ fontSize: 11, fill: '#888' }} />
-            <YAxis tick={{ fontSize: 11, fill: '#888' }} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Line type="monotone" dataKey="value" stroke="#D4A017" strokeWidth={2} dot={{ fill: '#D4A017' }} />
-          </LineChart>
-        </ResponsiveContainer>
+        <div id={id}>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={viz.data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <XAxis dataKey={viz.data[0]?.year !== undefined ? 'year' : 'name'} tick={{ fontSize: 11, fill: '#888' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#888' }} />
+              <Tooltip content={<GlassTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#888' }} />
+              <Line type="monotone" dataKey="value" stroke="#D4A017" strokeWidth={2} dot={{ fill: '#D4A017' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       );
     case 'radar_chart':
       return (
-        <ResponsiveContainer width="100%" height={300}>
-          <RadarChart data={viz.data}>
-            <PolarGrid stroke="#333" />
-            <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#888' }} />
-            <PolarRadiusAxis tick={{ fontSize: 10, fill: '#888' }} />
-            <Radar dataKey="value" stroke="#D4A017" fill="#D4A017" fillOpacity={0.3} />
-          </RadarChart>
-        </ResponsiveContainer>
+        <div id={id}>
+          <ResponsiveContainer width="100%" height={300}>
+            <RadarChart data={viz.data}>
+              <PolarGrid stroke="#333" />
+              <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fill: '#888' }} />
+              <PolarRadiusAxis tick={{ fontSize: 10, fill: '#888' }} />
+              <Tooltip content={<GlassTooltip />} />
+              <Radar dataKey="value" stroke="#D4A017" fill="#D4A017" fillOpacity={0.3} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
       );
     case 'table':
       return (
-        <div className="overflow-x-auto">
+        <div id={id} className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-700">
@@ -140,7 +175,7 @@ function VisualizationRenderer({ viz }: { viz: AiVisualization }) {
       );
     case 'stat_cards':
       return (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div id={id} className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {viz.data.map((card: any, i: number) => (
             <div key={i} className="bg-white/[0.03] border border-gray-800 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">{card.label}</p>
@@ -160,14 +195,49 @@ function VisualizationRenderer({ viz }: { viz: AiVisualization }) {
   }
 }
 
+/** Try to extract structured visualization JSON from an AI text response */
+function parseVisualizationFromText(text: string): AiVisualization | null {
+  // Look for ```json ... ``` blocks that contain visualization data
+  const jsonBlockRegex = /```json\s*([\s\S]*?)```/g;
+  let match: RegExpExecArray | null;
+  while ((match = jsonBlockRegex.exec(text)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (parsed.type && parsed.data && Array.isArray(parsed.data)) {
+        return {
+          type: parsed.type,
+          title: parsed.title || 'Visualization',
+          data: parsed.data,
+          xAxis: parsed.xAxis,
+          yAxis: parsed.yAxis,
+          headers: parsed.headers,
+          rows: parsed.rows,
+        };
+      }
+    } catch {
+      // not valid JSON, skip
+    }
+  }
+  return null;
+}
+
+/** Strip visualization JSON blocks from the answer text so they don't render as raw code */
+function stripVisualizationBlocks(text: string): string {
+  return text.replace(/```json\s*\{[\s\S]*?"type"\s*:\s*"(bar_chart|line_chart|radar_chart|pie_chart|scatter_plot|table|stat_cards)"[\s\S]*?```/g, '').trim();
+}
+
 const NaturalLanguageQuery = () => {
   const [displayedText, setDisplayedText] = useState('');
   const [result, setResult] = useState<QueryResult | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [showExtras, setShowExtras] = useState(false);
   const [lastQuery, setLastQuery] = useState('');
   const [showCitations, setShowCitations] = useState(false);
+  const [inputValue, setInputValue] = useState('');
   const typingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const vizContainerId = useRef(`viz-${Date.now()}`);
 
   const clearTyping = useCallback(() => {
     if (typingInterval.current) {
@@ -180,6 +250,15 @@ const NaturalLanguageQuery = () => {
     return () => clearTyping();
   }, [clearTyping]);
 
+  // Auto-resize textarea
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.style.height = 'auto';
+      ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
+    }
+  }, [inputValue]);
+
   const handleQuery = useCallback(
     async (q: string) => {
       clearTyping();
@@ -188,46 +267,85 @@ const NaturalLanguageQuery = () => {
       setShowExtras(false);
       setShowCitations(false);
       setIsTyping(true);
+      setIsLoading(true);
       setResult(null);
+      vizContainerId.current = `viz-${Date.now()}`;
 
       const apiBase = import.meta.env.VITE_API_URL || '/api';
       let queryResult: QueryResult;
+
+      // ------ Try 1: /ai/chat (Claude-powered) ------
       try {
-        const res = await fetch(`${apiBase}/nlq/query`, {
+        const res = await fetch(`${apiBase}/ai/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: q }),
+          body: JSON.stringify({
+            message: q,
+            context: 'African youth data analysis platform. The user is asking about youth indicators, demographics, education, employment, health, and policy compliance across African countries.',
+          }),
         });
         if (res.ok) {
           const data = await res.json();
+          const rawAnswer: string = data.answer || 'No answer available.';
+          // Try to parse a visualization from the AI text if none was returned explicitly
+          const parsedViz = data.visualization || parseVisualizationFromText(rawAnswer);
+          const cleanAnswer = parsedViz && !data.visualization ? stripVisualizationBlocks(rawAnswer) : rawAnswer;
           queryResult = {
-            answer: data.answer || 'No answer available.',
+            answer: cleanAnswer,
             keyFindings: data.keyFindings || [],
             dataCitations: data.dataCitations || [],
-            visualization: data.visualization || null,
+            visualization: parsedViz,
             followUpQuestions: data.followUpQuestions || [],
-            confidence: data.confidence || 0.5,
+            confidence: data.confidence ?? 0.85,
             dataAvailability: data.dataAvailability || 'partial',
-            source: data.source || 'rule-based',
+            source: data.source || 'ai',
             processingTime: data.processingTime,
           };
         } else {
-          throw new Error('API error');
+          throw new Error('AI endpoint returned non-OK');
         }
       } catch {
-        queryResult = {
-          answer: `I wasn't able to connect to the AI service right now. Please try again in a moment, or try a more specific question like "What is the youth unemployment rate in Nigeria?"`,
-          keyFindings: [],
-          dataCitations: [],
-          visualization: null,
-          followUpQuestions: suggestedQuestions.slice(0, 3),
-          confidence: 0.3,
-          dataAvailability: 'limited',
-          source: 'rule-based',
-        };
+        // ------ Try 2: /nlq/query (legacy rule-based fallback) ------
+        try {
+          const res = await fetch(`${apiBase}/nlq/query`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: q }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            queryResult = {
+              answer: data.answer || 'No answer available.',
+              keyFindings: data.keyFindings || [],
+              dataCitations: data.dataCitations || [],
+              visualization: data.visualization || null,
+              followUpQuestions: data.followUpQuestions || [],
+              confidence: data.confidence || 0.5,
+              dataAvailability: data.dataAvailability || 'partial',
+              source: data.source || 'rule-based',
+              processingTime: data.processingTime,
+            };
+          } else {
+            throw new Error('NLQ endpoint returned non-OK');
+          }
+        } catch {
+          // ------ Try 3: Offline fallback ------
+          queryResult = {
+            answer:
+              `It looks like both the AI service and the query engine are unavailable right now. This usually means the backend server isn't running or there's a network issue.\n\n**What you can try:**\n- Check that the API server is running\n- Verify your internet connection\n- Refresh the page and try again\n\nIn the meantime, you can still browse the data dashboards and country profiles directly.`,
+            keyFindings: [],
+            dataCitations: [],
+            visualization: null,
+            followUpQuestions: suggestedQuestions,
+            confidence: 0,
+            dataAvailability: 'limited',
+            source: 'rule-based',
+          };
+        }
       }
 
       setResult(queryResult);
+      setIsLoading(false);
 
       let idx = 0;
       const text = queryResult.answer;
@@ -244,9 +362,17 @@ const NaturalLanguageQuery = () => {
     [clearTyping],
   );
 
-  const handleSendMessage = (message: string, _files: FileWithPreview[], _pastedContent: PastedContent[]) => {
-    if (message.trim()) {
-      handleQuery(message.trim());
+  const handleSubmit = () => {
+    const trimmed = inputValue.trim();
+    if (!trimmed || isLoading) return;
+    setInputValue('');
+    handleQuery(trimmed);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
     }
   };
 
@@ -263,7 +389,7 @@ const NaturalLanguageQuery = () => {
       <div className="relative z-10 flex-1 flex flex-col">
         {/* Header */}
         {!result && (
-          <div className="text-center pt-16 pb-8">
+          <div className="text-center pt-16 pb-6">
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent mb-3">
               What can I help you explore?
             </h1>
@@ -273,14 +399,38 @@ const NaturalLanguageQuery = () => {
           </div>
         )}
 
-        {/* Suggested Questions - only before first query */}
-        {!result && (
-          <div className="flex flex-wrap justify-center gap-2 mb-8 px-4 max-w-3xl mx-auto">
+        {/* Chat input — always at the TOP */}
+        <div className="px-4 pt-4 pb-2 max-w-3xl mx-auto w-full">
+          <div className="relative flex items-end gap-2 bg-white/[0.04] border border-gray-800 rounded-2xl px-4 py-3 focus-within:border-[#D4A017]/40 transition-colors">
+            <textarea
+              ref={textareaRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask anything about African youth data..."
+              rows={1}
+              disabled={isLoading}
+              className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 resize-none outline-none max-h-40 leading-relaxed disabled:opacity-50"
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={!inputValue.trim() || isLoading}
+              className="flex-shrink-0 p-2 rounded-xl bg-[#D4A017] text-black hover:bg-[#E0B030] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              aria-label="Send message"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Suggested Questions — below chat input, only before first query */}
+        {!result && !isLoading && (
+          <div className="flex flex-wrap justify-center gap-2 pt-3 pb-6 px-4 max-w-3xl mx-auto">
             {suggestedQuestions.map((q) => (
               <button
                 key={q}
-                onClick={() => handleQuery(q)}
-                className="px-4 py-2 rounded-xl bg-white/[0.05] border border-gray-800 text-sm text-gray-300 hover:bg-white/[0.08] hover:border-gray-700 transition-all text-left"
+                onClick={() => { setInputValue(''); handleQuery(q); }}
+                className="px-4 py-2 rounded-xl bg-white/[0.03] border border-gray-800/60 text-xs text-gray-500 hover:text-gray-300 hover:bg-white/[0.06] hover:border-gray-700 transition-all text-left"
               >
                 {q}
               </button>
@@ -288,9 +438,19 @@ const NaturalLanguageQuery = () => {
           </div>
         )}
 
+        {/* Loading indicator */}
+        {isLoading && !result && (
+          <div className="flex items-center gap-3 px-4 max-w-3xl mx-auto w-full mt-6">
+            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#D4A017]/20 flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-[#D4A017] animate-pulse" />
+            </div>
+            <span className="text-sm text-gray-400 animate-pulse">Thinking...</span>
+          </div>
+        )}
+
         {/* Results */}
         {result && (
-          <div className="flex-1 px-4 md:px-6 max-w-3xl mx-auto w-full mb-8">
+          <div className="flex-1 px-4 md:px-6 max-w-3xl mx-auto w-full mb-8 mt-2">
             {/* User query */}
             <div className="flex justify-end mb-6">
               <div className="bg-[#D4A017]/20 border border-[#D4A017]/30 rounded-2xl rounded-tr-sm px-4 py-3 max-w-md">
@@ -337,11 +497,23 @@ const NaturalLanguageQuery = () => {
                 {/* Visualization */}
                 {showExtras && result.visualization && (
                   <div className="bg-white/[0.03] border border-gray-800 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <BarChart3 className="h-4 w-4 text-[#D4A017]" />
-                      <span className="text-xs text-gray-400">{result.visualization.title}</span>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-[#D4A017]" />
+                        <span className="text-xs text-gray-400">{result.visualization.title}</span>
+                      </div>
+                      {result.visualization.type !== 'table' && result.visualization.type !== 'stat_cards' && (
+                        <button
+                          onClick={() => downloadVisualizationSvg(vizContainerId.current, result.visualization?.title?.replace(/\s+/g, '_') || 'chart')}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.05] border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-600 transition-all"
+                          title="Download as SVG"
+                        >
+                          <Download className="h-3 w-3" />
+                          SVG
+                        </button>
+                      )}
                     </div>
-                    <VisualizationRenderer viz={result.visualization} />
+                    <VisualizationRenderer viz={result.visualization} id={vizContainerId.current} />
                   </div>
                 )}
 
@@ -385,16 +557,6 @@ const NaturalLanguageQuery = () => {
             </div>
           </div>
         )}
-
-        {/* Claude-style AI Input - pinned to bottom */}
-        <div className="sticky bottom-0 px-4 pb-6 pt-4 bg-gradient-to-t from-background via-background to-transparent">
-          <ClaudeChatInput
-            onSendMessage={handleSendMessage}
-            placeholder="Ask anything about African youth data..."
-            maxFiles={5}
-            maxFileSize={10 * 1024 * 1024}
-          />
-        </div>
       </div>
     </div>
   );

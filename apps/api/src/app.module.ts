@@ -15,6 +15,7 @@ import { DashboardsModule } from './modules/dashboards/dashboards.module';
 import { ExportModule } from './modules/export/export.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { NlqModule } from './modules/nlq/nlq.module';
+import { AiChatModule } from './modules/ai-chat/ai-chat.module';
 import { PolicyMonitorModule } from './modules/policy-monitor/policy-monitor.module';
 import { ExpertDirectoryModule } from './modules/expert-directory/expert-directory.module';
 import { LiveFeedModule } from './modules/live-feed/live-feed.module';
@@ -55,6 +56,7 @@ import { CacheService } from './common/cache.service';
     CompareModule,
     InsightsModule,
     NlqModule,
+    AiChatModule,
 
     // Features
     PolicyMonitorModule,

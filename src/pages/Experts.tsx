@@ -8,12 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Users, Search, UserPlus, MapPin, Briefcase, Globe } from 'lucide-react';
+import { Users, Search, UserPlus, MapPin, Briefcase, Globe, Check } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import CountryFlag from '@/components/CountryFlag';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 
 interface Expert {
   id: number;
@@ -135,6 +136,29 @@ const mockLanguages = [...new Set(experts.flatMap((e) => e.languages))].sort();
 
 const avatarColors = ['bg-pan-green-500', 'bg-pan-blue-500', 'bg-pan-gold-500', 'bg-pan-red-500', 'bg-purple-500', 'bg-teal-500', 'bg-indigo-500', 'bg-rose-500', 'bg-cyan-500'];
 
+const registrationSpecializations = [
+  'Youth Employment',
+  'Development Economics',
+  'Youth Entrepreneurship',
+  'Youth Policy',
+  'Youth Health',
+  'Education Policy',
+  'Digital Literacy',
+  'Data Science',
+  'Gender Equality',
+  'Innovation',
+  'Climate Change',
+  'Civic Participation',
+  'Peace Building',
+  'STEM Education',
+  'Financial Inclusion',
+  'Migration',
+  'Social Protection',
+  'Youth Mental Health',
+];
+
+const apiBase = import.meta.env.VITE_API_URL || '/api';
+
 const Experts = () => {
   const { t } = useLanguage();
   const [search, setSearch] = useState('');
@@ -142,6 +166,22 @@ const Experts = () => {
   const [specFilter, setSpecFilter] = useState('all');
   const [langFilter, setLangFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // View Profile dialog state
+  const [selectedExpert, setSelectedExpert] = useState<Expert | null>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+
+  // Registration form state
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regTitle, setRegTitle] = useState('');
+  const [regOrg, setRegOrg] = useState('');
+  const [regCountry, setRegCountry] = useState('');
+  const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]);
+  const [regLanguages, setRegLanguages] = useState('');
+  const [regBio, setRegBio] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Fetch experts from API
   const { data: apiExperts, isLoading, isError } = useQuery({
@@ -186,6 +226,92 @@ const Experts = () => {
     });
   }, [allExperts, search, countryFilter, specFilter, langFilter]);
 
+  const toggleSpec = (spec: string) => {
+    setSelectedSpecs((prev) =>
+      prev.includes(spec) ? prev.filter((s) => s !== spec) : [...prev, spec]
+    );
+    // Clear specialization error when user selects
+    if (formErrors.specializations) {
+      setFormErrors((prev) => {
+        const next = { ...prev };
+        delete next.specializations;
+        return next;
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setRegName('');
+    setRegEmail('');
+    setRegTitle('');
+    setRegOrg('');
+    setRegCountry('');
+    setSelectedSpecs([]);
+    setRegLanguages('');
+    setRegBio('');
+    setFormErrors({});
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!regName.trim()) errors.name = 'Full name is required';
+    if (!regEmail.trim()) errors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail.trim())) errors.email = 'Invalid email address';
+    if (!regTitle.trim()) errors.title = 'Title / Role is required';
+    if (!regOrg.trim()) errors.organization = 'Organization is required';
+    if (!regCountry) errors.country = 'Country is required';
+    if (selectedSpecs.length === 0) errors.specializations = 'Select at least one specialization';
+    if (!regLanguages.trim()) errors.languages = 'Languages are required';
+    if (!regBio.trim()) errors.bio = 'Bio is required';
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleRegistrationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        name: regName.trim(),
+        email: regEmail.trim(),
+        title: regTitle.trim(),
+        organization: regOrg.trim(),
+        country: regCountry,
+        specializations: selectedSpecs,
+        languages: regLanguages.split(',').map((l) => l.trim()).filter(Boolean),
+        bio: regBio.trim(),
+      };
+
+      const res = await fetch(`${apiBase}/experts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Registration failed (${res.status})`);
+      }
+
+      toast.success(
+        "Your registration has been submitted! You'll receive a confirmation email shortly. Your profile will be visible once approved by an admin."
+      );
+      resetForm();
+      setDialogOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to submit registration. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleViewProfile = (expert: Expert) => {
+    setSelectedExpert(expert);
+    setProfileDialogOpen(true);
+  };
+
   return (
     <>
       <header className="relative py-8 md:py-12 overflow-hidden">
@@ -201,7 +327,7 @@ const Experts = () => {
                 {t('experts.subtitle')}
               </p>
             </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { resetForm(); } }}>
               <DialogTrigger asChild>
                 <Button className="gap-2 self-start">
                   <UserPlus className="h-4 w-4" />
@@ -214,72 +340,124 @@ const Experts = () => {
                 </DialogHeader>
                 <form
                   className="space-y-4 mt-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setDialogOpen(false);
-                  }}
+                  onSubmit={handleRegistrationSubmit}
                 >
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="reg-name">Full Name</Label>
-                      <Input id="reg-name" placeholder="Your full name" required />
+                      <Label htmlFor="reg-name">Full Name *</Label>
+                      <Input
+                        id="reg-name"
+                        placeholder="Your full name"
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
+                      />
+                      {formErrors.name && <p className="text-xs text-red-400">{formErrors.name}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="reg-email">Email</Label>
-                      <Input id="reg-email" type="email" placeholder="Email address" required />
+                      <Label htmlFor="reg-email">Email *</Label>
+                      <Input
+                        id="reg-email"
+                        type="email"
+                        placeholder="Email address"
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                      />
+                      {formErrors.email && <p className="text-xs text-red-400">{formErrors.email}</p>}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="reg-title">Title / Role</Label>
-                      <Input id="reg-title" placeholder="e.g., Research Fellow" required />
+                      <Label htmlFor="reg-title">Title / Role *</Label>
+                      <Input
+                        id="reg-title"
+                        placeholder="e.g., Research Fellow"
+                        value={regTitle}
+                        onChange={(e) => setRegTitle(e.target.value)}
+                      />
+                      {formErrors.title && <p className="text-xs text-red-400">{formErrors.title}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="reg-org">Organization</Label>
-                      <Input id="reg-org" placeholder="Your organization" required />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Country</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {allCountries.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Specialization</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select area" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {allSpecializations.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="reg-org">Organization *</Label>
+                      <Input
+                        id="reg-org"
+                        placeholder="Your organization"
+                        value={regOrg}
+                        onChange={(e) => setRegOrg(e.target.value)}
+                      />
+                      {formErrors.organization && <p className="text-xs text-red-400">{formErrors.organization}</p>}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="reg-bio">Bio</Label>
-                    <Textarea id="reg-bio" placeholder="Brief professional bio..." rows={3} />
+                    <Label>Country *</Label>
+                    <Select value={regCountry} onValueChange={setRegCountry}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allCountries.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formErrors.country && <p className="text-xs text-red-400">{formErrors.country}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Specializations * <span className="text-xs text-gray-400">(select one or more)</span></Label>
+                    <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-gray-800 bg-white/[0.03] max-h-[180px] overflow-y-auto">
+                      {registrationSpecializations.map((spec) => {
+                        const isSelected = selectedSpecs.includes(spec);
+                        return (
+                          <button
+                            key={spec}
+                            type="button"
+                            onClick={() => toggleSpec(spec)}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border cursor-pointer ${
+                              isSelected
+                                ? 'bg-primary/20 text-primary border-primary/40'
+                                : 'bg-white/[0.03] text-gray-400 border-gray-700 hover:border-gray-500 hover:text-gray-300'
+                            }`}
+                          >
+                            {isSelected && <Check className="h-3 w-3" />}
+                            {spec}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedSpecs.length > 0 && (
+                      <p className="text-xs text-gray-400">{selectedSpecs.length} selected</p>
+                    )}
+                    {formErrors.specializations && <p className="text-xs text-red-400">{formErrors.specializations}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-languages">Languages * <span className="text-xs text-gray-400">(comma-separated)</span></Label>
+                    <Input
+                      id="reg-languages"
+                      placeholder="e.g., English, French, Swahili"
+                      value={regLanguages}
+                      onChange={(e) => setRegLanguages(e.target.value)}
+                    />
+                    {formErrors.languages && <p className="text-xs text-red-400">{formErrors.languages}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-bio">Bio *</Label>
+                    <Textarea
+                      id="reg-bio"
+                      placeholder="Brief professional bio..."
+                      rows={3}
+                      value={regBio}
+                      onChange={(e) => setRegBio(e.target.value)}
+                    />
+                    {formErrors.bio && <p className="text-xs text-red-400">{formErrors.bio}</p>}
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
                     <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit">Submit Registration</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? 'Submitting...' : 'Submit Registration'}
+                    </Button>
                   </div>
                 </form>
               </DialogContent>
@@ -399,7 +577,12 @@ const Experts = () => {
                     </div>
                   </div>
 
-                  <Button variant="outline" className="w-full mt-4" size="sm">
+                  <Button
+                    variant="outline"
+                    className="w-full mt-4"
+                    size="sm"
+                    onClick={() => handleViewProfile(expert)}
+                  >
                     View Profile
                   </Button>
                 </CardContent>
@@ -416,6 +599,88 @@ const Experts = () => {
           )}
         </div>
       </div>
+
+      {/* View Profile Dialog */}
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto bg-black/95 border-gray-800">
+          {selectedExpert && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="sr-only">{selectedExpert.name} Profile</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-6">
+                {/* Profile Header */}
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16 text-xl">
+                    <AvatarFallback className={`${selectedExpert.color} text-white font-bold`}>
+                      {selectedExpert.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="text-xl font-bold">{selectedExpert.name}</h2>
+                    <p className="text-sm text-gray-400">{selectedExpert.title}</p>
+                  </div>
+                </div>
+
+                {/* Organization */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Briefcase className="h-4 w-4 shrink-0" />
+                    <span className="font-medium text-gray-300">Organization</span>
+                  </div>
+                  <p className="text-sm pl-6">{selectedExpert.organization}</p>
+                </div>
+
+                {/* Country */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <MapPin className="h-4 w-4 shrink-0" />
+                    <span className="font-medium text-gray-300">Country</span>
+                  </div>
+                  <div className="pl-6">
+                    <Badge variant="secondary" className="text-xs flex items-center gap-1 w-fit">
+                      <CountryFlag country={selectedExpert.country} size="xs" />
+                      {selectedExpert.country}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Specializations */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-300">Specializations</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedExpert.specializations.map((spec) => (
+                      <Badge
+                        key={spec}
+                        className="bg-primary/10 text-primary border-primary/20 text-xs"
+                      >
+                        {spec}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Languages */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Globe className="h-4 w-4 shrink-0" />
+                    <span className="font-medium text-gray-300">Languages</span>
+                  </div>
+                  <p className="text-sm pl-6">{selectedExpert.languages.join(', ')}</p>
+                </div>
+
+                {/* Bio */}
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-300">Bio</p>
+                  <p className="text-sm text-gray-400 leading-relaxed">
+                    {selectedExpert.name} is a {selectedExpert.title.toLowerCase()} at {selectedExpert.organization}, based in {selectedExpert.country}. Their areas of expertise include {selectedExpert.specializations.join(', ').replace(/, ([^,]*)$/, ' and $1')}.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

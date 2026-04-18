@@ -7,5 +7,6 @@ import { InsightsModule } from '../insights/insights.module';
   imports: [InsightsModule],
   controllers: [NlqController],
   providers: [NlqService],
+  exports: [NlqService],
 })
 export class NlqModule {}

@@ -1,6 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-// Theme toggle removed - dark mode only
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import LiveDataTicker from '@/components/LiveDataTicker';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +10,6 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
   FileText,
   Users,
   BookOpen,
@@ -20,10 +18,29 @@ import {
   MessageSquare,
   ShieldCheck,
   Upload,
+  ChevronLeft,
+  ChevronRight,
+  User,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/contexts/AuthContext';
 
-const sidebarLinks = [
+const SIDEBAR_COLLAPSED_KEY = 'ayd-sidebar-collapsed';
+
+const adminLinks = [
+  { to: '/admin', label: 'Admin Panel', icon: ShieldCheck },
+  { to: '/dashboard/data-upload', label: 'Upload Data', icon: Upload },
+];
+
+const dataLinks = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { to: '/dashboard/explore', label: 'Data Explorer', icon: BarChart3 },
   { to: '/dashboard/countries', label: 'Countries', icon: Globe },
@@ -34,8 +51,10 @@ const sidebarLinks = [
   { to: '/dashboard/policy-monitor', label: 'Policy Monitor', icon: Shield },
   { to: '/dashboard/experts', label: 'Experts', icon: Users },
   { to: '/dashboard/reports', label: 'Reports', icon: BookOpen },
+];
+
+const contributorLinks = [
   { to: '/dashboard/data-upload', label: 'Upload Data', icon: Upload },
-  { to: '/admin', label: 'Admin', icon: ShieldCheck },
 ];
 
 interface DashboardLayoutProps {
@@ -44,43 +63,161 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const isAdmin = user?.role === 'ADMIN';
+  const isContributor = user?.role === 'CONTRIBUTOR';
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    navigate('/auth/signin');
+  };
 
   const isActive = (path: string) => {
     if (path === '/dashboard') return location.pathname === '/dashboard';
     return location.pathname.startsWith(path);
   };
 
-  const SidebarContent = () => (
+  /* ── NavLink used in both mobile sheet and desktop sidebar ── */
+  const NavLink = ({
+    to,
+    label,
+    icon: Icon,
+    accent = false,
+    isCollapsed = false,
+  }: {
+    to: string;
+    label: string;
+    icon: React.ElementType;
+    accent?: boolean;
+    isCollapsed?: boolean;
+  }) => (
+    <Link
+      to={to}
+      onClick={() => setSidebarOpen(false)}
+      title={isCollapsed ? label : undefined}
+      className={`flex items-center gap-3 rounded-lg text-sm font-medium transition-colors ${
+        isCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+      } ${
+        isActive(to)
+          ? accent
+            ? 'bg-red-500/15 text-red-400'
+            : 'bg-primary/10 text-primary'
+          : accent
+          ? 'text-red-400/70 hover:bg-red-500/10 hover:text-red-400'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+      }`}
+    >
+      <Icon className="h-4 w-4 flex-shrink-0" />
+      {!isCollapsed && <span className="truncate">{label}</span>}
+    </Link>
+  );
+
+  /* ── Mobile sidebar content (always expanded) ── */
+  const MobileSidebarContent = () => (
     <div className="flex flex-col h-full">
+      {/* Logo */}
       <div className="p-4 border-b border-border">
         <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-            AYD
+          <div
+            className={`flex h-8 w-8 items-center justify-center rounded-lg font-bold text-sm ${
+              isAdmin ? 'bg-red-500 text-white' : 'bg-primary text-primary-foreground'
+            }`}
+          >
+            AYO
           </div>
-          <span className="font-display font-bold text-sm">African Youth Database</span>
+          <div>
+            <span className="font-display font-bold text-sm block leading-tight">
+              African Youth Observatory
+            </span>
+            {isAdmin && (
+              <span className="text-[10px] text-red-400 font-semibold">Admin Access</span>
+            )}
+          </div>
         </Link>
       </div>
 
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {sidebarLinks.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              isActive(link.to)
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            <link.icon className="h-4 w-4 flex-shrink-0" />
-            {link.label}
-          </Link>
-        ))}
+      <nav className="flex-1 p-3 overflow-y-auto space-y-4">
+        {isAdmin && (
+          <div>
+            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-red-400/60">
+              Administration
+            </p>
+            <div className="space-y-0.5">
+              {adminLinks.map((link) => (
+                <NavLink key={link.to} {...link} accent />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isContributor && (
+          <div>
+            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-blue-400/60">
+              Contributor
+            </p>
+            <div className="space-y-0.5">
+              {contributorLinks.map((link) => (
+                <NavLink key={link.to} {...link} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          {(isAdmin || isContributor) && (
+            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+              Data &amp; Analytics
+            </p>
+          )}
+          <div className="space-y-0.5">
+            {dataLinks.map((link) => (
+              <NavLink key={link.to} {...link} />
+            ))}
+          </div>
+        </div>
       </nav>
 
+      {/* User info + actions */}
       <div className="p-3 border-t border-border space-y-1">
+        {user && (
+          <div className="px-3 py-2 mb-1 flex items-center gap-2">
+            <div
+              className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                isAdmin ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'
+              }`}
+            >
+              {(user.name || user.email).charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">
+                {user.name || user.email}
+              </p>
+              <p className="text-[10px] text-muted-foreground truncate">{user.role}</p>
+            </div>
+          </div>
+        )}
         <Link
           to="/settings"
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -88,33 +225,210 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <Settings className="h-4 w-4" />
           Settings
         </Link>
-        <Link
-          to="/"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <LogOut className="h-4 w-4" />
-          Back to Home
-        </Link>
+          Sign Out
+        </button>
       </div>
     </div>
   );
 
+  /* ── Desktop sidebar content (supports collapsed) ── */
+  const DesktopSidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Logo */}
+      <div className="p-4 border-b border-border">
+        <Link
+          to="/"
+          className="flex items-center gap-2"
+          title={collapsed ? 'African Youth Observatory' : undefined}
+        >
+          <div
+            className={`flex h-8 w-8 items-center justify-center rounded-lg font-bold text-sm flex-shrink-0 ${
+              isAdmin ? 'bg-red-500 text-white' : 'bg-primary text-primary-foreground'
+            }`}
+          >
+            AYO
+          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <span className="font-display font-bold text-sm block leading-tight truncate">
+                African Youth Observatory
+              </span>
+              {isAdmin && (
+                <span className="text-[10px] text-red-400 font-semibold">Admin Access</span>
+              )}
+            </div>
+          )}
+        </Link>
+      </div>
+
+      <nav className="flex-1 p-3 overflow-y-auto space-y-4">
+        {isAdmin && (
+          <div>
+            {!collapsed && (
+              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-red-400/60">
+                Administration
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {adminLinks.map((link) => (
+                <NavLink key={link.to} {...link} accent isCollapsed={collapsed} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isContributor && (
+          <div>
+            {!collapsed && (
+              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-blue-400/60">
+                Contributor
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {contributorLinks.map((link) => (
+                <NavLink key={link.to} {...link} isCollapsed={collapsed} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          {!collapsed && (isAdmin || isContributor) && (
+            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+              Data &amp; Analytics
+            </p>
+          )}
+          <div className="space-y-0.5">
+            {dataLinks.map((link) => (
+              <NavLink key={link.to} {...link} isCollapsed={collapsed} />
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {/* User info + actions */}
+      <div className="p-3 border-t border-border space-y-1">
+        {user && !collapsed && (
+          <div className="px-3 py-2 mb-1 flex items-center gap-2">
+            <div
+              className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                isAdmin ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'
+              }`}
+            >
+              {(user.name || user.email).charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">
+                {user.name || user.email}
+              </p>
+              <p className="text-[10px] text-muted-foreground truncate">{user.role}</p>
+            </div>
+          </div>
+        )}
+
+        {collapsed && user && (
+          <div className="flex justify-center py-2" title={user.name || user.email}>
+            <div
+              className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                isAdmin ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'
+              }`}
+            >
+              {(user.name || user.email).charAt(0).toUpperCase()}
+            </div>
+          </div>
+        )}
+
+        <Link
+          to="/settings"
+          title={collapsed ? 'Settings' : undefined}
+          className={`flex items-center gap-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${
+            collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+          }`}
+        >
+          <Settings className="h-4 w-4 flex-shrink-0" />
+          {!collapsed && 'Settings'}
+        </Link>
+        <button
+          onClick={handleSignOut}
+          title={collapsed ? 'Sign Out' : undefined}
+          className={`w-full flex items-center gap-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${
+            collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+          }`}
+        >
+          <LogOut className="h-4 w-4 flex-shrink-0" />
+          {!collapsed && 'Sign Out'}
+        </button>
+
+        {/* Collapse toggle */}
+        <button
+          onClick={toggleCollapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={`w-full flex items-center gap-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${
+            collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+          }`}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4 flex-shrink-0" />
+          ) : (
+            <>
+              <ChevronLeft className="h-4 w-4 flex-shrink-0" />
+              <span>Collapse</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
+  // Derive topbar title from current path
+  const pageTitle = (() => {
+    const p = location.pathname;
+    if (p === '/admin') return 'Admin Panel';
+    if (p === '/dashboard') return 'Overview';
+    if (p.includes('explore')) return 'Data Explorer';
+    if (p.includes('countries')) return 'Countries';
+    if (p.includes('youth-index')) return 'Youth Index';
+    if (p.includes('compare')) return 'Compare';
+    if (p.includes('insights')) return 'AI Insights';
+    if (p.includes('ask')) return 'Ask AI';
+    if (p.includes('policy-monitor')) return 'Policy Monitor';
+    if (p.includes('experts')) return 'Experts';
+    if (p.includes('reports')) return 'Reports';
+    if (p.includes('data-upload')) return 'Upload Data';
+    if (p.includes('settings')) return 'Settings';
+    return 'Dashboard';
+  })();
+
+  const userInitial = user ? (user.name || user.email).charAt(0).toUpperCase() : '?';
+
   return (
     <div className="min-h-screen flex overflow-x-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-border bg-sidebar-background">
-        <SidebarContent />
+      <aside
+        className="hidden lg:flex flex-col border-r border-border bg-sidebar-background flex-shrink-0 transition-[width] duration-300 ease-in-out overflow-hidden"
+        style={{ width: collapsed ? 68 : 256 }}
+      >
+        <DesktopSidebarContent />
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden">
-        {/* Live Data Ticker */}
         <LiveDataTicker />
 
         {/* Top Bar */}
-        <header className="sticky top-0 z-40 h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-4">
+        <header
+          className={`sticky top-0 z-40 h-14 border-b border-border backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-4 ${
+            isAdmin && location.pathname === '/admin'
+              ? 'bg-red-950/30'
+              : 'bg-background/95'
+          }`}
+        >
           <div className="flex items-center gap-2">
-            {/* Mobile sidebar trigger */}
             <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8">
@@ -122,16 +436,98 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64 p-0">
-                <SidebarContent />
+                <MobileSidebarContent />
               </SheetContent>
             </Sheet>
-            <h1 className="text-sm font-semibold text-foreground">Dashboard</h1>
+            <div className="flex items-center gap-2">
+              {location.pathname === '/admin' && (
+                <ShieldCheck className="h-4 w-4 text-red-400" />
+              )}
+              <h1
+                className={`text-sm font-semibold ${
+                  location.pathname === '/admin' ? 'text-red-400' : 'text-foreground'
+                }`}
+              >
+                {pageTitle}
+              </h1>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="text-xs h-8">
-              Sign Out
-            </Button>
+          {/* Right side: user profile dropdown */}
+          <div className="flex items-center gap-3">
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <div
+                      className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-opacity hover:opacity-80 ${
+                        isAdmin
+                          ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30'
+                          : 'bg-primary/20 text-primary ring-1 ring-primary/30'
+                      }`}
+                    >
+                      {userInitial}
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user.name || user.email}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="p-0 focus:bg-transparent">
+                    <div className="px-2 py-1.5">
+                      {isAdmin && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                          ADMIN
+                        </span>
+                      )}
+                      {isContributor && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                          CONTRIBUTOR
+                        </span>
+                      )}
+                      {!isAdmin && !isContributor && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                          {user.role}
+                        </span>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
+                      <User className="h-4 w-4" />
+                      Edit Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to="/settings"
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Change Password
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </header>
 

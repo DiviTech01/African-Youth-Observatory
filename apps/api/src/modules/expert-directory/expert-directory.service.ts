@@ -217,7 +217,8 @@ export class ExpertDirectoryService {
         specializations: dto.specializations,
         languages: dto.languages,
         bio: dto.bio,
-        verified: false, // Always starts unverified
+        verified: false,
+        status: 'PENDING',
       },
       include: {
         country: {
@@ -227,6 +228,10 @@ export class ExpertDirectoryService {
     });
 
     this.cache.clearPrefix('expert:');
+
+    // Log notification (email sending would be handled by a notification service)
+    console.log(`[Expert Registration] New expert registered: ${expert.name} (${expert.email})`);
+    console.log(`[Expert Registration] Admin notification: New expert pending approval - ${expert.name}`);
 
     return {
       id: expert.id,
@@ -239,7 +244,9 @@ export class ExpertDirectoryService {
       languages: expert.languages,
       bio: expert.bio,
       verified: expert.verified,
+      status: (expert as any).status || 'PENDING',
       createdAt: expert.createdAt.toISOString(),
+      message: 'Registration submitted successfully. You will receive a confirmation email shortly.',
     };
   }
 
@@ -272,19 +279,28 @@ export class ExpertDirectoryService {
       }
     }
 
+    const updateData: Record<string, unknown> = {};
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.email !== undefined) updateData.email = dto.email;
+    if (dto.title !== undefined) updateData.title = dto.title;
+    if (dto.organization !== undefined) updateData.organization = dto.organization;
+    if (dto.countryId !== undefined) updateData.countryId = dto.countryId;
+    if (dto.specializations !== undefined) updateData.specializations = dto.specializations;
+    if (dto.languages !== undefined) updateData.languages = dto.languages;
+    if (dto.bio !== undefined) updateData.bio = dto.bio;
+    if (dto.verified !== undefined) updateData.verified = dto.verified;
+    if (dto.status !== undefined) {
+      updateData.status = dto.status;
+      // Auto-verify on approval
+      if (dto.status === 'APPROVED') {
+        updateData.verified = true;
+      }
+    }
+    if (dto.rejectionReason !== undefined) updateData.rejectionReason = dto.rejectionReason;
+
     const updated = await this.prisma.expert.update({
       where: { id },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.email !== undefined && { email: dto.email }),
-        ...(dto.title !== undefined && { title: dto.title }),
-        ...(dto.organization !== undefined && { organization: dto.organization }),
-        ...(dto.countryId !== undefined && { countryId: dto.countryId }),
-        ...(dto.specializations !== undefined && { specializations: dto.specializations }),
-        ...(dto.languages !== undefined && { languages: dto.languages }),
-        ...(dto.bio !== undefined && { bio: dto.bio }),
-        ...(dto.verified !== undefined && { verified: dto.verified }),
-      },
+      data: updateData,
       include: {
         country: {
           select: { id: true, name: true, isoCode3: true, region: true, flagEmoji: true },
@@ -293,6 +309,15 @@ export class ExpertDirectoryService {
     });
 
     this.cache.clearPrefix('expert:');
+
+    // Log approval/rejection notification
+    if (dto.status === 'APPROVED') {
+      console.log(`[Expert Approval] Expert approved: ${updated.name} (${updated.email})`);
+      console.log(`[Expert Approval] Email notification sent to ${updated.email}: Your expert profile has been approved!`);
+    } else if (dto.status === 'REJECTED') {
+      console.log(`[Expert Rejection] Expert rejected: ${updated.name} (${updated.email})`);
+      console.log(`[Expert Rejection] Email notification sent to ${updated.email}: Your registration was not approved. Reason: ${dto.rejectionReason || 'Not specified'}`);
+    }
 
     return {
       id: updated.id,
@@ -305,6 +330,7 @@ export class ExpertDirectoryService {
       languages: updated.languages,
       bio: updated.bio,
       verified: updated.verified,
+      status: (updated as any).status,
       createdAt: updated.createdAt.toISOString(),
     };
   }

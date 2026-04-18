@@ -77,22 +77,23 @@ export const CustomTooltip: React.FC<CustomTooltipProps> = ({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="bg-popover border border-border rounded-lg shadow-lg p-3 min-w-[150px]">
-      <p className="font-semibold text-sm mb-2">{label}</p>
+    <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-2xl px-4 py-3 min-w-[160px]">
+      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">{label}</p>
       {payload.map((entry, index) => (
-        <div key={index} className="flex items-center justify-between gap-4 text-sm">
+        <div key={index} className="flex items-center justify-between gap-4 text-sm mb-1 last:mb-0">
           <span className="flex items-center gap-2">
-            <span 
-              className="w-3 h-3 rounded-full" 
+            <span
+              className="w-2.5 h-2.5 rounded-full ring-2 ring-white/10"
               style={{ backgroundColor: entry.color || COLOR_PALETTE[index % COLOR_PALETTE.length] }}
             />
-            <span className="text-muted-foreground">{entry.name || entry.dataKey}</span>
+            <span className="text-gray-400 text-xs">{entry.name || entry.dataKey}</span>
           </span>
-          <span className="font-medium">
+          <span className="font-semibold text-white">
             {formatter ? formatter(entry.value) : `${entry.value.toLocaleString()}${unit}`}
           </span>
         </div>
       ))}
+      <div className="mt-2 h-[2px] rounded-full bg-gradient-to-r from-emerald-500/40 via-amber-500/30 to-transparent" />
     </div>
   );
 };
@@ -139,7 +140,7 @@ export const AYDLineChart: React.FC<AYDLineChartProps> = ({
   const chart = (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-        {showGrid && <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />}
+        {showGrid && <CartesianGrid stroke="rgba(255,255,255,0.04)" strokeDasharray="0" vertical={false} />}
         <XAxis 
           dataKey={xAxisKey} 
           tick={{ fontSize: 12 }}
@@ -242,7 +243,7 @@ export const AYDBarChart: React.FC<AYDBarChartProps> = ({
         layout={layout === 'horizontal' ? 'vertical' : 'horizontal'}
         margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
       >
-        {showGrid && <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />}
+        {showGrid && <CartesianGrid stroke="rgba(255,255,255,0.04)" strokeDasharray="0" vertical={false} />}
         {layout === 'horizontal' ? (
           <>
             <XAxis type="number" tickFormatter={(v) => `${v}${unit}`} />
@@ -327,7 +328,7 @@ export const AYDAreaChart: React.FC<AYDAreaChartProps> = ({
   const chart = (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-        {showGrid && <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />}
+        {showGrid && <CartesianGrid stroke="rgba(255,255,255,0.04)" strokeDasharray="0" vertical={false} />}
         <XAxis dataKey={xAxisKey} tick={{ fontSize: 12 }} />
         <YAxis tickFormatter={(v) => `${v}${unit}`} />
         <Tooltip content={<CustomTooltip unit={unit} />} />
