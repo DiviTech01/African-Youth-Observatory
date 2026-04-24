@@ -68,3 +68,14 @@ export function useContent(key: string): PublishedContent | undefined {
   const ctx = useContext(ContentContext);
   return ctx?.map[key];
 }
+
+/**
+ * Return the published text for `key`, or `fallback` if the CMS has no
+ * override yet. Use this for cases where a plain string is required (props on
+ * 3rd-party components). For DOM-level edits prefer <Content>.
+ */
+export function useContentText(key: string, fallback: string): string {
+  const entry = useContent(key);
+  const raw = entry?.content;
+  return raw && raw.trim() ? raw : fallback;
+}

@@ -3,9 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Users, GraduationCap, Heart, Briefcase, BookOpen } from 'lucide-react';
 import { GlowCard } from '@/components/ui/spotlight-card';
+import { Content } from '@/components/cms';
 
 const statsData = [
   {
+    slug: 'population',
     title: 'Population',
     value: '226M',
     description: 'African youth aged 15-24',
@@ -15,6 +17,7 @@ const statsData = [
     link: '/explore?theme=population'
   },
   {
+    slug: 'education',
     title: 'Education',
     value: '63%',
     description: 'Secondary enrollment rate',
@@ -24,6 +27,7 @@ const statsData = [
     link: '/explore?theme=education'
   },
   {
+    slug: 'health',
     title: 'Health',
     value: '72%',
     description: 'Access to healthcare',
@@ -33,6 +37,7 @@ const statsData = [
     link: '/explore?theme=health'
   },
   {
+    slug: 'employment',
     title: 'Employment',
     value: '42%',
     description: 'Youth labor participation',
@@ -42,6 +47,7 @@ const statsData = [
     link: '/explore?theme=employment'
   },
   {
+    slug: 'entrepreneurship',
     title: 'Entrepreneurship',
     value: '18%',
     description: 'Youth-led businesses',
@@ -83,21 +89,25 @@ const QuickStats = () => {
 
       <div className="container px-4 md:px-6 relative z-10">
         <div className="flex flex-col items-center justify-center space-y-3 md:space-y-4 text-center mb-10 md:mb-14">
-          <h2
+          <Content
+            as="h2"
+            id="home.quick_stats.title"
+            fallback="Key Statistics"
             className="text-3xl sm:text-4xl font-semibold tracking-tighter md:text-5xl
             bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40
             bg-clip-text text-transparent"
-          >
-            Key Statistics
-          </h2>
-          <p className="max-w-[700px] text-sm sm:text-base text-[#A89070] md:text-lg">
-            Explore essential data points on African youth across our five core thematic areas.
-          </p>
+          />
+          <Content
+            as="p"
+            id="home.quick_stats.subtitle"
+            fallback="Explore essential data points on African youth across our five core thematic areas."
+            className="max-w-[700px] text-sm sm:text-base text-[#A89070] md:text-lg"
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {statsData.map((stat, index) => (
-            <Link key={index} to={stat.link} className="block group">
+            <Link key={stat.slug} to={stat.link} className="block group">
               <GlowCard
                 glowColor={stat.glowColor}
                 customSize
@@ -106,7 +116,12 @@ const QuickStats = () => {
                 <div className="relative z-10 flex flex-col justify-between h-full p-2">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs sm:text-sm font-medium text-gray-400 mb-1">{stat.title}</p>
+                      <Content
+                        as="p"
+                        id={`home.quick_stats.${stat.slug}.title`}
+                        fallback={stat.title}
+                        className="text-xs sm:text-sm font-medium text-gray-400 mb-1"
+                      />
                       <h3 className="text-3xl sm:text-4xl font-bold text-white">{stat.value}</h3>
                     </div>
                     <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10">
@@ -114,7 +129,12 @@ const QuickStats = () => {
                     </div>
                   </div>
 
-                  <p className="text-xs text-gray-500 mt-3">{stat.description}</p>
+                  <Content
+                    as="p"
+                    id={`home.quick_stats.${stat.slug}.description`}
+                    fallback={stat.description}
+                    className="text-xs text-gray-500 mt-3"
+                  />
 
                   <div className="mt-4 flex items-center justify-between">
                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${

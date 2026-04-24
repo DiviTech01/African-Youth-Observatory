@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Content } from '@/components/cms';
 // Theme toggle removed - dark mode only
 import { motion } from 'framer-motion';
 import {
@@ -55,7 +56,21 @@ const fadeUp = {
   }),
 };
 
-const AnimatedStat = ({ target, suffix, label, icon: Icon, delay }: { target: number; suffix: string; label: string; icon: React.ElementType; delay: number }) => {
+const AnimatedStat = ({
+  target,
+  suffix,
+  labelKey,
+  fallbackLabel,
+  icon: Icon,
+  delay,
+}: {
+  target: number;
+  suffix: string;
+  labelKey: string;
+  fallbackLabel: string;
+  icon: React.ElementType;
+  delay: number;
+}) => {
   const { ref, display } = useCountUp(target, 2000, suffix);
   return (
     <motion.div
@@ -68,10 +83,49 @@ const AnimatedStat = ({ target, suffix, label, icon: Icon, delay }: { target: nu
     >
       <Icon className="h-8 w-8 mx-auto text-primary" />
       <p ref={ref} className="text-3xl md:text-4xl font-display font-bold text-foreground">{display}</p>
-      <p className="text-sm text-muted-foreground">{label}</p>
+      <Content as="p" id={labelKey} fallback={fallbackLabel} className="text-sm text-muted-foreground" />
     </motion.div>
   );
 };
+
+const FEATURES = [
+  {
+    slug: 'card1',
+    icon: Globe,
+    title: 'Interactive Maps',
+    description: 'Visualize data across Africa with our dynamic, interactive mapping tools.',
+  },
+  {
+    slug: 'card2',
+    icon: BarChart3,
+    title: 'Advanced Analytics',
+    description: 'Deep dive into trends with powerful charts and comparative analysis.',
+  },
+  {
+    slug: 'card3',
+    icon: Database,
+    title: 'Data Export',
+    description: 'Download datasets in multiple formats for your research needs.',
+  },
+  {
+    slug: 'card4',
+    icon: Users,
+    title: 'Youth Index (AYI)',
+    description: 'Track country rankings across education, health, and economic dimensions.',
+  },
+  {
+    slug: 'card5',
+    icon: TrendingUp,
+    title: 'Trend Analysis',
+    description: 'Monitor changes over time with historical data spanning over a decade.',
+  },
+  {
+    slug: 'card6',
+    icon: BookOpen,
+    title: 'Reports & Insights',
+    description: 'Access curated reports and policy briefs from leading researchers.',
+  },
+];
 
 const Landing = () => {
   return (
@@ -91,15 +145,17 @@ const Landing = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
               AYD
             </div>
-            <span className="font-display font-bold text-lg hidden sm:block">African Youth Database</span>
+            <Content as="span" id="landing.brand.name" fallback="African Youth Database" className="font-display font-bold text-lg hidden sm:block" />
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/auth/signin">
-              <Button variant="ghost" size="sm">Sign In</Button>
+              <Button variant="ghost" size="sm">
+                <Content as="span" id="landing.header.signin" fallback="Sign In" />
+              </Button>
             </Link>
             <Link to="/auth/signup">
               <Button size="sm" className="gap-2">
-                Get Started
+                <Content as="span" id="landing.header.get_started" fallback="Get Started" />
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -120,7 +176,7 @@ const Landing = () => {
               custom={0}
             >
               <Sparkles className="h-4 w-4" />
-              Africa's Premier Youth Data Intelligence Platform
+              <Content as="span" id="landing.hero.badge" fallback="Africa's Premier Youth Data Intelligence Platform" />
             </motion.div>
 
             {/* Main Title */}
@@ -131,21 +187,17 @@ const Landing = () => {
               animate="visible"
               custom={0.15}
             >
-              Empowering Africa's
-              <span className="block gradient-text">Youth Through Data</span>
+              <Content as="span" id="landing.hero.title_line1" fallback="Empowering Africa's" />
+              <Content as="span" id="landing.hero.title_line2" fallback="Youth Through Data" className="block gradient-text" />
             </motion.h1>
 
             {/* Description */}
-            <motion.p
+            <Content
+              as="p"
+              id="landing.hero.description"
+              fallback="Access comprehensive youth statistics across all 54 African nations. Power your research, policy decisions, and investments with trusted, real-time data."
               className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground"
-              variants={fadeUp}
-              initial="hidden"
-              animate="visible"
-              custom={0.3}
-            >
-              Access comprehensive youth statistics across all 54 African nations.
-              Power your research, policy decisions, and investments with trusted, real-time data.
-            </motion.p>
+            />
 
             {/* CTA Buttons */}
             <motion.div
@@ -158,12 +210,12 @@ const Landing = () => {
               <Link to="/auth/signup">
                 <Button size="lg" className="w-full sm:w-auto text-base gap-2 px-8">
                   <Database className="h-5 w-5" />
-                  Start Exploring Data
+                  <Content as="span" id="landing.hero.cta_primary" fallback="Start Exploring Data" />
                 </Button>
               </Link>
               <Link to="/auth/signin">
                 <Button variant="outline" size="lg" className="w-full sm:w-auto text-base gap-2 px-8">
-                  Sign In to Dashboard
+                  <Content as="span" id="landing.hero.cta_secondary" fallback="Sign In to Dashboard" />
                 </Button>
               </Link>
             </motion.div>
@@ -175,10 +227,10 @@ const Landing = () => {
       <section className="py-16 border-y border-border/50 bg-muted/30 backdrop-blur-sm">
         <div className="container px-4 md:px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <AnimatedStat target={54} suffix="" label="African Countries" icon={MapPin} delay={0} />
-            <AnimatedStat target={500} suffix="+" label="Data Indicators" icon={BarChart3} delay={0.1} />
-            <AnimatedStat target={226} suffix="M" label="Youth Covered" icon={Users} delay={0.2} />
-            <AnimatedStat target={10} suffix="+" label="Years of Data" icon={TrendingUp} delay={0.3} />
+            <AnimatedStat target={54} suffix="" labelKey="landing.stats.countries.label" fallbackLabel="African Countries" icon={MapPin} delay={0} />
+            <AnimatedStat target={500} suffix="+" labelKey="landing.stats.indicators.label" fallbackLabel="Data Indicators" icon={BarChart3} delay={0.1} />
+            <AnimatedStat target={226} suffix="M" labelKey="landing.stats.youth.label" fallbackLabel="Youth Covered" icon={Users} delay={0.2} />
+            <AnimatedStat target={10} suffix="+" labelKey="landing.stats.years.label" fallbackLabel="Years of Data" icon={TrendingUp} delay={0.3} />
           </div>
         </div>
       </section>
@@ -187,57 +239,43 @@ const Landing = () => {
       <section className="py-20 md:py-32">
         <div className="container px-4 md:px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-display font-bold mb-4 animate-fade-in">
-              Comprehensive Data Solutions
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              Everything you need to understand Africa's youth demographics and drive impactful decisions.
-            </p>
+            <Content
+              as="h2"
+              id="landing.features.title"
+              fallback="Comprehensive Data Solutions"
+              className="text-3xl md:text-4xl font-display font-bold mb-4 animate-fade-in"
+            />
+            <Content
+              as="p"
+              id="landing.features.subtitle"
+              fallback="Everything you need to understand Africa's youth demographics and drive impactful decisions."
+              className="text-muted-foreground max-w-2xl mx-auto animate-fade-in"
+              style={{ animationDelay: '0.1s' }}
+            />
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                icon: Globe,
-                title: 'Interactive Maps',
-                description: 'Visualize data across Africa with our dynamic, interactive mapping tools.',
-              },
-              {
-                icon: BarChart3,
-                title: 'Advanced Analytics',
-                description: 'Deep dive into trends with powerful charts and comparative analysis.',
-              },
-              {
-                icon: Database,
-                title: 'Data Export',
-                description: 'Download datasets in multiple formats for your research needs.',
-              },
-              {
-                icon: Users,
-                title: 'Youth Index (AYI)',
-                description: 'Track country rankings across education, health, and economic dimensions.',
-              },
-              {
-                icon: TrendingUp,
-                title: 'Trend Analysis',
-                description: 'Monitor changes over time with historical data spanning over a decade.',
-              },
-              {
-                icon: BookOpen,
-                title: 'Reports & Insights',
-                description: 'Access curated reports and policy briefs from leading researchers.',
-              },
-            ].map((feature, index) => (
+            {FEATURES.map((feature, index) => (
               <div
-                key={feature.title}
+                key={feature.slug}
                 className="group p-6 rounded-xl border border-border bg-card hover:bg-card/80 hover:border-primary/50 transition-all duration-300 hover-lift animate-fade-in"
                 style={{ animationDelay: `${0.2 + index * 0.1}s` }}
               >
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
                   <feature.icon className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground text-sm">{feature.description}</p>
+                <Content
+                  as="h3"
+                  id={`landing.features.${feature.slug}.title`}
+                  fallback={feature.title}
+                  className="text-lg font-semibold mb-2"
+                />
+                <Content
+                  as="p"
+                  id={`landing.features.${feature.slug}.description`}
+                  fallback={feature.description}
+                  className="text-muted-foreground text-sm"
+                />
               </div>
             ))}
           </div>
@@ -248,22 +286,28 @@ const Landing = () => {
       <section className="py-20 md:py-32 bg-primary/5">
         <div className="container px-4 md:px-6">
           <div className="max-w-3xl mx-auto text-center space-y-8">
-            <h2 className="text-3xl md:text-4xl font-display font-bold">
-              Ready to Unlock Africa's Youth Data?
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Join researchers, policymakers, and organizations using AYD to drive meaningful change across the continent.
-            </p>
+            <Content
+              as="h2"
+              id="landing.bottom_cta.title"
+              fallback="Ready to Unlock Africa's Youth Data?"
+              className="text-3xl md:text-4xl font-display font-bold"
+            />
+            <Content
+              as="p"
+              id="landing.bottom_cta.description"
+              fallback="Join researchers, policymakers, and organizations using AYD to drive meaningful change across the continent."
+              className="text-lg text-muted-foreground"
+            />
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/auth/signup">
                 <Button size="lg" className="w-full sm:w-auto text-base gap-2 px-8">
-                  Create Free Account
+                  <Content as="span" id="landing.bottom_cta.primary" fallback="Create Free Account" />
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
               <Link to="/about">
                 <Button variant="outline" size="lg" className="w-full sm:w-auto text-base px-8">
-                  Learn More About AYD
+                  <Content as="span" id="landing.bottom_cta.secondary" fallback="Learn More About AYD" />
                 </Button>
               </Link>
             </div>
@@ -279,15 +323,26 @@ const Landing = () => {
               <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
                 AYD
               </div>
-              <span className="text-sm text-muted-foreground">
-                © 2025 African Youth Database. Powered by PACSDA & ZeroUp Next.
-              </span>
+              <Content
+                as="span"
+                id="landing.footer.copyright"
+                fallback="© 2025 African Youth Database. Powered by PACSDA & ZeroUp Next."
+                className="text-sm text-muted-foreground"
+              />
             </div>
             <div className="flex gap-6 text-sm text-muted-foreground">
-              <Link to="/about" className="hover:text-foreground transition-colors">About</Link>
-              <Link to="/contact" className="hover:text-foreground transition-colors">Contact</Link>
-              <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-              <a href="#" className="hover:text-foreground transition-colors">Terms</a>
+              <Link to="/about" className="hover:text-foreground transition-colors">
+                <Content as="span" id="landing.footer.link_about" fallback="About" />
+              </Link>
+              <Link to="/contact" className="hover:text-foreground transition-colors">
+                <Content as="span" id="landing.footer.link_contact" fallback="Contact" />
+              </Link>
+              <a href="#" className="hover:text-foreground transition-colors">
+                <Content as="span" id="landing.footer.link_privacy" fallback="Privacy" />
+              </a>
+              <a href="#" className="hover:text-foreground transition-colors">
+                <Content as="span" id="landing.footer.link_terms" fallback="Terms" />
+              </a>
             </div>
           </div>
         </div>

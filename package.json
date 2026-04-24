@@ -27,6 +27,7 @@
     "seed:experts": "tsx scripts/seed-experts.ts",
     "import:ayc-scorecard": "tsx scripts/import-ayc-scorecard.ts",
     "compute:youth-index": "tsx scripts/compute-youth-index.ts",
+    "cms:sync": "tsx scripts/sync-cms-registry.ts",
     "setup": "bash scripts/setup.sh"
   },
   "dependencies": {

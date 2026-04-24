@@ -1,5 +1,6 @@
 import React from 'react';
 import { Logos3 } from '@/components/ui/logos3';
+import { useContentText } from '@/contexts/ContentContext';
 
 const partnerLogos = [
   {
@@ -53,12 +54,8 @@ const partnerLogos = [
 ];
 
 const Partners = () => {
-  return (
-    <Logos3
-      heading="Our Partners & Data Sources"
-      logos={partnerLogos}
-    />
-  );
+  const heading = useContentText('home.partners.heading', 'Our Partners & Data Sources');
+  return <Logos3 heading={heading} logos={partnerLogos} />;
 };
 
 export default Partners;

@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { BarChart3, PieChart, TrendingUp, ArrowRight, Download } from 'lucide-react';
+import { Content } from '@/components/cms';
 // African divider removed
 
 const featuredItems = [
   {
+    slug: 'unemployment',
     icon: BarChart3,
     title: 'Youth Unemployment Trends',
     description: 'Analysis of youth unemployment rates across African regions from 2010-2023.',
@@ -15,6 +17,7 @@ const featuredItems = [
     link: '/explore?theme=employment',
   },
   {
+    slug: 'education_gender',
     icon: PieChart,
     title: 'Education Access by Gender',
     description: 'Comparative analysis of education access and completion rates by gender.',
@@ -24,6 +27,7 @@ const featuredItems = [
     link: '/explore?theme=education',
   },
   {
+    slug: 'entrepreneurship',
     icon: TrendingUp,
     title: 'Youth-led Entrepreneurship',
     description: 'Emerging trends in youth entrepreneurship and business formation across Africa.',
@@ -42,22 +46,26 @@ const FeaturedData = () => {
 
       <div className="container px-4 md:px-6 relative z-10">
         <div className="flex flex-col items-center justify-center space-y-3 md:space-y-4 text-center mb-10 md:mb-14">
-          <h2
+          <Content
+            as="h2"
+            id="home.featured.title"
+            fallback="Featured Insights"
             className="text-3xl sm:text-4xl font-semibold tracking-tighter md:text-5xl
             bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40
             bg-clip-text text-transparent"
-          >
-            Featured Insights
-          </h2>
-          <p className="max-w-[700px] text-sm sm:text-base text-[#A89070] md:text-lg">
-            Explore our latest visualizations and reports on African youth development.
-          </p>
+          />
+          <Content
+            as="p"
+            id="home.featured.subtitle"
+            fallback="Explore our latest visualizations and reports on African youth development."
+            className="max-w-[700px] text-sm sm:text-base text-[#A89070] md:text-lg"
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredItems.map((item, index) => (
+          {featuredItems.map((item) => (
             <Link
-              key={index}
+              key={item.slug}
               to={item.link}
               className={`group relative rounded-2xl border ${item.borderColor} bg-white/[0.03] backdrop-blur-sm p-6 transition-all duration-300 hover:-translate-y-1`}
             >
@@ -70,13 +78,23 @@ const FeaturedData = () => {
               </div>
 
               {/* Content */}
-              <h3 className="text-lg font-semibold text-white mb-2 tracking-tight">{item.title}</h3>
-              <p className="text-sm text-gray-400 mb-6 leading-relaxed">{item.description}</p>
+              <Content
+                as="h3"
+                id={`home.featured.${item.slug}.title`}
+                fallback={item.title}
+                className="text-lg font-semibold text-white mb-2 tracking-tight"
+              />
+              <Content
+                as="p"
+                id={`home.featured.${item.slug}.description`}
+                fallback={item.description}
+                className="text-sm text-gray-400 mb-6 leading-relaxed"
+              />
 
               {/* Actions */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500 group-hover:text-white transition-colors flex items-center gap-1">
-                  Explore
+                  <Content as="span" id="home.featured.explore_cta" fallback="Explore" />
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </span>
                 <Button variant="ghost" size="sm" className="text-gray-500 hover:text-white h-8 px-2">
@@ -93,7 +111,7 @@ const FeaturedData = () => {
               variant="outline"
               className="border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 tracking-tight"
             >
-              View All Reports
+              <Content as="span" id="home.featured.view_all" fallback="View All Reports" />
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>

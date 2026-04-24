@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Content } from '@/components/cms';
 
 const STORAGE_KEY = 'ayd_cookie_consent';
 
@@ -21,8 +22,6 @@ const CookieConsent = () => {
   };
 
   const handleManage = () => {
-    // For now, treat "Manage Preferences" the same as accept.
-    // A full preferences modal can be wired up later.
     localStorage.setItem(STORAGE_KEY, 'managed');
     setVisible(false);
   };
@@ -39,16 +38,18 @@ const CookieConsent = () => {
         >
           <Card className="mx-auto max-w-2xl">
             <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4">
-              <p className="text-sm text-muted-foreground text-center sm:text-left">
-                We use cookies to improve your experience. By continuing to use this site you agree
-                to our use of cookies.
-              </p>
+              <Content
+                as="p"
+                id="cookie_consent.message"
+                fallback="We use cookies to improve your experience. By continuing to use this site you agree to our use of cookies."
+                className="text-sm text-muted-foreground text-center sm:text-left"
+              />
               <div className="flex gap-2 shrink-0">
                 <Button variant="outline" size="sm" onClick={handleManage}>
-                  Manage Preferences
+                  <Content as="span" id="cookie_consent.manage" fallback="Manage Preferences" />
                 </Button>
                 <Button size="sm" onClick={handleAccept}>
-                  Accept All
+                  <Content as="span" id="cookie_consent.accept" fallback="Accept All" />
                 </Button>
               </div>
             </CardContent>

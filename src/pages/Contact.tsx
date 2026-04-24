@@ -5,9 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Mail, MapPin, Phone, Clock, Send, MessageSquare, Building, Users } from 'lucide-react';
+import { Mail, Clock, Send, MessageSquare, Building, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Content } from '@/components/cms';
+import { useContentText } from '@/contexts/ContentContext';
 
 const Contact = () => {
   const { t } = useLanguage();
@@ -21,28 +23,25 @@ const Contact = () => {
     message: ''
   });
 
+  const toastTitle = useContentText('contact.form.toast.title', 'Message Sent');
+  const toastDesc = useContentText(
+    'contact.form.toast.description',
+    "Thank you for contacting us. We'll respond within 2-3 business days.",
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Message Sent",
-      description: "Thank you for contacting us. We'll respond within 2-3 business days.",
-    });
-    setFormData({
-      name: '',
-      email: '',
-      organization: '',
-      inquiryType: '',
-      subject: '',
-      message: ''
-    });
+    toast({ title: toastTitle, description: toastDesc });
+    setFormData({ name: '', email: '', organization: '', inquiryType: '', subject: '', message: '' });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
+
+  const emailInfo = useContentText('contact.email.info', 'info@africanyouthdata.org');
+  const emailData = useContentText('contact.email.data', 'data@africanyouthdata.org');
+  const emailPartnerships = useContentText('contact.email.partnerships', 'partnerships@africanyouthdata.org');
 
   return (
     <>
@@ -50,9 +49,7 @@ const Contact = () => {
         <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         <div className="container px-4 md:px-6 relative z-10">
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent mb-2">{t('contact.title')}</h1>
-          <p className="text-[#A89070]">
-            {t('contact.subtitle')}
-          </p>
+          <p className="text-[#A89070]">{t('contact.subtitle')}</p>
         </div>
       </header>
 
@@ -65,22 +62,16 @@ const Contact = () => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Mail className="h-5 w-5 text-[#D4A017]" />
-                    Email
+                    <Content as="span" id="contact.email.card_title" fallback="Email" />
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <p className="text-gray-400">General Inquiries:</p>
-                  <a href="mailto:info@africanyouthdata.org" className="text-primary hover:underline block">
-                    info@africanyouthdata.org
-                  </a>
-                  <p className="text-gray-400 mt-3">Data Requests:</p>
-                  <a href="mailto:data@africanyouthdata.org" className="text-primary hover:underline block">
-                    data@africanyouthdata.org
-                  </a>
-                  <p className="text-gray-400 mt-3">Partnerships:</p>
-                  <a href="mailto:partnerships@africanyouthdata.org" className="text-primary hover:underline block">
-                    partnerships@africanyouthdata.org
-                  </a>
+                  <Content as="p" id="contact.email.general_label" fallback="General Inquiries:" className="text-gray-400" />
+                  <a href={`mailto:${emailInfo}`} className="text-primary hover:underline block">{emailInfo}</a>
+                  <Content as="p" id="contact.email.data_label" fallback="Data Requests:" className="text-gray-400 mt-3" />
+                  <a href={`mailto:${emailData}`} className="text-primary hover:underline block">{emailData}</a>
+                  <Content as="p" id="contact.email.partnerships_label" fallback="Partnerships:" className="text-gray-400 mt-3" />
+                  <a href={`mailto:${emailPartnerships}`} className="text-primary hover:underline block">{emailPartnerships}</a>
                 </CardContent>
               </Card>
 
@@ -88,14 +79,14 @@ const Contact = () => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Building className="h-5 w-5 text-[#D4A017]" />
-                    Organization
+                    <Content as="span" id="contact.org.card_title" fallback="Organization" />
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  <p className="font-medium">PACSDA</p>
-                  <p className="text-gray-400">Pan-African Centre for Statistics and Data Analytics</p>
-                  <p className="text-gray-400 mt-2">Implementing Partner:</p>
-                  <p className="font-medium">ZeroUp Next</p>
+                  <Content as="p" id="contact.org.primary_name" fallback="PACSDA" className="font-medium" />
+                  <Content as="p" id="contact.org.primary_desc" fallback="Pan-African Centre for Statistics and Data Analytics" className="text-gray-400" />
+                  <Content as="p" id="contact.org.partner_label" fallback="Implementing Partner:" className="text-gray-400 mt-2" />
+                  <Content as="p" id="contact.org.partner_name" fallback="ZeroUp Next" className="font-medium" />
                 </CardContent>
               </Card>
 
@@ -103,12 +94,12 @@ const Contact = () => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Clock className="h-5 w-5 text-[#D4A017]" />
-                    Response Time
+                    <Content as="span" id="contact.response.card_title" fallback="Response Time" />
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm text-gray-400">
-                  <p>We typically respond to inquiries within 2-3 business days.</p>
-                  <p className="mt-2">For urgent data requests, please indicate in your subject line.</p>
+                  <Content as="p" id="contact.response.body_p1" fallback="We typically respond to inquiries within 2-3 business days." />
+                  <Content as="p" id="contact.response.body_p2" fallback="For urgent data requests, please indicate in your subject line." className="mt-2" />
                 </CardContent>
               </Card>
 
@@ -116,7 +107,7 @@ const Contact = () => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Users className="h-5 w-5 text-[#D4A017]" />
-                    Connect With Us
+                    <Content as="span" id="contact.social.card_title" fallback="Connect With Us" />
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -146,107 +137,73 @@ const Contact = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-[#D4A017]" />
-                  Send us a Message
+                  <Content as="span" id="contact.form.card_title" fallback="Send us a Message" />
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name *</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        placeholder="Your name"
-                        required
-                        className="border-gray-800 bg-white/[0.03]"
-                      />
+                      <Label htmlFor="name">
+                        <Content as="span" id="contact.form.name_label" fallback="Full Name *" />
+                      </Label>
+                      <Input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Your name" required className="border-gray-800 bg-white/[0.03]" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email Address *</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="your@email.com"
-                        required
-                        className="border-gray-800 bg-white/[0.03]"
-                      />
+                      <Label htmlFor="email">
+                        <Content as="span" id="contact.form.email_label" fallback="Email Address *" />
+                      </Label>
+                      <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="your@email.com" required className="border-gray-800 bg-white/[0.03]" />
                     </div>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="organization">Organization</Label>
-                      <Input
-                        id="organization"
-                        name="organization"
-                        value={formData.organization}
-                        onChange={handleChange}
-                        placeholder="Your organization"
-                        className="border-gray-800 bg-white/[0.03]"
-                      />
+                      <Label htmlFor="organization">
+                        <Content as="span" id="contact.form.org_label" fallback="Organization" />
+                      </Label>
+                      <Input id="organization" name="organization" value={formData.organization} onChange={handleChange} placeholder="Your organization" className="border-gray-800 bg-white/[0.03]" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="inquiryType">Inquiry Type *</Label>
-                      <Select 
-                        value={formData.inquiryType}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, inquiryType: value }))}
-                      >
+                      <Label htmlFor="inquiryType">
+                        <Content as="span" id="contact.form.type_label" fallback="Inquiry Type *" />
+                      </Label>
+                      <Select value={formData.inquiryType} onValueChange={(value) => setFormData(prev => ({ ...prev, inquiryType: value }))}>
                         <SelectTrigger className="border-gray-800 bg-white/[0.03]">
-                          <SelectValue placeholder="Select inquiry type" />
+                          <SelectValue placeholder={useContentText('contact.form.type_placeholder', 'Select inquiry type')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="general">General Inquiry</SelectItem>
-                          <SelectItem value="data-request">Data Request</SelectItem>
-                          <SelectItem value="partnership">Partnership Opportunity</SelectItem>
-                          <SelectItem value="technical">Technical Support</SelectItem>
-                          <SelectItem value="media">Media Inquiry</SelectItem>
-                          <SelectItem value="feedback">Feedback</SelectItem>
+                          <SelectItem value="general">{useContentText('contact.form.type.general', 'General Inquiry')}</SelectItem>
+                          <SelectItem value="data-request">{useContentText('contact.form.type.data_request', 'Data Request')}</SelectItem>
+                          <SelectItem value="partnership">{useContentText('contact.form.type.partnership', 'Partnership Opportunity')}</SelectItem>
+                          <SelectItem value="technical">{useContentText('contact.form.type.technical', 'Technical Support')}</SelectItem>
+                          <SelectItem value="media">{useContentText('contact.form.type.media', 'Media Inquiry')}</SelectItem>
+                          <SelectItem value="feedback">{useContentText('contact.form.type.feedback', 'Feedback')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="subject">Subject *</Label>
-                    <Input
-                      id="subject"
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      placeholder="Brief subject of your inquiry"
-                      required
-                      className="border-gray-800 bg-white/[0.03]"
-                    />
+                    <Label htmlFor="subject">
+                      <Content as="span" id="contact.form.subject_label" fallback="Subject *" />
+                    </Label>
+                    <Input id="subject" name="subject" value={formData.subject} onChange={handleChange} placeholder="Brief subject of your inquiry" required className="border-gray-800 bg-white/[0.03]" />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="message">Message *</Label>
-                    <Textarea
-                      id="message"
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      placeholder="Please describe your inquiry in detail..."
-                      rows={5}
-                      required
-                      className="border-gray-800 bg-white/[0.03]"
-                    />
+                    <Label htmlFor="message">
+                      <Content as="span" id="contact.form.message_label" fallback="Message *" />
+                    </Label>
+                    <Textarea id="message" name="message" value={formData.message} onChange={handleChange} placeholder="Please describe your inquiry in detail..." rows={5} required className="border-gray-800 bg-white/[0.03]" />
                   </div>
 
                   <div className="flex items-center gap-4">
                     <Button type="submit" className="gap-2">
                       <Send className="h-4 w-4" />
-                      Send Message
+                      <Content as="span" id="contact.form.submit" fallback="Send Message" />
                     </Button>
-                    <p className="text-xs text-gray-400">
-                      * Required fields
-                    </p>
+                    <Content as="p" id="contact.form.required_hint" fallback="* Required fields" className="text-xs text-gray-400" />
                   </div>
                 </form>
               </CardContent>

@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { WhatsNew } from '@/components/WhatsNew';
+import { Content } from '@/components/cms';
 
 const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -93,9 +94,12 @@ const Navbar = () => {
             <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-md bg-primary">
               <span className="font-bold text-primary-foreground text-sm sm:text-base">AYD</span>
             </div>
-            <span className="hidden font-display font-bold sm:inline-block text-sm md:text-base text-foreground">
-              African Youth Database
-            </span>
+            <Content
+              as="span"
+              id="navbar.brand.name"
+              fallback="African Youth Database"
+              className="hidden font-display font-bold sm:inline-block text-sm md:text-base text-foreground"
+            />
           </Link>
         </div>
 
@@ -197,13 +201,13 @@ const Navbar = () => {
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
                     <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
+                    <Content as="span" id="navbar.user_menu.dashboard" fallback="Dashboard" />
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
                     <Settings className="h-4 w-4" />
-                    Settings
+                    <Content as="span" id="navbar.user_menu.settings" fallback="Settings" />
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -212,7 +216,7 @@ const Navbar = () => {
                   className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="h-4 w-4" />
-                  Sign Out
+                  <Content as="span" id="navbar.user_menu.sign_out" fallback="Sign Out" />
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -244,7 +248,7 @@ const Navbar = () => {
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
                     <span className="font-bold text-primary-foreground">AYD</span>
                   </div>
-                  <span className="text-foreground">African Youth Database</span>
+                  <Content as="span" id="navbar.brand.name" fallback="African Youth Database" className="text-foreground" />
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 mt-6">
@@ -292,7 +296,7 @@ const Navbar = () => {
                       className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                     >
                       <LayoutDashboard className="h-4 w-4" />
-                      Dashboard
+                      <Content as="span" id="navbar.user_menu.dashboard" fallback="Dashboard" />
                     </Link>
                     <Link
                       to="/settings"
@@ -300,7 +304,7 @@ const Navbar = () => {
                       className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                     >
                       <Settings className="h-4 w-4" />
-                      Settings
+                      <Content as="span" id="navbar.user_menu.settings" fallback="Settings" />
                     </Link>
                     <Button
                       className="w-full"
@@ -311,7 +315,7 @@ const Navbar = () => {
                       }}
                     >
                       <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
+                      <Content as="span" id="navbar.user_menu.sign_out" fallback="Sign Out" />
                     </Button>
                   </div>
                 ) : (
