@@ -48,13 +48,19 @@ function p(text: string): string {
 
 @Injectable()
 export class MailService {
-  private resend: Resend;
+  private resend: Resend | null = null;
   private from: string;
   private adminEmail: string;
   private readonly logger = new Logger(MailService.name);
 
   constructor() {
-    this.resend = new Resend(process.env.RESEND_API_KEY);
+    const apiKey = process.env.RESEND_API_KEY;
+    if (apiKey) {
+      this.resend = new Resend(apiKey);
+      this.logger.log('Resend email client initialized');
+    } else {
+      this.logger.warn('RESEND_API_KEY not set — email sending disabled');
+    }
     this.from = process.env.FROM_EMAIL || 'AYD Platform <noreply@pacsda.org>';
     this.adminEmail = process.env.ADMIN_EMAIL || 'admin@africanyouthobservatory.org';
   }
@@ -62,6 +68,10 @@ export class MailService {
   // ── Welcome Email ──────────────────────────────────────────
 
   async sendWelcome(to: string, name?: string) {
+    if (!this.resend) {
+      this.logger.warn('Email not sent — Resend not configured');
+      return;
+    }
     const displayName = name || to.split('@')[0];
     const html = layout('Welcome to the African Youth Observatory', `
       ${p(`Hi ${displayName},`)}
@@ -85,6 +95,10 @@ export class MailService {
   // ── Password Reset ─────────────────────────────────────────
 
   async sendPasswordReset(to: string, code: string, name?: string) {
+    if (!this.resend) {
+      this.logger.warn('Email not sent — Resend not configured');
+      return;
+    }
     const displayName = name || to.split('@')[0];
     const html = layout('Password Reset Code', `
       ${p(`Hi ${displayName},`)}
@@ -102,6 +116,10 @@ export class MailService {
   // ── Contact Form Confirmation ──────────────────────────────
 
   async sendContactConfirmation(to: string, name: string, subject: string) {
+    if (!this.resend) {
+      this.logger.warn('Email not sent — Resend not configured');
+      return;
+    }
     const html = layout('We received your message', `
       ${p(`Hi ${name},`)}
       ${p(`Thank you for reaching out. We received your inquiry regarding "<strong>${subject}</strong>" and will get back to you within <strong>2-3 business days</strong>.`)}
@@ -124,6 +142,10 @@ export class MailService {
     subject: string;
     message: string;
   }) {
+    if (!this.resend) {
+      this.logger.warn('Email not sent — Resend not configured');
+      return;
+    }
     const html = layout('New Contact Form Submission', `
       ${p('<strong>New contact form submission:</strong>')}
       <table style="width:100%;border-collapse:collapse;margin:16px 0;">
@@ -152,6 +174,10 @@ export class MailService {
   // ── Admin: New User Notification ───────────────────────────
 
   async sendNewUserNotification(user: { email: string; name?: string; role: string }) {
+    if (!this.resend) {
+      this.logger.warn('Email not sent — Resend not configured');
+      return;
+    }
     const html = layout('New User Registration', `
       ${p('A new user has registered on the African Youth Observatory:')}
       <table style="width:100%;border-collapse:collapse;margin:16px 0;">
@@ -173,6 +199,10 @@ export class MailService {
   // ── Core Send ──────────────────────────────────────────────
 
   private async send(to: string, subject: string, html: string) {
+    if (!this.resend) {
+      this.logger.warn('Email not sent — Resend not configured');
+      return;
+    }
     try {
       const result = await this.resend.emails.send({
         from: this.from,
