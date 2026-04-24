@@ -37,11 +37,20 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 // starts can't short-circuit provisioning for Google OAuth / other providers.
 async function syncBackendUser(accessToken: string): Promise<void> {
   try {
-    await fetch(`${API_BASE}/auth/profile`, {
+    const res = await fetch(`${API_BASE}/auth/profile`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    if (!res.ok) {
+      // fetch only throws on network errors; 401/500 still resolve. Surface them.
+      const body = await res.text().catch(() => '');
+      console.error(
+        `[auth-sync] Backend /auth/profile returned ${res.status} ${res.statusText}. Body: ${body.slice(0, 200)}`,
+      );
+      return;
+    }
+    console.log('[auth-sync] Backend user row confirmed / provisioned');
   } catch (e) {
-    console.warn('Backend user sync failed:', e);
+    console.error('[auth-sync] Network error calling /auth/profile:', e);
   }
 }
 
