@@ -13,19 +13,18 @@ const SignUp = () => {
     try {
       await signIn(data.email, data.password);
       toast({ title: "Welcome back!", description: "You have successfully signed in." });
-      navigate('/');
-    } catch {
-      toast({ title: "Error", description: "Invalid credentials.", variant: "destructive" });
+      navigate('/dashboard');
+    } catch (err) {
+      toast({ title: "Sign in failed", description: err instanceof Error ? err.message : "Invalid credentials.", variant: "destructive" });
     }
   };
 
   const handleSignUp = async (data: { name: string; email: string; password: string }) => {
     try {
       await signUp(data.name, data.email, data.password);
-      toast({ title: "Account created!", description: "Welcome to African Youth Database." });
-      navigate('/');
-    } catch {
-      toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
+      navigate(`/auth/email-sent?email=${encodeURIComponent(data.email)}`);
+    } catch (err) {
+      toast({ title: "Sign up failed", description: err instanceof Error ? err.message : "Something went wrong.", variant: "destructive" });
     }
   };
 

@@ -344,6 +344,21 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
+    forgotPassword: (email: string) =>
+      request<{ message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (email: string, code: string, newPassword: string) =>
+      request<{ message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ email, code, newPassword }),
+      }),
+    contact: (data: { name: string; email: string; organization?: string; inquiryType: string; subject: string; message: string }) =>
+      request<{ message: string }>('/auth/contact', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   // Reports

@@ -308,11 +308,97 @@ export const DEFAULT_DASHBOARDS: DashboardConfig[] = [
 ];
 
 // ============================================
-// DASHBOARD MANAGEMENT
+// DASHBOARD MANAGEMENT (syncs to backend API when logged in)
 // ============================================
 
 const STORAGE_KEY = 'ayd_dashboards';
 const ACTIVE_DASHBOARD_KEY = 'ayd_active_dashboard';
+
+// ---- API helpers ----
+
+const _viteUrl = import.meta.env.VITE_API_URL as string | undefined;
+const API_BASE = (_viteUrl && _viteUrl.startsWith('http'))
+  ? _viteUrl
+  : (import.meta.env.PROD ? 'https://african-youth-observatory.onrender.com/api' : '/api');
+
+function getAuthToken(): string | null {
+  // Supabase stores session in localStorage
+  const raw = localStorage.getItem(`sb-${new URL(import.meta.env.VITE_SUPABASE_URL || 'https://x.supabase.co').hostname.split('.')[0]}-auth-token`);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed?.access_token || null;
+  } catch { return null; }
+}
+
+async function apiRequest<T>(method: string, path: string, body?: unknown): Promise<T | null> {
+  const token = getAuthToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    if (res.status === 204) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+// Convert between frontend DashboardConfig and backend format
+function toApiFormat(d: DashboardConfig) {
+  return {
+    title: d.name,
+    description: d.description,
+    widgets: d.widgets,
+    isPublic: false,
+  };
+}
+
+function fromApiFormat(d: { id: string; title: string; description?: string | null; widgets: unknown; createdAt: string; updatedAt: string }): DashboardConfig {
+  return {
+    id: d.id,
+    name: d.title,
+    description: d.description || '',
+    widgets: (Array.isArray(d.widgets) ? d.widgets : []) as DashboardWidget[],
+    createdAt: d.createdAt,
+    updatedAt: d.updatedAt,
+    isDefault: false,
+  };
+}
+
+// ---- In-memory cache of server dashboards ----
+let _serverDashboards: DashboardConfig[] | null = null;
+let _syncPromise: Promise<void> | null = null;
+
+/** Pull dashboards from the backend and merge into local cache */
+export async function syncDashboardsFromServer(): Promise<void> {
+  const token = getAuthToken();
+  if (!token) { _serverDashboards = null; return; }
+
+  try {
+    const list = await apiRequest<Array<{ id: string; title: string; description?: string | null; widgets: unknown; createdAt: string; updatedAt: string }>>('GET', '/dashboards');
+    if (list && Array.isArray(list)) {
+      _serverDashboards = list.map(fromApiFormat);
+      // Persist server dashboards to localStorage as cache
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(_serverDashboards));
+    }
+  } catch {
+    // Fall back to localStorage
+  }
+}
+
+/** Call this on login to pull user dashboards */
+export function triggerDashboardSync(): void {
+  _syncPromise = syncDashboardsFromServer();
+}
 
 // Get all saved dashboards
 export function getAllDashboards(): DashboardConfig[] {
@@ -355,18 +441,25 @@ export function setActiveDashboard(id: string): void {
   localStorage.setItem(ACTIVE_DASHBOARD_KEY, id);
 }
 
-// Save a dashboard
+// Save a dashboard (localStorage + API)
 export function saveDashboard(dashboard: DashboardConfig): void {
   const dashboards = getAllDashboards().filter(d => d.id !== dashboard.id);
   dashboard.updatedAt = new Date().toISOString();
   dashboards.push(dashboard);
-  
+
   // Only store non-default dashboards
   const customDashboards = dashboards.filter(d => !DEFAULT_DASHBOARDS.some(def => def.id === d.id));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(customDashboards));
+
+  // Sync to backend (fire-and-forget)
+  const isServerDashboard = dashboard.id && !dashboard.id.startsWith('custom-');
+  if (isServerDashboard) {
+    // Update existing server dashboard
+    apiRequest('PUT', `/dashboards/${dashboard.id}`, toApiFormat(dashboard));
+  }
 }
 
-// Create a new dashboard
+// Create a new dashboard (localStorage + API)
 export function createDashboard(name: string, description: string = ''): DashboardConfig {
   const dashboard: DashboardConfig = {
     id: `custom-${Date.now()}`,
@@ -377,7 +470,29 @@ export function createDashboard(name: string, description: string = ''): Dashboa
     updatedAt: new Date().toISOString(),
     isDefault: false,
   };
+
+  // Save locally first
   saveDashboard(dashboard);
+
+  // Create on server and update ID when response comes back
+  const token = getAuthToken();
+  if (token) {
+    apiRequest<{ id: string }>('POST', '/dashboards', toApiFormat(dashboard))
+      .then((result) => {
+        if (result?.id) {
+          // Replace the temp ID with the server ID
+          const all = getAllDashboards();
+          const idx = all.findIndex(d => d.id === dashboard.id);
+          if (idx >= 0) {
+            all[idx].id = result.id;
+            const custom = all.filter(d => !DEFAULT_DASHBOARDS.some(def => def.id === d.id));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+          }
+          dashboard.id = result.id;
+        }
+      });
+  }
+
   return dashboard;
 }
 
@@ -385,16 +500,21 @@ export function createDashboard(name: string, description: string = ''): Dashboa
 export function deleteDashboard(id: string): boolean {
   const dashboard = getDashboard(id);
   if (!dashboard || dashboard.isDefault) return false;
-  
+
   const dashboards = getAllDashboards().filter(d => d.id !== id);
   const customDashboards = dashboards.filter(d => !DEFAULT_DASHBOARDS.some(def => def.id === d.id));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(customDashboards));
-  
+
+  // Delete from server too
+  if (!id.startsWith('custom-')) {
+    apiRequest('DELETE', `/dashboards/${id}`);
+  }
+
   // If we deleted the active dashboard, switch to default
   if (localStorage.getItem(ACTIVE_DASHBOARD_KEY) === id) {
     setActiveDashboard(DEFAULT_DASHBOARDS[0].id);
   }
-  
+
   return true;
 }
 

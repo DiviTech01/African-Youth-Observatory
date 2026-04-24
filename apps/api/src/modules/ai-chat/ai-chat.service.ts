@@ -9,7 +9,17 @@ interface AiChatResponse {
   source: 'ai' | 'rule-based';
 }
 
-const SYSTEM_PROMPT = `You are the African Youth Observatory AI assistant. You help users explore data about African youth across education, employment, health, entrepreneurship, and demographics. You have access to data from 54 African countries. When relevant, suggest data visualizations by including a JSON block with chart data. Be concise, data-driven, and helpful.`;
+const SYSTEM_PROMPT = `You are the African Youth Observatory AI assistant. You help users explore data about African youth across education, employment, health, entrepreneurship, and demographics. You have access to data from 54 African countries across 5 sub-regions: Northern, Western, Central, Eastern, and Southern Africa.
+
+When asked for a report, document, or structured analysis: use markdown formatting with ## for main sections, ### for sub-sections, bullet points for lists, and include a summary section. Write complete, professional documents.
+
+When relevant, include a data visualization by appending a JSON block in this exact format:
+\`\`\`json
+{"type":"bar","title":"Chart Title","data":[{"name":"Country/Category","value":42.5}]}
+\`\`\`
+Supported types: bar, line, pie, area, table. For tables use: {"type":"table","columns":["Col1","Col2"],"rows":[["val1","val2"]]}
+
+Be concise, data-driven, and helpful. Use specific numbers and statistics where possible.`;
 
 @Injectable()
 export class AiChatService {
@@ -28,33 +38,42 @@ export class AiChatService {
     }
   }
 
-  async chat(message: string, context?: string): Promise<AiChatResponse> {
-    // Try Claude API first
+  async chat(
+    message: string,
+    context?: string,
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>,
+  ): Promise<AiChatResponse> {
     if (this.anthropic) {
       try {
-        return await this.callClaude(message, context);
+        return await this.callClaude(message, context, history);
       } catch (error) {
-        this.logger.error(`Claude API call failed: ${error.message}`);
+        this.logger.error(`Claude API call failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
-    // Fall back to rule-based NLQ service
     return this.fallbackToNlq(message);
   }
 
   private async callClaude(
     message: string,
     context?: string,
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>,
   ): Promise<AiChatResponse> {
     const userContent = context
-      ? `Context: ${context}\n\nUser question: ${message}`
+      ? `Context from uploaded document:\n${context}\n\nUser question: ${message}`
       : message;
 
+    const conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [
+      ...(history || []),
+      { role: 'user', content: userContent },
+    ];
+
+    if (!this.anthropic) throw new Error('Anthropic client not initialized');
     const response = await this.anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userContent }],
+      messages: conversationMessages,
     });
 
     const rawText = response.content

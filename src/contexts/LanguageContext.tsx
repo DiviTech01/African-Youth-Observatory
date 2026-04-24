@@ -71,7 +71,7 @@ const translations: Record<Language, Record<string, string>> = {
     'common.yourCountry': 'Your Country',
 
     // Homepage
-    'home.title': 'African Youth Database',
+    'home.title': 'African Youth Observatory',
     'home.subtitle': 'Powering policy, research, innovation, and investment decisions with trusted, accessible youth data across all 54 African countries.',
     'home.searchPlaceholder': 'Search countries, indicators, themes...',
     'home.exploreData': 'Explore Data',
@@ -178,7 +178,7 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Contact
     'contact.title': 'Contact Us',
-    'contact.subtitle': "Get in touch with the African Youth Database team. We're here to help.",
+    'contact.subtitle': "Get in touch with the African Youth Observatory team. We're here to help.",
     'contact.send': 'Send Message',
 
     // Auth
@@ -202,7 +202,7 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.contact': 'Contact',
     'footer.newsletter': 'Newsletter',
     'footer.subscribe': 'Subscribe',
-    'footer.copyright': '\u00a9 2025 African Youth Database. All rights reserved.',
+    'footer.copyright': '\u00a9 2025 African Youth Observatory. All rights reserved.',
     'footer.privacy': 'Privacy Policy',
     'footer.terms': 'Terms of Service',
   },

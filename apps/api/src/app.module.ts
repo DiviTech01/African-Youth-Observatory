@@ -24,6 +24,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { EmbedModule } from './modules/embed/embed.module';
 import { DataUploadModule } from './modules/data-upload/data-upload.module';
 import { ContentModule } from './modules/content/content.module';
+import { MailModule } from './modules/mail/mail.module';
 import { CacheService } from './common/cache.service';
 
 @Global()
@@ -67,6 +68,9 @@ import { CacheService } from './common/cache.service';
     SearchModule,
     EmbedModule,
     ExportModule,
+
+    // Email
+    MailModule,
 
     // Auth & Admin
     AuthModule,

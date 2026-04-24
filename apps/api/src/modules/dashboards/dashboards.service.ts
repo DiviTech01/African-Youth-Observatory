@@ -26,15 +26,7 @@ export class DashboardsService {
       orderBy: { updatedAt: 'desc' },
     });
 
-    return dashboards.map((d) => ({
-      id: d.id,
-      title: d.title,
-      description: d.description,
-      isPublic: d.isPublic,
-      widgetCount: Array.isArray(d.widgets) ? (d.widgets as unknown[]).length : 0,
-      createdAt: d.createdAt.toISOString(),
-      updatedAt: d.updatedAt.toISOString(),
-    }));
+    return dashboards.map((d) => this.formatDashboard(d));
   }
 
   async listPublicDashboards(dto: ListPublicDashboardsDto) {

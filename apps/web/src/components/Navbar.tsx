@@ -18,6 +18,7 @@ const navLinks = [
   { to: '/youth-index', label: 'Youth Index' },
   { to: '/compare', label: 'Compare' },
   { to: '/dashboard', label: 'Dashboard' },
+  { to: '/ask-ai', label: 'Ask AI' },
   { to: '/insights', label: 'AI Insights' },
   { to: '/countries', label: 'Countries' },
   { to: '/reports', label: 'Reports' },

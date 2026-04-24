@@ -16,7 +16,7 @@ const Hero = () => {
                 Africa's Youth Data Intelligence Platform
               </div>
               <h1 className="text-3xl font-display font-bold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-                African Youth Database
+                African Youth Observatory
               </h1>
               <p className="max-w-[600px] text-muted-foreground text-base sm:text-lg md:text-xl mx-auto lg:mx-0">
                 Powering policy, research, innovation, and investment decisions with trusted, 
