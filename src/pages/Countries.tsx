@@ -14,6 +14,7 @@ import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Content } from '@/components/cms';
 
 // Fallback data in case API is not available
 const regionsMapFallback: Record<string, string[]> = {
@@ -170,7 +171,7 @@ const Countries = () => {
               className="mb-4 md:mb-6 gap-2 text-sm border-gray-800"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Country List
+              <Content as="span" id="countries.back_button" fallback="Back to Country List" />
             </Button>
 
             <CountryProfile country={selectedCountry} />
@@ -193,13 +194,15 @@ const Countries = () => {
             ) : filteredCountries.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <Search className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                <p className="text-lg font-medium">No countries found</p>
-                <p className="text-sm mt-1">Try adjusting your search or region filter.</p>
+                <Content as="p" id="countries.empty.title" fallback="No countries found" className="text-lg font-medium" />
+                <Content as="p" id="countries.empty.description" fallback="Try adjusting your search or region filter." className="text-sm mt-1" />
               </div>
             ) : (
               <>
                 {isError && (
-                  <Badge variant="secondary" className="mb-4 text-xs">Showing offline data</Badge>
+                  <Badge variant="secondary" className="mb-4 text-xs">
+                    <Content as="span" id="countries.offline_notice" fallback="Showing offline data" />
+                  </Badge>
                 )}
                 <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                   {filteredCountries.map(({ country, region }: any) => {
@@ -257,9 +260,12 @@ const Countries = () => {
                           </div>
 
                           <div className="flex items-center justify-between mt-1">
-                            <span className="text-[11px] sm:text-xs text-gray-500 font-medium group-hover:text-[#D4A017] transition-colors">
-                              View Profile
-                            </span>
+                            <Content
+                              as="span"
+                              id="countries.card.view_profile"
+                              fallback="View Profile"
+                              className="text-[11px] sm:text-xs text-gray-500 font-medium group-hover:text-[#D4A017] transition-colors"
+                            />
                             <ChevronRight className="h-3.5 w-3.5 text-gray-500 group-hover:text-[#D4A017] group-hover:translate-x-0.5 transition-all" />
                           </div>
                         </CardContent>

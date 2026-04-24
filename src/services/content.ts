@@ -176,10 +176,22 @@ export const contentApi = {
     defaultContent?: string;
     defaultStyles?: ContentStyles;
     description?: string;
-  }>) {
+  }>): Promise<{ created: number; updated: number; total: number }> {
     return request(`/content/sync-registry`, {
       method: 'POST',
       body: JSON.stringify({ entries }),
+    });
+  },
+
+  checkDrift(keys: string[]): Promise<{
+    missing: string[];
+    orphaned: string[];
+    localCount: number;
+    backendCount: number;
+  }> {
+    return request(`/content/drift`, {
+      method: 'POST',
+      body: JSON.stringify({ keys }),
     });
   },
 
@@ -187,5 +199,16 @@ export const contentApi = {
     const form = new FormData();
     form.append('file', file);
     return request(`/content/images`, { method: 'POST', body: form });
+  },
+
+  storageHealth(): Promise<{
+    configured: boolean;
+    reachable: boolean;
+    bucket: string | null;
+    publicUrl: string | null;
+    reason?: string;
+    missingVars?: string[];
+  }> {
+    return request(`/content/storage/health`);
   },
 };

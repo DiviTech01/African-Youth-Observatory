@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download, FileText, Calendar, Tag, Search, Filter, Star, Code, Copy, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { Content } from '@/components/cms';
+import { useContentText } from '@/contexts/ContentContext';
 
 type ReportType = 'Country Report' | 'Thematic Report' | 'Regional Report';
 
@@ -133,14 +135,20 @@ const Reports = () => {
   const [selectedYear, setSelectedYear] = useState('All Years');
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const { toast } = useToast();
+  const toastTitle = useContentText('reports.toast.embed_copied_title', 'Embed code copied!');
+  const toastDescTemplate = useContentText(
+    'reports.toast.embed_copied_description',
+    'Embed code for "{title}" has been copied to your clipboard.',
+  );
+  const searchPlaceholder = useContentText('reports.search.placeholder', 'Search reports...');
 
   const handleCopyEmbed = (report: typeof reports[0]) => {
     const embedCode = `<iframe src="https://ayd.africa/embed/report/${report.id}" width="600" height="400" frameborder="0" title="${report.title}"></iframe>`;
     navigator.clipboard.writeText(embedCode).then(() => {
       setCopiedId(report.id);
       toast({
-        title: 'Embed code copied!',
-        description: `Embed code for "${report.title}" has been copied to your clipboard.`,
+        title: toastTitle,
+        description: toastDescTemplate.replace('{title}', report.title),
       });
       setTimeout(() => setCopiedId(null), 2000);
     });
@@ -162,10 +170,18 @@ const Reports = () => {
       <header className="relative py-8 md:py-12 overflow-hidden">
         <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         <div className="container px-4 md:px-6 relative z-10">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter mb-2 bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">Reports & Publications</h1>
-          <p className="text-sm sm:text-base text-[#A89070]">
-            Access our latest reports, thematic briefs, and data publications on African youth development.
-          </p>
+          <Content
+            as="h1"
+            id="reports.header.title"
+            fallback="Reports & Publications"
+            className="text-2xl sm:text-3xl font-semibold tracking-tighter mb-2 bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent"
+          />
+          <Content
+            as="p"
+            id="reports.header.subtitle"
+            fallback="Access our latest reports, thematic briefs, and data publications on African youth development."
+            className="text-sm sm:text-base text-[#A89070]"
+          />
         </div>
       </header>
 
@@ -175,7 +191,7 @@ const Reports = () => {
           <section className="mb-8 md:mb-12">
             <h2 className="text-xl sm:text-2xl font-semibold tracking-tighter mb-4 flex items-center gap-2 bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">
               <Star className="h-5 w-5 text-pan-gold-500" />
-              Featured Publications
+              <Content as="span" id="reports.featured.heading" fallback="Featured Publications" />
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {featuredReports.map((report) => (
@@ -188,10 +204,13 @@ const Reports = () => {
                     <h3 className="font-bold text-base md:text-lg mb-2 line-clamp-2">{report.title}</h3>
                     <p className="text-xs sm:text-sm text-gray-400 mb-4 line-clamp-3">{report.description}</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">{report.downloads.toLocaleString()} downloads</span>
+                      <span className="text-xs text-gray-500">
+                        {report.downloads.toLocaleString()}{' '}
+                        <Content as="span" id="reports.downloads_suffix" fallback="downloads" />
+                      </span>
                       <Button size="sm" className="gap-1">
                         <Download className="h-3 w-3" />
-                        Download
+                        <Content as="span" id="reports.download_button" fallback="Download" />
                       </Button>
                     </div>
                   </CardContent>
@@ -205,14 +224,14 @@ const Reports = () => {
             <div className="flex flex-col gap-4 p-4 bg-white/[0.03] border border-gray-800 rounded-2xl">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-gray-400" />
-                <span className="font-medium text-sm">Filter Reports</span>
+                <Content as="span" id="reports.filters.heading" fallback="Filter Reports" className="font-medium text-sm" />
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <div className="lg:col-span-2 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Search reports..."
+                    placeholder={searchPlaceholder}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-9 text-sm border-gray-800 bg-white/[0.03]"
@@ -254,7 +273,9 @@ const Reports = () => {
 
           {/* All Reports - Card Grid */}
           <section>
-            <h2 className="text-xl sm:text-2xl font-semibold tracking-tighter mb-4 bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">All Publications ({filteredReports.length})</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tighter mb-4 bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">
+              <Content as="span" id="reports.all.heading" fallback="All Publications" /> ({filteredReports.length})
+            </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredReports.map((report) => (
                 <Card key={report.id} className="bg-white/[0.03] border-gray-800 rounded-2xl hover:border-gray-700 transition-all flex flex-col">
@@ -279,7 +300,10 @@ const Reports = () => {
                         {new Date(report.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                       <span>|</span>
-                      <span>{report.downloads.toLocaleString()} downloads</span>
+                      <span>
+                        {report.downloads.toLocaleString()}{' '}
+                        <Content as="span" id="reports.downloads_suffix" fallback="downloads" />
+                      </span>
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-auto">
@@ -300,7 +324,7 @@ const Reports = () => {
                         ) : (
                           <Code className="h-3 w-3" />
                         )}
-                        Embed
+                        <Content as="span" id="reports.embed_button" fallback="Embed" />
                       </Button>
                     </div>
                   </CardContent>
