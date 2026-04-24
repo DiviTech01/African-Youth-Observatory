@@ -15,7 +15,9 @@
       "Bash(curl -k https://african-youth-observatory.onrender.com/api/health)",
       "Bash(curl -k https://african-youth-observatory.onrender.com/)",
       "Bash(npm list:*)",
-      "Bash(npx wrangler:*)"
+      "Bash(npx wrangler:*)",
+      "Bash(node \"apps/api/node_modules/typescript/lib/tsc.js\" --noEmit -p tsconfig.app.json)",
+      "Bash(git stash *)"
     ]
   }
 }

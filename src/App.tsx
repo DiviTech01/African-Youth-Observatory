@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ContentProvider } from "@/contexts/ContentContext";
 import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import CookieConsent from "@/components/CookieConsent";
@@ -42,6 +43,7 @@ const FAQ = lazy(() => import("./pages/resources/FAQ"));
 const Methodology = lazy(() => import("./pages/resources/Methodology"));
 const CountryProfilePage = lazy(() => import("./pages/CountryProfilePage"));
 const DataUpload = lazy(() => import("./pages/DataUpload"));
+const ContentManager = lazy(() => import("./pages/admin/ContentManager"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,6 +64,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+          <ContentProvider>
           <UserPreferencesProvider>
           <AnimatePresence mode="wait">
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
@@ -106,6 +109,7 @@ const App = () => (
               <Route path="/dashboard/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
               <Route path="/settings" element={<DashboardLayout><PageTransition><Settings /></PageTransition></DashboardLayout>} />
               <Route path="/admin" element={<DashboardLayout><PageTransition><Admin /></PageTransition></DashboardLayout>} />
+              <Route path="/admin/cms" element={<DashboardLayout><PageTransition><ContentManager /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/data-upload" element={<DashboardLayout><PageTransition><DataUpload /></PageTransition></DashboardLayout>} />
 
               {/* Catch-all */}
@@ -114,6 +118,7 @@ const App = () => (
             </Suspense>
           </AnimatePresence>
           </UserPreferencesProvider>
+          </ContentProvider>
           </AuthProvider>
           <CookieConsent />
         </BrowserRouter>

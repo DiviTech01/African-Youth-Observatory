@@ -1,0 +1,191 @@
+// CMS / Content API client — fetches published content, admin CRUD helpers.
+
+const _viteUrl = import.meta.env.VITE_API_URL as string | undefined;
+export const CONTENT_API_BASE =
+  _viteUrl && _viteUrl.startsWith('http')
+    ? _viteUrl
+    : import.meta.env.PROD
+      ? 'https://african-youth-observatory.onrender.com/api'
+      : '/api';
+
+export type ContentType = 'TEXT' | 'RICH_TEXT' | 'IMAGE';
+
+export interface ContentStyles {
+  color?: string;
+  backgroundColor?: string;
+  fontSize?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  textAlign?: string;
+  letterSpacing?: string;
+  lineHeight?: string;
+  textDecoration?: string;
+  textTransform?: string;
+}
+
+export interface PublishedContent {
+  content: string;
+  styles: ContentStyles;
+  imageUrl: string | null;
+  contentType: ContentType;
+  version: number;
+}
+
+export type PublishedContentMap = Record<string, PublishedContent>;
+
+export interface ContentEntryRow {
+  id: string;
+  key: string;
+  page: string;
+  section: string | null;
+  contentType: ContentType;
+  description: string | null;
+  status: 'published' | 'draft' | 'new';
+  currentContent: string;
+  draftContent: string | null;
+  imageUrl: string | null;
+  updatedAt: string;
+}
+
+export interface ContentEntryDetail {
+  id: string;
+  key: string;
+  page: string;
+  section: string | null;
+  contentType: ContentType;
+  defaultContent: string;
+  defaultStyles: ContentStyles;
+  description: string | null;
+  draft: {
+    content: string;
+    styles: ContentStyles;
+    imageUrl: string | null;
+    updatedAt: string;
+    updatedById: string | null;
+  } | null;
+  published: {
+    content: string;
+    styles: ContentStyles;
+    imageUrl: string | null;
+    version: number;
+    publishedAt: string;
+    publishedById: string | null;
+  } | null;
+  revisions: Array<{
+    id: string;
+    content: string;
+    styles: ContentStyles;
+    imageUrl: string | null;
+    version: number;
+    action: 'SAVE_DRAFT' | 'PUBLISH' | 'REVERT' | 'DISCARD_DRAFT';
+    actorId: string | null;
+    createdAt: string;
+  }>;
+}
+
+export interface PageTreeNode {
+  page: string;
+  sections: Record<string, number>;
+  total: number;
+}
+
+function authHeader(): Record<string, string> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('ayd_token') : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${CONTENT_API_BASE}${path}`, {
+    ...init,
+    headers: {
+      ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+      ...authHeader(),
+      ...(init.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || `Content API error ${res.status}`);
+  }
+  return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
+}
+
+export const contentApi = {
+  getPublished(preview = false): Promise<PublishedContentMap> {
+    return request<PublishedContentMap>(`/content/published${preview ? '?preview=1' : ''}`);
+  },
+
+  listEntries(params: {
+    search?: string;
+    page?: string;
+    section?: string;
+    contentType?: ContentType;
+    status?: 'all' | 'published' | 'draft' | 'new';
+    pageNum?: number;
+    pageSize?: number;
+  } = {}): Promise<{ data: ContentEntryRow[]; total: number; page: number; pageSize: number }> {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    });
+    return request(`/content/entries?${qs.toString()}`);
+  },
+
+  listPages(): Promise<PageTreeNode[]> {
+    return request(`/content/pages`);
+  },
+
+  getEntry(key: string): Promise<ContentEntryDetail> {
+    return request(`/content/entries/${encodeURIComponent(key)}`);
+  },
+
+  saveDraft(
+    key: string,
+    payload: { content: string; styles?: ContentStyles; imageUrl?: string | null },
+  ) {
+    return request(`/content/entries/${encodeURIComponent(key)}/draft`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  publish(key: string) {
+    return request(`/content/entries/${encodeURIComponent(key)}/publish`, {
+      method: 'POST',
+    });
+  },
+
+  revert(key: string, revisionId: string) {
+    return request(`/content/entries/${encodeURIComponent(key)}/revert`, {
+      method: 'POST',
+      body: JSON.stringify({ revisionId }),
+    });
+  },
+
+  discardDraft(key: string) {
+    return request(`/content/entries/${encodeURIComponent(key)}/draft`, {
+      method: 'DELETE',
+    });
+  },
+
+  syncRegistry(entries: Array<{
+    key: string;
+    page: string;
+    section?: string;
+    contentType?: ContentType;
+    defaultContent?: string;
+    defaultStyles?: ContentStyles;
+    description?: string;
+  }>) {
+    return request(`/content/sync-registry`, {
+      method: 'POST',
+      body: JSON.stringify({ entries }),
+    });
+  },
+
+  async uploadImage(file: File): Promise<{ url: string; key: string }> {
+    const form = new FormData();
+    form.append('file', file);
+    return request(`/content/images`, { method: 'POST', body: form });
+  },
+};

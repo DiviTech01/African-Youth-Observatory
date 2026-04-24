@@ -23,6 +23,7 @@ import { SearchModule } from './modules/search/search.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { EmbedModule } from './modules/embed/embed.module';
 import { DataUploadModule } from './modules/data-upload/data-upload.module';
+import { ContentModule } from './modules/content/content.module';
 import { CacheService } from './common/cache.service';
 
 @Global()
@@ -71,6 +72,7 @@ import { CacheService } from './common/cache.service';
     AuthModule,
     AdminModule,
     DataUploadModule,
+    ContentModule,
 
     // Platform
     PlatformModule,

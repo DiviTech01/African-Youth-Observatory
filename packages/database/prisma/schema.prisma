@@ -217,7 +217,10 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  dashboards Dashboard[]
+  dashboards        Dashboard[]
+  contentDrafts     ContentDraft[]
+  contentPublished  ContentPublished[]
+  contentRevisions  ContentRevision[]
 }
 
 enum UserRole {
@@ -245,6 +248,92 @@ model Dashboard {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+// ============ CMS / CONTENT ============
+
+model ContentEntry {
+  id             String      @id @default(cuid())
+  key            String      @unique
+  page           String
+  section        String?
+  contentType    ContentType @default(TEXT)
+  defaultContent String      @default("")
+  defaultStyles  Json        @default("{}")
+  description    String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  draft     ContentDraft?
+  published ContentPublished?
+  revisions ContentRevision[]
+
+  @@index([page])
+  @@index([section])
+  @@index([contentType])
+}
+
+enum ContentType {
+  TEXT
+  RICH_TEXT
+  IMAGE
+}
+
+model ContentDraft {
+  id         String   @id @default(cuid())
+  entryId    String   @unique
+  content    String   @default("")
+  styles     Json     @default("{}")
+  imageUrl   String?
+  updatedById String?
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  entry     ContentEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  updatedBy User?        @relation(fields: [updatedById], references: [id])
+
+  @@index([updatedById])
+}
+
+model ContentPublished {
+  id          String   @id @default(cuid())
+  entryId     String   @unique
+  content     String   @default("")
+  styles      Json     @default("{}")
+  imageUrl    String?
+  version     Int      @default(1)
+  publishedById String?
+  publishedAt DateTime @default(now())
+
+  entry       ContentEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  publishedBy User?        @relation(fields: [publishedById], references: [id])
+
+  @@index([publishedById])
+}
+
+model ContentRevision {
+  id        String         @id @default(cuid())
+  entryId   String
+  content   String         @default("")
+  styles    Json           @default("{}")
+  imageUrl  String?
+  version   Int
+  action    RevisionAction
+  actorId   String?
+  createdAt DateTime       @default(now())
+
+  entry ContentEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  actor User?        @relation(fields: [actorId], references: [id])
+
+  @@index([entryId, createdAt])
+  @@index([actorId])
+}
+
+enum RevisionAction {
+  SAVE_DRAFT
+  PUBLISH
+  REVERT
+  DISCARD_DRAFT
 }
 
 // ============ DATA SOURCES ============
