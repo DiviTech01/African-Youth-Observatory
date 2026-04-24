@@ -111,7 +111,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+    const hasHashToken = typeof window !== 'undefined' && window.location.hash.includes('access_token');
+    const hasCode = typeof window !== 'undefined' && window.location.search.includes('code=');
+    const hasError = typeof window !== 'undefined' && (window.location.hash.includes('error') || window.location.search.includes('error'));
+    console.log('[auth] mount — url hints:', { hasHashToken, hasCode, hasError, href: window.location.href });
+
+    supabase.auth.getSession().then(async ({ data: { session: s }, error }) => {
+      console.log('[auth] getSession resolved —', { hasSession: !!s, email: s?.user?.email, error: error?.message });
       setSession(s);
       if (s) {
         await syncBackendUser(s.access_token);
@@ -126,7 +132,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
+      console.log('[auth] onAuthStateChange —', { event, hasSession: !!s, email: s?.user?.email, provider: s?.user?.app_metadata?.provider });
       setSession(s);
       if (s) {
         await syncBackendUser(s.access_token);
