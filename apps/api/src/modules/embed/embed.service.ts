@@ -142,7 +142,7 @@ export class EmbedService {
       <span>${value ? value.year : 'No data'}</span>
       <span class="trend" style="color:${trendColor}">${trendArrow}</span>
     </div>
-    <div class="watermark">Data: <a href="https://africanyouthdatabase.org" target="_blank">African Youth Database</a></div>
+    <div class="watermark">Data: <a href="https://africanyouthobservatory.org" target="_blank">African Youth Observatory</a></div>
   </div>
 </body>
 </html>`;
@@ -266,7 +266,7 @@ export class EmbedService {
     <div class="legend-bar"></div>
     <span>High (${this.formatValue(maxVal, indicator.unit)})</span>
   </div>
-  <div class="watermark">Data: <a href="https://africanyouthdatabase.org" target="_blank">African Youth Database</a></div>
+  <div class="watermark">Data: <a href="https://africanyouthobservatory.org" target="_blank">African Youth Observatory</a></div>
 </body>
 </html>`;
 
@@ -450,7 +450,7 @@ export class EmbedService {
 </head>
 <body>
   <div class="chart-container"><canvas id="chart"></canvas></div>
-  <div class="watermark">Data: <a href="https://africanyouthdatabase.org" target="_blank">African Youth Database</a></div>
+  <div class="watermark">Data: <a href="https://africanyouthobservatory.org" target="_blank">African Youth Observatory</a></div>
   <script>
     const ctx = document.getElementById('chart').getContext('2d');
     new Chart(ctx, ${JSON.stringify(chartConfig)});

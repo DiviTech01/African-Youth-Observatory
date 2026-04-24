@@ -128,7 +128,7 @@ export class ExportService {
       '# African Youth Database — Data Export',
       `# Generated: ${now}`,
       `# Filters: ${filterDesc}`,
-      '# Source: africanyouthdatabase.org',
+      '# Source: africanyouthobservatory.org',
       '# License: CC BY 4.0',
       '',
     ].join('\n');
@@ -190,7 +190,7 @@ export class ExportService {
         exportDate: now,
         filters: this.describeFilters(query),
         recordCount: rows.length,
-        source: 'africanyouthdatabase.org',
+        source: 'africanyouthobservatory.org',
         license: 'CC BY 4.0',
       },
       data: rows,
@@ -242,7 +242,7 @@ export class ExportService {
       ['Platform', 'African Youth Database'],
       ['Export Date', now],
       ['Record Count', String(rows.length)],
-      ['Source', 'africanyouthdatabase.org'],
+      ['Source', 'africanyouthobservatory.org'],
       ['License', 'CC BY 4.0'],
       ...Object.entries(filters).map(([k, v]) => [`Filter: ${k}`, v]),
     ];
@@ -376,7 +376,7 @@ export class ExportService {
   </table>
 
   <footer>
-    Source: africanyouthdatabase.org | Data as of ${indicators[0]?.year || 'N/A'} | License: CC BY 4.0
+    Source: africanyouthobservatory.org | Data as of ${indicators[0]?.year || 'N/A'} | License: CC BY 4.0
   </footer>
 </body>
 </html>`;

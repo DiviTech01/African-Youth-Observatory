@@ -11,17 +11,25 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
-  // CORS — allow all dev servers + production
+  const isProd = process.env.NODE_ENV === 'production';
+  const localhostOrigins = isProd ? [] : [
+    'http://localhost:8080',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+  const corsOriginEnv = (process.env.CORS_ORIGIN || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  const allowedOrigins = [
+    ...localhostOrigins,
+    ...corsOriginEnv,
+    'https://africanyouthobservatory.org',
+    'https://www.africanyouthobservatory.org',
+    'https://african-youth-observatory.pages.dev',
+  ];
   app.enableCors({
-    origin: [
-      'http://localhost:8080',       // Vite dev server (Dev 2's port)
-      'http://localhost:5173',       // Vite default
-      'http://localhost:3000',       // Next.js default
-      process.env.CORS_ORIGIN || '',
-      'https://africanyouthdatabase.org',
-      'https://www.africanyouthdatabase.org',
-      'https://african-youth-observatory.pages.dev',  // Cloudflare Pages
-    ].filter(Boolean),
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -69,7 +77,7 @@ Most GET endpoints are public. Protected endpoints require a Bearer token obtain
 World Bank, ILO, UNESCO, national statistics bureaus`,
     )
     .setVersion('1.0.0')
-    .setContact('AYD Team', 'https://africanyouthdatabase.org', 'info@africanyouthdatabase.org')
+    .setContact('AYD Team', 'https://africanyouthobservatory.org', 'info@africanyouthobservatory.org')
     .setLicense('CC BY 4.0', 'https://creativecommons.org/licenses/by/4.0/')
     .addBearerAuth()
     .addTag('countries', 'Country data and profiles')
