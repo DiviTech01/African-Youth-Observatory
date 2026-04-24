@@ -31,6 +31,20 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+// Ensures a row exists in our backend DB for the authenticated Supabase user.
+// Hitting GET /auth/profile triggers jwt.strategy.ts which JIT-provisions the
+// user row on first login. Runs to completion (no timeout) so Render cold
+// starts can't short-circuit provisioning for Google OAuth / other providers.
+async function syncBackendUser(accessToken: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/auth/profile`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  } catch (e) {
+    console.warn('Backend user sync failed:', e);
+  }
+}
+
 async function fetchProfile(
   accessToken: string,
   fallback: { id: string; email: string; name?: string },
@@ -91,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       setSession(s);
       if (s) {
+        await syncBackendUser(s.access_token);
         const profile = await fetchProfile(s.access_token, {
           id: s.user.id,
           email: s.user.email ?? '',
@@ -105,6 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       if (s) {
+        await syncBackendUser(s.access_token);
         const profile = await fetchProfile(s.access_token, {
           id: s.user.id,
           email: s.user.email ?? '',
