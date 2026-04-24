@@ -1,20 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as crypto from 'crypto';
-
-// Simple bcryptjs-compatible hash for seed only (avoids needing bcryptjs at seed time)
-// When bcryptjs is installed, replace with: import * as bcrypt from 'bcryptjs'; bcrypt.hashSync(...)
-async function hashPassword(password: string): Promise<string> {
-  // Use dynamic import to try bcryptjs first, fall back to SHA-256
-  try {
-    const bcrypt = await import('bcryptjs');
-    return bcrypt.hashSync(password, 12);
-  } catch {
-    // Fallback if bcryptjs not available at seed time
-    return '$2a$12$' + crypto.createHash('sha256').update(password + 'ayd-salt').digest('hex');
-  }
-}
 
 const prisma = new PrismaClient();
 
@@ -259,60 +245,26 @@ async function main() {
     }
   }
 
-  // 6. Seed default admin user
-  // NOTE: Change this password in production!
-  console.log('  👤 Seeding default admin user...');
-  const adminPasswordHash = await hashPassword('AYD@Admin2026!');
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@africanyouthdatabase.org' },
-    update: {},
-    create: {
-      email: 'admin@africanyouthdatabase.org',
-      name: 'AYD Admin',
-      passwordHash: adminPasswordHash,
-      role: 'ADMIN',
-      organization: 'African Youth Database',
-    },
-  });
-  console.log(`  ✅ Admin user created: ${adminUser.email}`);
-
-  // 6b. Seed data team contributor account
-  console.log('  👤 Seeding data contributor account...');
-  const contributorPasswordHash = await hashPassword('AYD@Data2026!');
-  const contributorUser = await prisma.user.upsert({
-    where: { email: 'data@africanyouthdatabase.org' },
-    update: {},
-    create: {
-      email: 'data@africanyouthdatabase.org',
-      name: 'AYD Data Team',
-      passwordHash: contributorPasswordHash,
-      role: 'CONTRIBUTOR',
-      organization: 'African Youth Database',
-    },
-  });
-  console.log(`  ✅ Contributor user created: ${contributorUser.email}`);
-
-  // 6c. Seed additional test accounts
-  console.log('  👤 Seeding test accounts...');
-  const testAccounts = [
-    { email: 'researcher@africanyouthdatabase.org', name: 'Test Researcher', role: 'RESEARCHER' as const, password: 'AYD@Research2026!' },
-    { email: 'demo@africanyouthdatabase.org', name: 'Demo User', role: 'REGISTERED' as const, password: 'AYD@Demo2026!' },
+  // 6. Seed role-binding user rows.
+  // Supabase owns authentication; these rows exist only to attach roles.
+  // When a real user signs in via Supabase, JIT provisioning in JwtStrategy
+  // creates/links rows by Supabase UUID.
+  console.log('  👤 Seeding role-binding user rows...');
+  const seedUsers = [
+    { id: 'seed-admin-001', email: 'admin@africanyouthobservatory.org', name: 'AYO Admin', role: 'ADMIN' as const },
+    { id: 'seed-contributor-001', email: 'data@africanyouthobservatory.org', name: 'Data Team', role: 'CONTRIBUTOR' as const },
   ];
-  for (const acct of testAccounts) {
-    const hash = await hashPassword(acct.password);
-    await prisma.user.upsert({
-      where: { email: acct.email },
-      update: {},
-      create: {
-        email: acct.email,
-        name: acct.name,
-        passwordHash: hash,
-        role: acct.role,
-        organization: 'African Youth Database',
-      },
+  let adminUser: { id: string; email: string } | null = null;
+  for (const u of seedUsers) {
+    const row = await prisma.user.upsert({
+      where: { email: u.email },
+      update: { role: u.role },
+      create: { id: u.id, email: u.email, name: u.name, role: u.role },
     });
-    console.log(`    ✅ ${acct.role}: ${acct.email}`);
+    if (u.role === 'ADMIN') adminUser = { id: row.id, email: row.email };
+    console.log(`    ✅ ${u.role}: ${row.email}`);
   }
+  if (!adminUser) throw new Error('Admin seed user missing — cannot attach dashboard templates');
 
   // 7. Seed dashboard templates
   console.log('  📊 Seeding dashboard templates...');

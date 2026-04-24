@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, RadarChart, Radar,
   PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -208,8 +209,17 @@ const chartTypeOptions: { type: ChartType; label: string; icon: React.ReactNode 
 // ── Main Dashboard component ───────────────────────────────────────────────────
 
 const Dashboard = () => {
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
   const { preferences, isPersonalized } = useUserPreferences();
   const [widgets, setWidgets] = useState<Widget[]>(defaultWidgets);
+
+  // Redirect admin users to the admin panel
+  useEffect(() => {
+    if (!isLoading && user?.role === 'ADMIN') {
+      navigate('/admin', { replace: true });
+    }
+  }, [user, isLoading, navigate]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const countryMeta = isPersonalized && preferences.myCountry ? getCountryMeta(preferences.myCountry) : null;
 

@@ -1,7 +1,5 @@
 import { Controller, Post } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const bcrypt = require('bcryptjs');
 
 @Controller('seed')
 export class SeedController {
@@ -9,20 +7,20 @@ export class SeedController {
 
   @Post('users')
   async seedUsers() {
+    // Supabase owns authentication; these rows exist only to attach roles.
     const users = [
-      { email: 'admin@africanyouthdatabase.org', name: 'AYD Admin', role: 'ADMIN', password: 'AYD@Admin2026!' },
-      { email: 'data@africanyouthdatabase.org', name: 'Data Team', role: 'CONTRIBUTOR', password: 'AYD@Data2026!' },
-      { email: 'researcher@africanyouthdatabase.org', name: 'Test Researcher', role: 'RESEARCHER', password: 'AYD@Research2026!' },
-      { email: 'demo@africanyouthdatabase.org', name: 'Demo User', role: 'REGISTERED', password: 'AYD@Demo2026!' },
+      { id: 'seed-admin-001', email: 'admin@africanyouthobservatory.org', name: 'AYO Admin', role: 'ADMIN' },
+      { id: 'seed-contributor-001', email: 'data@africanyouthobservatory.org', name: 'Data Team', role: 'CONTRIBUTOR' },
+      { id: 'seed-researcher-001', email: 'researcher@africanyouthobservatory.org', name: 'Test Researcher', role: 'RESEARCHER' },
+      { id: 'seed-demo-001', email: 'demo@africanyouthobservatory.org', name: 'Demo User', role: 'REGISTERED' },
     ];
 
     const results = [];
     for (const u of users) {
-      const hash = await bcrypt.hash(u.password, 12);
       const user = await this.prisma.user.upsert({
         where: { email: u.email },
-        update: {},
-        create: { email: u.email, name: u.name, role: u.role as any, passwordHash: hash },
+        update: { role: u.role as any },
+        create: { id: u.id, email: u.email, name: u.name, role: u.role as any },
       });
       results.push({ email: user.email, role: user.role, status: 'ok' });
     }

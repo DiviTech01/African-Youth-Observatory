@@ -22,6 +22,7 @@ import FAQ from "./pages/resources/FAQ";
 import Methodology from "./pages/resources/Methodology";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
+import AskAI from "./pages/AskAI";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/youth-index" element={<YouthIndex />} />
             <Route path="/insights" element={<Insights />} />
+            <Route path="/ask-ai" element={<AskAI />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/resources/glossary" element={<Glossary />} />
             <Route path="/resources/faq" element={<FAQ />} />

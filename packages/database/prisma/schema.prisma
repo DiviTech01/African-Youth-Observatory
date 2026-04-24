@@ -280,14 +280,14 @@ enum ContentType {
 }
 
 model ContentDraft {
-  id         String   @id @default(cuid())
-  entryId    String   @unique
-  content    String   @default("")
-  styles     Json     @default("{}")
-  imageUrl   String?
+  id          String   @id @default(cuid())
+  entryId     String   @unique
+  content     String   @default("")
+  styles      Json     @default("{}")
+  imageUrl    String?
   updatedById String?
-  updatedAt  DateTime @updatedAt
-  createdAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
 
   entry     ContentEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
   updatedBy User?        @relation(fields: [updatedById], references: [id])
@@ -296,14 +296,14 @@ model ContentDraft {
 }
 
 model ContentPublished {
-  id          String   @id @default(cuid())
-  entryId     String   @unique
-  content     String   @default("")
-  styles      Json     @default("{}")
-  imageUrl    String?
-  version     Int      @default(1)
+  id            String   @id @default(cuid())
+  entryId       String   @unique
+  content       String   @default("")
+  styles        Json     @default("{}")
+  imageUrl      String?
+  version       Int      @default(1)
   publishedById String?
-  publishedAt DateTime @default(now())
+  publishedAt   DateTime @default(now())
 
   entry       ContentEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
   publishedBy User?        @relation(fields: [publishedById], references: [id])

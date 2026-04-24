@@ -122,7 +122,7 @@ const Settings = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">Settings</h1>
           <p className="text-sm sm:text-base text-[#A89070]">
-            Personalize your experience on the African Youth Database.
+            Personalize your experience on the African Youth Observatory.
           </p>
         </div>
       </div>

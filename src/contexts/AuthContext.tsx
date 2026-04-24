@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { triggerDashboardSync } from '@/services/dashboard';
 
 const _viteUrl = import.meta.env.VITE_API_URL as string | undefined;
 const API_BASE = (_viteUrl && _viteUrl.startsWith('http'))
@@ -28,107 +31,120 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+async function fetchProfile(
+  accessToken: string,
+  fallback: { id: string; email: string; name?: string },
+): Promise<User> {
+  // Primary: fetch role/profile directly from Supabase User table
+  try {
+    const { data, error } = await supabase
+      .from('User')
+      .select('id, email, name, role, organization, avatar')
+      .eq('id', fallback.id)
+      .single();
+    if (!error && data) {
+      return {
+        id: data.id,
+        name: data.name || fallback.name || fallback.email.split('@')[0],
+        email: data.email,
+        role: (data.role || 'REGISTERED').toUpperCase() as UserRole,
+        organization: data.organization,
+        avatar: data.avatar,
+      };
+    }
+  } catch { /* fall through */ }
+
+  // Secondary: try backend (may be sleeping on free tier)
+  try {
+    const res = await fetch(`${API_BASE}/auth/profile`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        id: data.id,
+        name: data.name || fallback.email.split('@')[0],
+        email: data.email,
+        role: (data.role || 'REGISTERED').toUpperCase() as UserRole,
+        organization: data.organization,
+        avatar: data.avatar,
+      };
+    }
+  } catch { /* fall through */ }
+
+  // Last resort fallback
+  return {
+    id: fallback.id,
+    name: fallback.name || fallback.email.split('@')[0],
+    email: fallback.email,
+    role: 'REGISTERED',
+  };
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Validate existing token on mount
   useEffect(() => {
-    const token = localStorage.getItem('ayd_token');
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-    fetch(`${API_BASE}/auth/profile`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Invalid token');
-        return res.json();
-      })
-      .then(data => {
-        setUser({
-          id: data.id,
-          name: data.name || data.email.split('@')[0],
-          email: data.email,
-          role: (data.role || 'REGISTERED').toUpperCase() as UserRole,
-          organization: data.organization,
-          avatar: data.avatar,
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      setSession(s);
+      if (s) {
+        const profile = await fetchProfile(s.access_token, {
+          id: s.user.id,
+          email: s.user.email ?? '',
+          name: s.user.user_metadata?.name,
         });
-      })
-      .catch(() => {
-        localStorage.removeItem('ayd_token');
-        localStorage.removeItem('ayd_refresh_token');
-      })
-      .finally(() => setIsLoading(false));
+        setUser(profile);
+        triggerDashboardSync();
+      }
+      setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+      setSession(s);
+      if (s) {
+        const profile = await fetchProfile(s.access_token, {
+          id: s.user.id,
+          email: s.user.email ?? '',
+          name: s.user.user_metadata?.name,
+        });
+        setUser(profile);
+        // Sync dashboards from server on login
+        triggerDashboardSync();
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/auth/signin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Invalid credentials');
-      }
-      const data = await res.json();
-      const accessToken = data.tokens?.accessToken || data.token;
-      const refreshToken = data.tokens?.refreshToken;
-      if (accessToken) localStorage.setItem('ayd_token', accessToken);
-      if (refreshToken) localStorage.setItem('ayd_refresh_token', refreshToken);
-      setUser({
-        id: data.user.id,
-        name: data.user.name || data.user.email.split('@')[0],
-        email: data.user.email,
-        role: (data.user.role || 'REGISTERED').toUpperCase() as UserRole,
-        organization: data.user.organization,
-        avatar: data.user.avatar,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
   }, []);
 
   const signUp = useCallback(async (name: string, email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Registration failed');
-      }
-      const data = await res.json();
-      const accessToken = data.tokens?.accessToken || data.token;
-      const refreshToken = data.tokens?.refreshToken;
-      if (accessToken) localStorage.setItem('ayd_token', accessToken);
-      if (refreshToken) localStorage.setItem('ayd_refresh_token', refreshToken);
-      setUser({
-        id: data.user.id,
-        name: data.user.name || name,
-        email: data.user.email,
-        role: (data.user.role || 'REGISTERED').toUpperCase() as UserRole,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name },
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+    if (error) throw new Error(error.message);
   }, []);
 
   const signOut = useCallback(() => {
-    localStorage.removeItem('ayd_token');
-    localStorage.removeItem('ayd_refresh_token');
-    localStorage.removeItem('ayd_user');
+    void supabase.auth.signOut();
     setUser(null);
+    setSession(null);
   }, []);
 
-  const getToken = useCallback(() => localStorage.getItem('ayd_token'), []);
+  const getToken = useCallback(() => session?.access_token ?? null, [session]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ user, isAuthenticated: !!user, isLoading, signIn, signUp, signOut, getToken }),
