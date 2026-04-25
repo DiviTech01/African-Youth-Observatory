@@ -17,7 +17,11 @@
       "Bash(npm list:*)",
       "Bash(npx wrangler:*)",
       "Bash(node \"apps/api/node_modules/typescript/lib/tsc.js\" --noEmit -p tsconfig.app.json)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

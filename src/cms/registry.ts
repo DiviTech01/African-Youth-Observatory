@@ -34,6 +34,7 @@ import { aboutEntries } from './pages/about';
 import { contactEntries } from './pages/contact';
 import { resourcesEntries } from './pages/resources';
 import { chromeEntries } from './pages/chrome';
+import { dataPagesEntries } from './pages/data-pages';
 
 cmsRegistry.push(
   ...landingEntries,
@@ -42,4 +43,5 @@ cmsRegistry.push(
   ...contactEntries,
   ...resourcesEntries,
   ...chromeEntries,
+  ...dataPagesEntries,
 );

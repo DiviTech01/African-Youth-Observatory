@@ -38,6 +38,8 @@ import {
   type PageTreeNode,
 } from '@/services/content';
 import EntryEditor from '@/components/admin/cms/EntryEditor';
+import DriftBanner from '@/components/admin/cms/DriftBanner';
+import StorageStatusBanner from '@/components/admin/cms/StorageStatusBanner';
 import { cn } from '@/lib/utils';
 
 type StatusFilter = 'all' | 'published' | 'draft' | 'new';
@@ -250,6 +252,11 @@ const ContentManager: React.FC = () => {
             >
               <Eye className="mr-1 h-4 w-4" /> Preview drafts
             </Button>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <DriftBanner onSynced={() => { loadTree(); loadEntries(); }} />
+            <StorageStatusBanner />
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">

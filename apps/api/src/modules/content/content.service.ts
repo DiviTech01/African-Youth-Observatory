@@ -324,6 +324,25 @@ export class ContentService {
     return { created, updated, total: dto.entries.length };
   }
 
+  async checkDrift(localKeys: string[]) {
+    const localSet = new Set(localKeys);
+    const allEntries = await this.prisma.contentEntry.findMany({ select: { key: true } });
+    const dbSet = new Set(allEntries.map((e) => e.key));
+
+    const missing: string[] = [];
+    for (const key of localSet) if (!dbSet.has(key)) missing.push(key);
+
+    const orphaned: string[] = [];
+    for (const key of dbSet) if (!localSet.has(key)) orphaned.push(key);
+
+    return {
+      missing: missing.sort(),
+      orphaned: orphaned.sort(),
+      localCount: localSet.size,
+      backendCount: dbSet.size,
+    };
+  }
+
   async listPages() {
     const rows = await this.prisma.contentEntry.groupBy({
       by: ['page', 'section'],

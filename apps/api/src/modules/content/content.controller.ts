@@ -30,6 +30,7 @@ import {
   RevertDto,
   SyncRegistryDto,
   PublishedQueryDto,
+  DriftCheckDto,
 } from './content.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -139,6 +140,15 @@ export class ContentController {
     return this.contentService.syncRegistry(dto);
   }
 
+  @Post('drift')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Compare a local key list against the DB to detect drift' })
+  drift(@Body() dto: DriftCheckDto) {
+    return this.contentService.checkDrift(dto.keys);
+  }
+
   @Post('images')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -152,5 +162,14 @@ export class ContentController {
       throw new BadRequestException(`Unsupported mime type: ${file.mimetype}`);
     }
     return this.r2.uploadImage(file);
+  }
+
+  @Get('storage/health')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Check whether R2 is configured and the bucket is reachable' })
+  storageHealth() {
+    return this.r2.health();
   }
 }

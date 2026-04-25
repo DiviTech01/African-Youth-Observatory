@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useExportGuard } from '@/hooks/useExportGuard';
 import { GuestInviteModal } from '@/components/GuestInviteModal';
+import { Content } from '@/components/cms';
 
 const mockIndexData = [
   { rank: 1, country: "Mauritius", score: 78.4, change: 2, education: 85.2, employment: 71.3, health: 82.1, civic: 74.8 },
@@ -166,7 +167,7 @@ const YouthIndex = () => {
               </Select>
               <Button variant="outline" className="gap-2" onClick={handleExport}>
                 <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Export</span>
+                <Content as="span" id="youth_index.export_button" fallback="Export" className="hidden sm:inline" />
               </Button>
             </div>
           </div>
@@ -198,7 +199,7 @@ const YouthIndex = () => {
               <Card key={item.country} className={`relative overflow-hidden bg-white/[0.03] border-gray-800 rounded-2xl ${idx === 0 ? 'border-2 border-pan-gold-400' : ''}`}>
                 {idx === 0 && (
                   <div className="absolute top-0 right-0 bg-pan-gold-400 text-white px-3 py-1 text-xs font-medium">
-                    Top Ranked
+                    <Content as="span" id="youth_index.top_ranked_badge" fallback="Top Ranked" />
                   </div>
                 )}
                 <CardContent className="p-6">
@@ -216,7 +217,8 @@ const YouthIndex = () => {
                         <span className="text-sm text-gray-500">/ 100</span>
                         {getTrendIcon(item.change)}
                         <span className={`text-xs ${item.change > 0 ? 'text-pan-green-500' : item.change < 0 ? 'text-pan-red-500' : 'text-gray-500'}`}>
-                          {item.change > 0 ? '+' : ''}{item.change} from last year
+                          {item.change > 0 ? '+' : ''}{item.change}{' '}
+                          <Content as="span" id="youth_index.change_suffix" fallback="from last year" />
                         </span>
                       </div>
                     </div>
@@ -364,7 +366,11 @@ const YouthIndex = () => {
                           <span className="inline-flex items-center gap-2">
                             <CountryFlag country={item.country} size="sm" />
                             {item.country}
-                            {isMyCountry && <Badge className="ml-1 bg-primary/15 text-primary border-primary/30 text-[10px] px-1.5 py-0">Your Country</Badge>}
+                            {isMyCountry && (
+                              <Badge className="ml-1 bg-primary/15 text-primary border-primary/30 text-[10px] px-1.5 py-0">
+                                <Content as="span" id="youth_index.your_country_badge" fallback="Your Country" />
+                              </Badge>
+                            )}
                           </span>
                         </td>
                         <td className={`py-3 px-2 font-bold ${getScoreColor(item.score)}`}>
@@ -396,13 +402,15 @@ const YouthIndex = () => {
 
           {/* Methodology Note */}
           <div className="mt-8 p-4 bg-white/[0.03] border border-gray-800 rounded-2xl">
-            <h3 className="font-bold mb-2">About the African Youth Index</h3>
+            <Content as="h3" id="youth_index.about.title" fallback="About the African Youth Index" className="font-bold mb-2" />
             <p className="text-sm text-gray-400">
-              The AYI is a composite indicator ranking African countries based on youth development outcomes. 
-              Scores range from 0-100, calculated across four dimensions: Education (25%), Employment (30%), 
-              Health (25%), and Civic Engagement (20%). Rankings are updated annually. 
+              <Content
+                as="span"
+                id="youth_index.about.body"
+                fallback="The AYI is a composite indicator ranking African countries based on youth development outcomes. Scores range from 0-100, calculated across four dimensions: Education (25%), Employment (30%), Health (25%), and Civic Engagement (20%). Rankings are updated annually."
+              />
               <a href="/resources/methodology" className="text-primary hover:underline ml-1">
-                View full methodology
+                <Content as="span" id="youth_index.about.methodology_link" fallback="View full methodology" />
               </a>
             </p>
           </div>

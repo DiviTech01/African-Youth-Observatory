@@ -75,6 +75,13 @@ export class SyncRegistryDto {
   entries!: SyncRegistryEntryDto[];
 }
 
+export class DriftCheckDto {
+  @ApiProperty({ type: [String], description: 'Keys declared in the local frontend registry' })
+  @IsArray()
+  @IsString({ each: true })
+  keys!: string[];
+}
+
 export class PublishedQueryDto {
   @ApiPropertyOptional({ description: 'Include drafts (admin only)' })
   @IsOptional()

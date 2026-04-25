@@ -4,22 +4,21 @@ import LiveDataTicker from '@/components/LiveDataTicker';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
-  BarChart3,
+  Search,
   Globe,
-  TrendingUp,
+  Layers,
+  BarChart3,
+  ArrowLeftRight,
+  Lightbulb,
+  MessageSquare,
+  Shield,
+  Users,
+  FileText,
   Settings,
   LogOut,
   Menu,
-  FileText,
-  Users,
-  BookOpen,
-  Sparkles,
-  Shield,
-  MessageSquare,
   ShieldCheck,
   Upload,
-  ChevronLeft,
-  ChevronRight,
   User,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -33,8 +32,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 
-const SIDEBAR_COLLAPSED_KEY = 'ayd-sidebar-collapsed';
-
 const adminLinks = [
   { to: '/admin', label: 'Admin Panel', icon: ShieldCheck },
   { to: '/dashboard/data-upload', label: 'Upload Data', icon: Upload },
@@ -42,15 +39,16 @@ const adminLinks = [
 
 const dataLinks = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { to: '/dashboard/explore', label: 'Data Explorer', icon: BarChart3 },
+  { to: '/dashboard/explore', label: 'Data Explorer', icon: Search },
   { to: '/dashboard/countries', label: 'Countries', icon: Globe },
-  { to: '/dashboard/youth-index', label: 'Youth Index', icon: TrendingUp },
-  { to: '/dashboard/compare', label: 'Compare', icon: FileText },
-  { to: '/dashboard/insights', label: 'AI Insights', icon: Sparkles },
+  { to: '/dashboard/themes', label: 'Themes', icon: Layers },
+  { to: '/dashboard/youth-index', label: 'Youth Index', icon: BarChart3 },
+  { to: '/dashboard/compare', label: 'Compare', icon: ArrowLeftRight },
+  { to: '/dashboard/insights', label: 'AI Insights', icon: Lightbulb },
   { to: '/dashboard/ask', label: 'Ask AI', icon: MessageSquare },
   { to: '/dashboard/policy-monitor', label: 'Policy Monitor', icon: Shield },
   { to: '/dashboard/experts', label: 'Experts', icon: Users },
-  { to: '/dashboard/reports', label: 'Reports', icon: BookOpen },
+  { to: '/dashboard/reports', label: 'Reports', icon: FileText },
 ];
 
 const contributorLinks = [
@@ -66,28 +64,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const [collapsed, setCollapsed] = React.useState(() => {
-    try {
-      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [hovered, setHovered] = React.useState(false);
+  // Desktop sidebar shows icons-only by default; expands on hover.
+  // Existing render code is keyed off `collapsed`, so we derive it.
+  const collapsed = !hovered;
 
   const isAdmin = user?.role === 'ADMIN';
   const isContributor = user?.role === 'CONTRIBUTOR';
-
-  const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  };
 
   const handleSignOut = () => {
     signOut();
@@ -363,24 +346,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <LogOut className="h-4 w-4 flex-shrink-0" />
           {!collapsed && 'Sign Out'}
         </button>
-
-        {/* Collapse toggle */}
-        <button
-          onClick={toggleCollapsed}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={`w-full flex items-center gap-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${
-            collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
-          }`}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4 flex-shrink-0" />
-          ) : (
-            <>
-              <ChevronLeft className="h-4 w-4 flex-shrink-0" />
-              <span>Collapse</span>
-            </>
-          )}
-        </button>
       </div>
     </div>
   );
@@ -392,6 +357,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     if (p === '/dashboard') return 'Overview';
     if (p.includes('explore')) return 'Data Explorer';
     if (p.includes('countries')) return 'Countries';
+    if (p.includes('themes')) return 'Themes';
     if (p.includes('youth-index')) return 'Youth Index';
     if (p.includes('compare')) return 'Compare';
     if (p.includes('insights')) return 'AI Insights';
@@ -408,16 +374,18 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <div className="min-h-screen flex overflow-x-hidden">
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar — fixed, hover-to-expand. Overlays content; main has lg:ml-16 so nothing is hidden. */}
       <aside
-        className="hidden lg:flex flex-col border-r border-border bg-sidebar-background flex-shrink-0 transition-[width] duration-300 ease-in-out overflow-hidden"
-        style={{ width: collapsed ? 68 : 256 }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="hidden lg:flex flex-col border-r border-border bg-sidebar-background fixed top-0 left-0 h-screen z-50 transition-[width] duration-200 ease-in-out overflow-hidden shadow-lg shadow-black/20"
+        style={{ width: hovered ? 240 : 64 }}
       >
         <DesktopSidebarContent />
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden">
+      {/* Main Content — left margin reserved for the collapsed sidebar (64px). */}
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden lg:ml-16">
         <LiveDataTicker />
 
         {/* Top Bar */}

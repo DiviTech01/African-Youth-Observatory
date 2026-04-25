@@ -14,6 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { Content } from '@/components/cms';
 
 const Explore = () => {
   const { t } = useLanguage();
@@ -58,12 +59,14 @@ const Explore = () => {
               <SheetTrigger asChild>
                 <Button variant="outline" className="lg:hidden self-start gap-2">
                   <Filter className="h-4 w-4" />
-                  Filters
+                  <Content as="span" id="explore.filters_button" fallback="Filters" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[300px] sm:w-[350px] overflow-y-auto">
                 <SheetHeader>
-                  <SheetTitle>Data Filters</SheetTitle>
+                  <SheetTitle>
+                    <Content as="span" id="explore.filters_sheet_title" fallback="Data Filters" />
+                  </SheetTitle>
                 </SheetHeader>
                 <div className="mt-4">
                   <FilterContent />
@@ -84,10 +87,13 @@ const Explore = () => {
 
             <div className="lg:col-span-3 space-y-6 md:space-y-8">
               <div className="rounded-2xl border border-gray-800 bg-white/[0.03] p-4 md:p-6">
-                <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4 text-white">Africa Map</h3>
-                <p className="text-xs sm:text-sm text-gray-400 mb-4">
-                  Click on a country to view its youth data.
-                </p>
+                <Content as="h3" id="explore.map.title" fallback="Africa Map" className="text-lg md:text-xl font-bold mb-3 md:mb-4 text-white" />
+                <Content
+                  as="p"
+                  id="explore.map.description"
+                  fallback="Click on a country to view its youth data."
+                  className="text-xs sm:text-sm text-gray-400 mb-4"
+                />
                 <div className="h-[300px] sm:h-[350px] md:h-[400px]">
                   <AfricaMap onCountrySelect={handleCountrySelect} selectedCountry={selectedCountry} />
                 </div>

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Upload, X } from 'lucide-react';
 import { contentApi } from '@/services/content';
 import { toast } from '@/hooks/use-toast';
+import StorageStatusBanner from './StorageStatusBanner';
 
 interface ImageUploaderProps {
   value: string | null;
@@ -31,6 +32,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange })
 
   return (
     <div className="space-y-3">
+      <StorageStatusBanner compact />
       {value ? (
         <div className="relative overflow-hidden rounded-md border">
           <img src={value} alt="Current upload" className="max-h-64 w-full object-contain bg-muted" />

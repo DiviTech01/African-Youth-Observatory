@@ -104,6 +104,7 @@ const App = () => (
               <Route path="/dashboard/explore" element={<DashboardLayout><PageTransition><Explore /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/countries" element={<DashboardLayout><PageTransition><Countries /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
+              <Route path="/dashboard/themes" element={<DashboardLayout><PageTransition><Themes /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/youth-index" element={<DashboardLayout><PageTransition><YouthIndex /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/compare" element={<DashboardLayout><PageTransition><Compare /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/insights" element={<DashboardLayout><PageTransition><Insights /></PageTransition></DashboardLayout>} />
