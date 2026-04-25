@@ -18,7 +18,7 @@ const Index = () => {
 
   return (
     <>
-      <Hero eyebrow={eyebrow} title={title} subtitle={subtitle} ctaLabel={ctaLabel} ctaHref="/explore" />
+      <Hero eyebrow={eyebrow} title={title} subtitle={subtitle} ctaLabel={ctaLabel} ctaHref="/auth/signup" />
       <SaaSHero />
       <QuickStats />
       <FeaturedData />

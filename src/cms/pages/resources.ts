@@ -30,7 +30,7 @@ const meth = (
 // ==== FAQ ====
 const faqPairs: Array<[string, string, string]> = [
   // platform
-  ['platform', 'q1', 'What is the African Youth Database (AYD)?'],
+  ['platform', 'q1', 'What is the African Youth Observatory (AYD)?'],
   ['platform', 'q2', 'Who manages and maintains the AYD?'],
   ['platform', 'q3', 'How often is the data updated?'],
   ['platform', 'q4', 'Which countries are covered?'],
@@ -53,7 +53,7 @@ const faqPairs: Array<[string, string, string]> = [
 
 const faqAnswers: Record<string, Record<string, string>> = {
   platform: {
-    q1: "The African Youth Database is Africa's most comprehensive youth data intelligence platform. It centralizes, analyzes, and visualizes youth-related statistics across all 54 African countries, covering population, education, health, employment, and entrepreneurship. Our mission is to power policy, research, innovation, and investment decisions with trusted, accessible data.",
+    q1: "The African Youth Observatory is Africa's most comprehensive youth data intelligence platform. It centralizes, analyzes, and visualizes youth-related statistics across all 54 African countries, covering population, education, health, employment, and entrepreneurship. Our mission is to power policy, research, innovation, and investment decisions with trusted, accessible data.",
     q2: 'AYD is managed by PACSDA (Pan-African Centre for Statistics and Data Analytics) with implementation support from ZeroUp Next. We collaborate with national statistical offices, international organizations (UN agencies, World Bank, African Development Bank), and research institutions across Africa.',
     q3: 'Data update frequency varies by indicator and source. Most core indicators are updated annually when new national or international survey data becomes available. Real-time indicators may be updated more frequently. Each dataset includes metadata showing the last update date and data vintage.',
     q4: 'AYD covers all 54 African Union member states. Coverage depth varies by country and indicator based on data availability. We continuously work with national partners to expand coverage and improve data quality.',
@@ -62,7 +62,7 @@ const faqAnswers: Record<string, Record<string, string>> = {
     q1: 'Use our Data Explorer to browse data by country, theme (Population, Education, Health, Employment, Entrepreneurship), indicator, year, gender, and age group. The interactive map allows you to click on countries to view their profiles. You can also use the Compare Countries feature to analyze up to 5 countries side by side.',
     q2: 'The AYI is our flagship composite indicator that ranks all African countries based on youth development outcomes. It combines scores across education, employment, health, and civic engagement to provide a comprehensive measure of how well countries are supporting their youth population. Countries are ranked annually.',
     q3: 'Yes! All public datasets can be downloaded in multiple formats including CSV, Excel (XLSX), and PDF. Charts can be exported as PNG images. Premium API access provides programmatic access to raw data for advanced users and applications.',
-    q4: "Yes, our charts support embedding. Click the 'Embed' button on any visualization to get an embed code. Please ensure you attribute the African Youth Database as the source and link back to the original data page.",
+    q4: "Yes, our charts support embedding. Click the 'Embed' button on any visualization to get an embed code. Please ensure you attribute the African Youth Observatory as the source and link back to the original data page.",
   },
   quality: {
     q1: 'Our data comes from multiple verified sources including: national statistical offices and census bureaus, UN agencies (UNDP, UNICEF, UNESCO, ILO), World Bank, African Development Bank, Demographic and Health Surveys (DHS), academic research, and specialized youth surveys. Each dataset includes full source attribution and methodology notes.',
@@ -73,14 +73,14 @@ const faqAnswers: Record<string, Record<string, string>> = {
   access: {
     q1: 'Yes, core platform features are free for all users. This includes browsing dashboards, viewing visualizations, downloading standard datasets, and accessing the African Youth Index. Premium features (API access, custom dashboards, advanced analytics) require registration or subscription.',
     q2: 'No account is needed for basic browsing. However, registered users can: save custom dashboards, set up data alerts, access download history, use the API, and contribute datasets. Registration is free for researchers and institutions.',
-    q3: 'Yes! We encourage the use of AYD data for research, policy analysis, and journalism. Please cite the African Youth Database as your source and include a link to the specific dataset or page. For academic citations, use our suggested citation format available on each data page.',
+    q3: 'Yes! We encourage the use of AYD data for research, policy analysis, and journalism. Please cite the African Youth Observatory as your source and include a link to the specific dataset or page. For academic citations, use our suggested citation format available on each data page.',
     q4: 'We welcome data contributions from national statistical offices, research institutions, and development organizations. Contributors must: register through our Partner Portal, submit datasets with full metadata and methodology, undergo a verification review, and sign a data sharing agreement. Contributors receive attribution and impact metrics.',
   },
 };
 
 const faqEntries: CmsRegistryEntry[] = [
   faq('faq.header.title', 'header', 'TEXT', 'Frequently Asked Questions'),
-  faq('faq.header.subtitle', 'header', 'RICH_TEXT', 'Find answers to common questions about the African Youth Database.'),
+  faq('faq.header.subtitle', 'header', 'RICH_TEXT', 'Find answers to common questions about the African Youth Observatory.'),
   faq('faq.platform.title', 'platform', 'TEXT', 'About the Platform'),
   faq('faq.usage.title', 'usage', 'TEXT', 'Using the Data'),
   faq('faq.quality.title', 'quality', 'TEXT', 'Data Quality & Sources'),
@@ -126,7 +126,7 @@ const glossaryEntries: CmsRegistryEntry[] = [
   gloss(
     'glossary.header.subtitle',
     'RICH_TEXT',
-    'Definitions of key terms, indicators, and concepts used in the African Youth Database.',
+    'Definitions of key terms, indicators, and concepts used in the African Youth Observatory.',
   ),
   gloss('glossary.search.placeholder', 'TEXT', 'Search terms...'),
   gloss('glossary.empty.message', 'TEXT', 'No terms found matching your search.'),
@@ -146,7 +146,7 @@ const methodologyEntries: CmsRegistryEntry[] = [
     'methodology.overview.body',
     'overview',
     'RICH_TEXT',
-    '<p>The African Youth Database aggregates youth-focused statistics from a diverse range of authoritative sources. Our data collection methodology is designed to ensure comprehensiveness, accuracy, and comparability across all 54 African countries.</p><h4>Primary Data Sources</h4><ul><li><strong>National Statistical Offices:</strong> Census data, labor force surveys, household surveys</li><li><strong>UN Agencies:</strong> UNDP Human Development Reports, UNESCO education statistics, ILO labor data, UNICEF surveys</li><li><strong>World Bank:</strong> World Development Indicators, Enterprise Surveys</li><li><strong>African Development Bank:</strong> African Economic Outlook, African Statistical Yearbook</li><li><strong>DHS Program:</strong> Demographic and Health Surveys</li><li><strong>Academic Research:</strong> Peer-reviewed studies and specialized youth surveys</li></ul>',
+    '<p>The African Youth Observatory aggregates youth-focused statistics from a diverse range of authoritative sources. Our data collection methodology is designed to ensure comprehensiveness, accuracy, and comparability across all 54 African countries.</p><h4>Primary Data Sources</h4><ul><li><strong>National Statistical Offices:</strong> Census data, labor force surveys, household surveys</li><li><strong>UN Agencies:</strong> UNDP Human Development Reports, UNESCO education statistics, ILO labor data, UNICEF surveys</li><li><strong>World Bank:</strong> World Development Indicators, Enterprise Surveys</li><li><strong>African Development Bank:</strong> African Economic Outlook, African Statistical Yearbook</li><li><strong>DHS Program:</strong> Demographic and Health Surveys</li><li><strong>Academic Research:</strong> Peer-reviewed studies and specialized youth surveys</li></ul>',
   ),
 
   meth('methodology.standardization.title', 'standardization', 'TEXT', 'Standardization Process'),

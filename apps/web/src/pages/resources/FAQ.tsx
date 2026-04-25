@@ -10,8 +10,8 @@ const faqCategories = [
     icon: Database,
     questions: [
       {
-        question: "What is the African Youth Database (AYD)?",
-        answer: "The African Youth Database is Africa's most comprehensive youth data intelligence platform. It centralizes, analyzes, and visualizes youth-related statistics across all 54 African countries, covering population, education, health, employment, and entrepreneurship. Our mission is to power policy, research, innovation, and investment decisions with trusted, accessible data."
+        question: "What is the African Youth Observatory (AYD)?",
+        answer: "The African Youth Observatory is Africa's most comprehensive youth data intelligence platform. It centralizes, analyzes, and visualizes youth-related statistics across all 54 African countries, covering population, education, health, employment, and entrepreneurship. Our mission is to power policy, research, innovation, and investment decisions with trusted, accessible data."
       },
       {
         question: "Who manages and maintains the AYD?",
@@ -45,7 +45,7 @@ const faqCategories = [
       },
       {
         question: "Can I embed charts in my website or report?",
-        answer: "Yes, our charts support embedding. Click the 'Embed' button on any visualization to get an embed code. Please ensure you attribute the African Youth Database as the source and link back to the original data page."
+        answer: "Yes, our charts support embedding. Click the 'Embed' button on any visualization to get an embed code. Please ensure you attribute the African Youth Observatory as the source and link back to the original data page."
       }
     ]
   },
@@ -85,7 +85,7 @@ const faqCategories = [
       },
       {
         question: "Can I use AYD data in my research or publications?",
-        answer: "Yes! We encourage the use of AYD data for research, policy analysis, and journalism. Please cite the African Youth Database as your source and include a link to the specific dataset or page. For academic citations, use our suggested citation format available on each data page."
+        answer: "Yes! We encourage the use of AYD data for research, policy analysis, and journalism. Please cite the African Youth Observatory as your source and include a link to the specific dataset or page. For academic citations, use our suggested citation format available on each data page."
       },
       {
         question: "How can my organization contribute data?",
@@ -107,7 +107,7 @@ const FAQ = () => {
             <h1 className="section-title">Frequently Asked Questions</h1>
           </div>
           <p className="section-description">
-            Find answers to common questions about the African Youth Database.
+            Find answers to common questions about the African Youth Observatory.
           </p>
         </div>
       </header>

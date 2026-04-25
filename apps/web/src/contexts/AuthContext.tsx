@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE — AUTH CONTEXT
+// AFRICAN YOUTH OBSERVATORY — AUTH CONTEXT
 // JWT-based auth wired to the NestJS backend
 // ============================================
 

@@ -46,7 +46,7 @@ const Navbar = () => {
               <span className="font-bold text-primary-foreground text-sm sm:text-base">AYD</span>
             </div>
             <span className="hidden font-display font-bold sm:inline-block text-sm md:text-base text-foreground">
-              African Youth Database
+              African Youth Observatory
             </span>
           </Link>
         </div>
@@ -121,7 +121,7 @@ const Navbar = () => {
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
                     <span className="font-bold text-primary-foreground">AYD</span>
                   </div>
-                  <span className="text-foreground">African Youth Database</span>
+                  <span className="text-foreground">African Youth Observatory</span>
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 mt-6">

@@ -13,6 +13,9 @@ import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { useExportGuard } from '@/hooks/useExportGuard';
+import { GuestInviteModal } from '@/components/GuestInviteModal';
 
 const mockIndexData = [
   { rank: 1, country: "Mauritius", score: 78.4, change: 2, education: 85.2, employment: 71.3, health: 82.1, civic: 74.8 },
@@ -55,6 +58,18 @@ const YouthIndex = () => {
   const [sortField, setSortField] = useState<SortField>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedCountry, setSelectedCountry] = useState<any>(null);
+  const { toast } = useToast();
+  const { guard, inviteOpen, setInviteOpen, inviteAction } = useExportGuard();
+
+  const handleExport = () => {
+    guard(
+      () => toast({
+        title: 'Export coming soon',
+        description: 'Bulk export of the Youth Index will be available shortly.',
+      }),
+      'export',
+    );
+  };
 
   // Fetch rankings from API
   const { data: apiRankings, isLoading, isError } = useQuery({
@@ -124,6 +139,7 @@ const YouthIndex = () => {
 
   return (
     <>
+      <GuestInviteModal open={inviteOpen} onOpenChange={setInviteOpen} action={inviteAction} />
       <header className="relative py-8 md:py-12 overflow-hidden">
         <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         <div className="container px-4 md:px-6 relative z-10">
@@ -148,7 +164,7 @@ const YouthIndex = () => {
                   <SelectItem value="2022">2022</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" className="gap-2" onClick={handleExport}>
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Export</span>
               </Button>

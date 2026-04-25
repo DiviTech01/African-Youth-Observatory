@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - AI INSIGHTS COMPONENTS
+// AFRICAN YOUTH OBSERVATORY - AI INSIGHTS COMPONENTS
 // Visual components for displaying AI-generated insights
 // ============================================
 

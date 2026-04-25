@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - DATA CONSTANTS
+// AFRICAN YOUTH OBSERVATORY - DATA CONSTANTS
 // All 54 African Countries & Metadata
 // ============================================
 

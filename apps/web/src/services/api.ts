@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - API SERVICE
+// AFRICAN YOUTH OBSERVATORY - API SERVICE
 // Real HTTP calls to the NestJS backend
 // ============================================
 

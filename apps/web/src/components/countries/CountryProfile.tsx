@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - COUNTRY PROFILE
+// AFRICAN YOUTH OBSERVATORY - COUNTRY PROFILE
 // Comprehensive country-level youth data dashboard
 // ============================================
 

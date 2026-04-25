@@ -14,6 +14,7 @@ import CookieConsent from "@/components/CookieConsent";
 import PublicLayout from "@/layouts/PublicLayout";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import PageTransition from "@/components/PageTransition";
+import { ScrollToTop } from "@/components/ScrollToTop";
 
 // Critical pages - static imports
 import Landing from "./pages/Landing";
@@ -41,6 +42,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const Glossary = lazy(() => import("./pages/resources/Glossary"));
 const FAQ = lazy(() => import("./pages/resources/FAQ"));
 const Methodology = lazy(() => import("./pages/resources/Methodology"));
+const Toolkits = lazy(() => import("./pages/resources/Toolkits"));
 const CountryProfilePage = lazy(() => import("./pages/CountryProfilePage"));
 const DataUpload = lazy(() => import("./pages/DataUpload"));
 const ContentManager = lazy(() => import("./pages/admin/ContentManager"));
@@ -63,6 +65,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <AuthProvider>
           <ContentProvider>
           <UserPreferencesProvider>
@@ -94,6 +97,7 @@ const App = () => (
               <Route path="/resources/glossary" element={<PublicLayout><PageTransition><Glossary /></PageTransition></PublicLayout>} />
               <Route path="/resources/faq" element={<PublicLayout><PageTransition><FAQ /></PageTransition></PublicLayout>} />
               <Route path="/resources/methodology" element={<PublicLayout><PageTransition><Methodology /></PageTransition></PublicLayout>} />
+              <Route path="/resources/toolkits" element={<PublicLayout><PageTransition><Toolkits /></PageTransition></PublicLayout>} />
 
               {/* Dashboard pages */}
               <Route path="/dashboard" element={<DashboardLayout><PageTransition><Dashboard /></PageTransition></DashboardLayout>} />

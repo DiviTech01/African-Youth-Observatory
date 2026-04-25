@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - INTERACTIVE MAP
+// AFRICAN YOUTH OBSERVATORY - INTERACTIVE MAP
 // Professional geographic map with react-simple-maps
 // ============================================
 

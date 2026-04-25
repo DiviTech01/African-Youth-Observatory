@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - DATA CHART
+// AFRICAN YOUTH OBSERVATORY - DATA CHART
 // Interactive chart component for data exploration
 // ============================================
 

@@ -39,9 +39,9 @@ const Contact = () => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const emailInfo = useContentText('contact.email.info', 'info@africanyouthdata.org');
-  const emailData = useContentText('contact.email.data', 'data@africanyouthdata.org');
-  const emailPartnerships = useContentText('contact.email.partnerships', 'partnerships@africanyouthdata.org');
+  const emailInfo = useContentText('contact.email.info', 'afriyouthstats@pacsda.org');
+  const emailData = useContentText('contact.email.data', 'afriyouthstats@pacsda.org');
+  const emailPartnerships = useContentText('contact.email.partnerships', 'afriyouthstats@pacsda.org');
 
   return (
     <>

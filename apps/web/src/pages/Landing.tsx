@@ -33,7 +33,7 @@ const Landing = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
               AYD
             </div>
-            <span className="font-display font-bold text-lg hidden sm:block">African Youth Database</span>
+            <span className="font-display font-bold text-lg hidden sm:block">African Youth Observatory</span>
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -211,7 +211,7 @@ const Landing = () => {
                 AYD
               </div>
               <span className="text-sm text-muted-foreground">
-                © 2025 African Youth Database. Powered by PACSDA & ZeroUp Next.
+                © 2025 African Youth Observatory. Powered by PACSDA & ZeroUp Next.
               </span>
             </div>
             <div className="flex gap-6 text-sm text-muted-foreground">

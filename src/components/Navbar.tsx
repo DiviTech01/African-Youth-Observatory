@@ -81,6 +81,16 @@ const Navbar = () => {
 
   const toggleSearch = () => setIsSearchOpen(!isSearchOpen);
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSearchQuery('');
+    setIsSearchOpen(false);
+    setIsSheetOpen(false);
+    navigate(`/explore?q=${encodeURIComponent(q)}`);
+  };
+
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
@@ -97,7 +107,7 @@ const Navbar = () => {
             <Content
               as="span"
               id="navbar.brand.name"
-              fallback="African Youth Database"
+              fallback="African Youth Observatory"
               className="hidden font-display font-bold sm:inline-block text-sm md:text-base text-foreground"
             />
           </Link>
@@ -121,14 +131,16 @@ const Navbar = () => {
         <div className="flex items-center gap-1 sm:gap-2">
           {isSearchOpen ? (
             <div ref={searchRef} className="flex items-center relative animate-fade-in">
-              <Input
-                type="search"
-                placeholder={t('nav.search')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-[160px] sm:w-[200px] lg:w-[250px] text-sm"
-                autoFocus
-              />
+              <form onSubmit={handleSearchSubmit} className="contents">
+                <Input
+                  type="search"
+                  placeholder={t('nav.search')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-[160px] sm:w-[200px] lg:w-[250px] text-sm"
+                  autoFocus
+                />
+              </form>
               <Button
                 variant="ghost"
                 size="icon"
@@ -248,7 +260,7 @@ const Navbar = () => {
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
                     <span className="font-bold text-primary-foreground">AYD</span>
                   </div>
-                  <Content as="span" id="navbar.brand.name" fallback="African Youth Database" className="text-foreground" />
+                  <Content as="span" id="navbar.brand.name" fallback="African Youth Observatory" className="text-foreground" />
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 mt-6">
@@ -269,14 +281,18 @@ const Navbar = () => {
               </nav>
               
               <div className="mt-6 pt-6 border-t border-border space-y-4">
-                <div className="relative">
+                <form onSubmit={handleSearchSubmit} className="relative">
                   <Input
                     type="search"
                     placeholder={t('nav.search')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pr-10"
                   />
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                </div>
+                  <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                    <Search className="h-4 w-4" />
+                  </button>
+                </form>
                 {isAuthenticated && user ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-3 px-1">

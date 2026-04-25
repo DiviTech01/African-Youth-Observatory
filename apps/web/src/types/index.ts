@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - TYPE EXPORTS
+// AFRICAN YOUTH OBSERVATORY - TYPE EXPORTS
 // ============================================
 
 // Database types

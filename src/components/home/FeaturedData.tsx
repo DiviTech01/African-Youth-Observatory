@@ -1,8 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { BarChart3, PieChart, TrendingUp, ArrowRight, Download } from 'lucide-react';
 import { Content } from '@/components/cms';
+import { useToast } from '@/hooks/use-toast';
+import { useExportGuard } from '@/hooks/useExportGuard';
+import { GuestInviteModal } from '@/components/GuestInviteModal';
 // African divider removed
 
 const featuredItems = [
@@ -39,6 +42,27 @@ const featuredItems = [
 ];
 
 const FeaturedData = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { guard, inviteOpen, setInviteOpen, inviteAction } = useExportGuard();
+
+  const handleDownload = (e: React.MouseEvent, title: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    guard(
+      () => toast({
+        title: 'Download coming soon',
+        description: `"${title}" download will be available shortly.`,
+      }),
+      'download',
+    );
+  };
+
+  const handleExplore = (e: React.MouseEvent, link: string) => {
+    e.preventDefault();
+    navigate(link);
+  };
+
   return (
     <section className="relative py-16 md:py-24 bg-black overflow-hidden">
       {/* Subtle radial glow */}
@@ -62,12 +86,16 @@ const FeaturedData = () => {
           />
         </div>
 
+        <GuestInviteModal open={inviteOpen} onOpenChange={setInviteOpen} action={inviteAction} />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {featuredItems.map((item) => (
-            <Link
+            <div
               key={item.slug}
-              to={item.link}
-              className={`group relative rounded-2xl border ${item.borderColor} bg-white/[0.03] backdrop-blur-sm p-6 transition-all duration-300 hover:-translate-y-1`}
+              role="button"
+              tabIndex={0}
+              onClick={(e) => handleExplore(e, item.link)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleExplore(e as any, item.link); }}
+              className={`group relative rounded-2xl border ${item.borderColor} bg-white/[0.03] backdrop-blur-sm p-6 transition-all duration-300 hover:-translate-y-1 cursor-pointer`}
             >
               {/* Gradient top accent */}
               <div className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${item.color}`} />
@@ -97,11 +125,16 @@ const FeaturedData = () => {
                   <Content as="span" id="home.featured.explore_cta" fallback="Explore" />
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </span>
-                <Button variant="ghost" size="sm" className="text-gray-500 hover:text-white h-8 px-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-500 hover:text-white h-8 px-2"
+                  onClick={(e) => handleDownload(e, item.title)}
+                >
                   <Download className="w-4 h-4" />
                 </Button>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
 

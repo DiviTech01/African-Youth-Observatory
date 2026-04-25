@@ -8,9 +8,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
+import { useToast } from '@/hooks/use-toast';
 
 const LanguageSwitcher = () => {
-  const { language, setLanguage, languageInfo } = useLanguage();
+  const { language, languageInfo } = useLanguage();
+  const { toast } = useToast();
+
+  const handleSelect = (code: string) => {
+    if (code === language) return;
+    toast({
+      title: 'Multi-language support coming soon',
+      description: 'The platform is currently available in English only. Other languages are on the roadmap.',
+    });
+  };
 
   return (
     <DropdownMenu>
@@ -24,7 +34,7 @@ const LanguageSwitcher = () => {
         {LANGUAGES.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
-            onClick={() => setLanguage(lang.code)}
+            onClick={() => handleSelect(lang.code)}
             className={language === lang.code ? 'bg-accent font-medium' : ''}
           >
             {lang.nativeName}

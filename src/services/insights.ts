@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - AI INSIGHTS SERVICE
+// AFRICAN YOUTH OBSERVATORY - AI INSIGHTS SERVICE
 // Generate intelligent insights from youth data
 // ============================================
 

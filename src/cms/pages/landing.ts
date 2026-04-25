@@ -4,7 +4,7 @@ const PAGE = 'landing';
 
 export const landingEntries: CmsRegistryEntry[] = [
   // Brand / header
-  { key: 'landing.brand.name', page: PAGE, section: 'header', contentType: 'TEXT', defaultContent: 'African Youth Database', description: 'Wordmark next to the AYD logo.' },
+  { key: 'landing.brand.name', page: PAGE, section: 'header', contentType: 'TEXT', defaultContent: 'African Youth Observatory', description: 'Wordmark next to the AYD logo.' },
   { key: 'landing.header.signin', page: PAGE, section: 'header', contentType: 'TEXT', defaultContent: 'Sign In' },
   { key: 'landing.header.get_started', page: PAGE, section: 'header', contentType: 'TEXT', defaultContent: 'Get Started' },
 
@@ -45,7 +45,7 @@ export const landingEntries: CmsRegistryEntry[] = [
   { key: 'landing.bottom_cta.secondary', page: PAGE, section: 'cta', contentType: 'TEXT', defaultContent: 'Learn More About AYD' },
 
   // Footer
-  { key: 'landing.footer.copyright', page: PAGE, section: 'footer', contentType: 'TEXT', defaultContent: '© 2025 African Youth Database. Powered by PACSDA & ZeroUp Next.' },
+  { key: 'landing.footer.copyright', page: PAGE, section: 'footer', contentType: 'TEXT', defaultContent: '© 2025 African Youth Observatory. Powered by PACSDA & ZeroUp Next.' },
   { key: 'landing.footer.link_about', page: PAGE, section: 'footer', contentType: 'TEXT', defaultContent: 'About' },
   { key: 'landing.footer.link_contact', page: PAGE, section: 'footer', contentType: 'TEXT', defaultContent: 'Contact' },
   { key: 'landing.footer.link_privacy', page: PAGE, section: 'footer', contentType: 'TEXT', defaultContent: 'Privacy' },

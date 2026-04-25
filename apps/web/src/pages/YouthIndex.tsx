@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - YOUTH INDEX RANKINGS
+// AFRICAN YOUTH OBSERVATORY - YOUTH INDEX RANKINGS
 // Complete rankings of African countries by youth development
 // ============================================
 

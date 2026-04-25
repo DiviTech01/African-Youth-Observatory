@@ -10,13 +10,13 @@ const COOKIE = 'cookie_consent';
 
 export const chromeEntries: CmsRegistryEntry[] = [
   // Navbar
-  { key: 'navbar.brand.name', page: NAVBAR, section: 'brand', contentType: 'TEXT', defaultContent: 'African Youth Database' },
+  { key: 'navbar.brand.name', page: NAVBAR, section: 'brand', contentType: 'TEXT', defaultContent: 'African Youth Observatory' },
   { key: 'navbar.user_menu.dashboard', page: NAVBAR, section: 'user_menu', contentType: 'TEXT', defaultContent: 'Dashboard' },
   { key: 'navbar.user_menu.settings', page: NAVBAR, section: 'user_menu', contentType: 'TEXT', defaultContent: 'Settings' },
   { key: 'navbar.user_menu.sign_out', page: NAVBAR, section: 'user_menu', contentType: 'TEXT', defaultContent: 'Sign Out' },
 
   // Footer — brand block
-  { key: 'footer.brand.name', page: FOOTER, section: 'brand', contentType: 'TEXT', defaultContent: 'African Youth Stats' },
+  { key: 'footer.brand.name', page: FOOTER, section: 'brand', contentType: 'TEXT', defaultContent: 'AfriYouthStats' },
   { key: 'footer.brand.description', page: FOOTER, section: 'brand', contentType: 'RICH_TEXT', defaultContent: 'The central hub for African youth statistics, supporting research, policy-making, and development initiatives.' },
 
   // Footer — Navigation column

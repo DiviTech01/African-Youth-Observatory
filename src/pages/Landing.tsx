@@ -145,7 +145,7 @@ const Landing = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
               AYD
             </div>
-            <Content as="span" id="landing.brand.name" fallback="African Youth Database" className="font-display font-bold text-lg hidden sm:block" />
+            <Content as="span" id="landing.brand.name" fallback="African Youth Observatory" className="font-display font-bold text-lg hidden sm:block" />
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/auth/signin">
@@ -326,7 +326,7 @@ const Landing = () => {
               <Content
                 as="span"
                 id="landing.footer.copyright"
-                fallback="© 2025 African Youth Database. Powered by PACSDA & ZeroUp Next."
+                fallback="© 2025 African Youth Observatory. Powered by PACSDA & ZeroUp Next."
                 className="text-sm text-muted-foreground"
               />
             </div>

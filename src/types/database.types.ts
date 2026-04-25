@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - TYPE DEFINITIONS
+// AFRICAN YOUTH OBSERVATORY - TYPE DEFINITIONS
 // Based on Database Schema & ER Model
 // ============================================
 

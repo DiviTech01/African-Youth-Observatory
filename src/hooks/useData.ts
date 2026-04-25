@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - REACT QUERY HOOKS
+// AFRICAN YOUTH OBSERVATORY - REACT QUERY HOOKS
 // Custom hooks for data fetching with caching
 // ============================================
 

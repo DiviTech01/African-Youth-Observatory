@@ -52,7 +52,7 @@ const Contact = () => {
         <div className="container px-4 md:px-6">
           <h1 className="section-title mb-2">Contact Us</h1>
           <p className="section-description">
-            Get in touch with the African Youth Database team. We're here to help.
+            Get in touch with the African Youth Observatory team. We're here to help.
           </p>
         </div>
       </header>

@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - MOCK DATA SERVICE
+// AFRICAN YOUTH OBSERVATORY - MOCK DATA SERVICE
 // Realistic youth data for all 54 African countries
 // ============================================
 

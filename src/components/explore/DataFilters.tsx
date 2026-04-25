@@ -1,8 +1,19 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
+
+const YEAR_RANGES: { label: string; range: [number, number] }[] = [
+  { label: '2000-2005', range: [2000, 2005] },
+  { label: '2006-2010', range: [2006, 2010] },
+  { label: '2011-2015', range: [2011, 2015] },
+  { label: '2016-2020', range: [2016, 2020] },
+  { label: '2021-2025', range: [2021, 2025] },
+  { label: 'All Years', range: [2000, 2025] },
+];
+
+const AGE_GROUPS = ['15-20', '21-25', '26-30', '31-35', 'All Ages'];
 
 const countries = [
   "All Countries", "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", 
@@ -48,9 +59,14 @@ const DataFilters = ({
   setYearRange: (range: [number, number]) => void;
 }) => {
   // Get indicators based on selected theme
-  const availableIndicators = selectedTheme !== "All Themes" 
+  const availableIndicators = selectedTheme !== "All Themes"
     ? indicators[selectedTheme as keyof typeof indicators] || []
     : ["Select a theme first"];
+
+  const [ageGroup, setAgeGroup] = useState<string>('15-20');
+
+  const isYearRangeActive = (r: [number, number]) =>
+    yearRange[0] === r[0] && yearRange[1] === r[1];
 
   return (
     <div className="space-y-6 p-4 rounded-2xl border border-gray-800 bg-white/[0.03]">
@@ -118,21 +134,22 @@ const DataFilters = ({
             </Select>
           </div>
 
-          <div className="space-y-4 pt-2">
-            <div className="flex justify-between">
-              <Label className="text-gray-300">Year Range</Label>
-              <span className="text-sm text-[#A89070]">
-                {yearRange[0]} - {yearRange[1]}
-              </span>
+          <div className="space-y-2 pt-2">
+            <Label className="text-gray-300">Year Range</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {YEAR_RANGES.map((opt) => (
+                <Button
+                  key={opt.label}
+                  type="button"
+                  size="sm"
+                  variant={isYearRangeActive(opt.range) ? 'default' : 'outline'}
+                  onClick={() => setYearRange(opt.range)}
+                  className="text-xs"
+                >
+                  {opt.label}
+                </Button>
+              ))}
             </div>
-            <Slider
-              defaultValue={[2010, 2023]}
-              min={2000}
-              max={2023}
-              step={1}
-              value={yearRange}
-              onValueChange={(value) => setYearRange(value as [number, number])}
-            />
           </div>
 
           <div className="space-y-2 pt-2">
@@ -150,17 +167,21 @@ const DataFilters = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="age" className="text-gray-300">Age Group</Label>
-            <Select defaultValue="15-24">
-              <SelectTrigger id="age">
-                <SelectValue placeholder="Select age group" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15-24">15-24 (Youth)</SelectItem>
-                <SelectItem value="15-19">15-19</SelectItem>
-                <SelectItem value="20-24">20-24</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-gray-300">Age Group</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {AGE_GROUPS.map((g) => (
+                <Button
+                  key={g}
+                  type="button"
+                  size="sm"
+                  variant={ageGroup === g ? 'default' : 'outline'}
+                  onClick={() => setAgeGroup(g)}
+                  className="text-xs"
+                >
+                  {g}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

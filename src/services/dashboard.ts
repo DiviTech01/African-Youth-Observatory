@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - DASHBOARD SERVICE
+// AFRICAN YOUTH OBSERVATORY - DASHBOARD SERVICE
 // Customizable dashboard configuration and management
 // ============================================
 

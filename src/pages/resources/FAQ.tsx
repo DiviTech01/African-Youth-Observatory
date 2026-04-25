@@ -9,7 +9,7 @@ const faqCategories = [
     title: 'About the Platform',
     icon: Database,
     questions: [
-      { slug: 'q1', question: 'What is the African Youth Database (AYD)?', answer: "The African Youth Database is Africa's most comprehensive youth data intelligence platform. It centralizes, analyzes, and visualizes youth-related statistics across all 54 African countries, covering population, education, health, employment, and entrepreneurship. Our mission is to power policy, research, innovation, and investment decisions with trusted, accessible data." },
+      { slug: 'q1', question: 'What is the African Youth Observatory (AYD)?', answer: "The African Youth Observatory is Africa's most comprehensive youth data intelligence platform. It centralizes, analyzes, and visualizes youth-related statistics across all 54 African countries, covering population, education, health, employment, and entrepreneurship. Our mission is to power policy, research, innovation, and investment decisions with trusted, accessible data." },
       { slug: 'q2', question: 'Who manages and maintains the AYD?', answer: 'AYD is managed by PACSDA (Pan-African Centre for Statistics and Data Analytics) with implementation support from ZeroUp Next. We collaborate with national statistical offices, international organizations (UN agencies, World Bank, African Development Bank), and research institutions across Africa.' },
       { slug: 'q3', question: 'How often is the data updated?', answer: 'Data update frequency varies by indicator and source. Most core indicators are updated annually when new national or international survey data becomes available. Real-time indicators may be updated more frequently. Each dataset includes metadata showing the last update date and data vintage.' },
       { slug: 'q4', question: 'Which countries are covered?', answer: 'AYD covers all 54 African Union member states. Coverage depth varies by country and indicator based on data availability. We continuously work with national partners to expand coverage and improve data quality.' },
@@ -23,7 +23,7 @@ const faqCategories = [
       { slug: 'q1', question: 'How do I search and filter data?', answer: 'Use our Data Explorer to browse data by country, theme (Population, Education, Health, Employment, Entrepreneurship), indicator, year, gender, and age group. The interactive map allows you to click on countries to view their profiles. You can also use the Compare Countries feature to analyze up to 5 countries side by side.' },
       { slug: 'q2', question: 'What is the African Youth Index (AYI)?', answer: 'The AYI is our flagship composite indicator that ranks all African countries based on youth development outcomes. It combines scores across education, employment, health, and civic engagement to provide a comprehensive measure of how well countries are supporting their youth population. Countries are ranked annually.' },
       { slug: 'q3', question: 'Can I download the data?', answer: 'Yes! All public datasets can be downloaded in multiple formats including CSV, Excel (XLSX), and PDF. Charts can be exported as PNG images. Premium API access provides programmatic access to raw data for advanced users and applications.' },
-      { slug: 'q4', question: 'Can I embed charts in my website or report?', answer: "Yes, our charts support embedding. Click the 'Embed' button on any visualization to get an embed code. Please ensure you attribute the African Youth Database as the source and link back to the original data page." },
+      { slug: 'q4', question: 'Can I embed charts in my website or report?', answer: "Yes, our charts support embedding. Click the 'Embed' button on any visualization to get an embed code. Please ensure you attribute the African Youth Observatory as the source and link back to the original data page." },
     ],
   },
   {
@@ -44,7 +44,7 @@ const faqCategories = [
     questions: [
       { slug: 'q1', question: 'Is the platform free to use?', answer: 'Yes, core platform features are free for all users. This includes browsing dashboards, viewing visualizations, downloading standard datasets, and accessing the African Youth Index. Premium features (API access, custom dashboards, advanced analytics) require registration or subscription.' },
       { slug: 'q2', question: 'Do I need to create an account?', answer: 'No account is needed for basic browsing. However, registered users can: save custom dashboards, set up data alerts, access download history, use the API, and contribute datasets. Registration is free for researchers and institutions.' },
-      { slug: 'q3', question: 'Can I use AYD data in my research or publications?', answer: 'Yes! We encourage the use of AYD data for research, policy analysis, and journalism. Please cite the African Youth Database as your source and include a link to the specific dataset or page. For academic citations, use our suggested citation format available on each data page.' },
+      { slug: 'q3', question: 'Can I use AYD data in my research or publications?', answer: 'Yes! We encourage the use of AYD data for research, policy analysis, and journalism. Please cite the African Youth Observatory as your source and include a link to the specific dataset or page. For academic citations, use our suggested citation format available on each data page.' },
       { slug: 'q4', question: 'How can my organization contribute data?', answer: 'We welcome data contributions from national statistical offices, research institutions, and development organizations. Contributors must: register through our Partner Portal, submit datasets with full metadata and methodology, undergo a verification review, and sign a data sharing agreement. Contributors receive attribution and impact metrics.' },
     ],
   },
@@ -62,7 +62,7 @@ const FAQ = () => {
           <Content
             as="p"
             id="faq.header.subtitle"
-            fallback="Find answers to common questions about the African Youth Database."
+            fallback="Find answers to common questions about the African Youth Observatory."
             className="section-description"
           />
         </div>

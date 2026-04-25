@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - SERVICES EXPORTS
+// AFRICAN YOUTH OBSERVATORY - SERVICES EXPORTS
 // ============================================
 
 export { api, default } from './api';

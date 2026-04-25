@@ -122,7 +122,7 @@ const Glossary = () => {
             <h1 className="section-title">Glossary</h1>
           </div>
           <p className="section-description">
-            Definitions of key terms, indicators, and concepts used in the African Youth Database.
+            Definitions of key terms, indicators, and concepts used in the African Youth Observatory.
           </p>
         </div>
       </header>

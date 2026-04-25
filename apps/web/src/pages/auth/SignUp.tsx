@@ -57,7 +57,7 @@ const SignUp = () => {
     setIsLoading(true);
     try {
       await signUp(formData.name, formData.email, formData.password);
-      toast({ title: 'Account created!', description: 'Welcome to African Youth Database.' });
+      toast({ title: 'Account created!', description: 'Welcome to African Youth Observatory.' });
       navigate('/');
     } catch (err) {
       toast({
@@ -122,7 +122,7 @@ const SignUp = () => {
               <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold">
                 AYD
               </div>
-              <span className="font-display font-bold text-lg">African Youth Database</span>
+              <span className="font-display font-bold text-lg">African Youth Observatory</span>
             </Link>
             <ThemeToggle />
           </div>

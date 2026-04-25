@@ -34,7 +34,7 @@ const Methodology = () => {
               </CardHeader>
               <CardContent className="prose prose-sm max-w-none text-muted-foreground">
                 <p>
-                  The African Youth Database aggregates youth-focused statistics from a diverse range of authoritative sources. 
+                  The African Youth Observatory aggregates youth-focused statistics from a diverse range of authoritative sources. 
                   Our data collection methodology is designed to ensure comprehensiveness, accuracy, and comparability across 
                   all 54 African countries.
                 </p>

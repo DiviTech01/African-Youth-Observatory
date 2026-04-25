@@ -53,7 +53,7 @@ const Glossary = () => {
           <Content
             as="p"
             id="glossary.header.subtitle"
-            fallback="Definitions of key terms, indicators, and concepts used in the African Youth Database."
+            fallback="Definitions of key terms, indicators, and concepts used in the African Youth Observatory."
             className="section-description"
           />
         </div>

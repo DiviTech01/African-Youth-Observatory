@@ -1,5 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { AuthSwitch } from '@/components/ui/auth-switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +38,14 @@ const SignUp = () => {
         bg-[size:6rem_5rem]
         [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_50%,transparent_100%)]"
       />
+
+      <Link
+        to="/"
+        className="absolute top-6 left-6 z-20 inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Back to home
+      </Link>
 
       <div className="relative z-10 w-full">
         <AuthSwitch

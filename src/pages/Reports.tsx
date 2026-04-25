@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download, FileText, Calendar, Tag, Search, Filter, Star, Code, Copy, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useExportGuard } from '@/hooks/useExportGuard';
+import { GuestInviteModal } from '@/components/GuestInviteModal';
 
 type ReportType = 'Country Report' | 'Thematic Report' | 'Regional Report';
 
@@ -133,6 +135,19 @@ const Reports = () => {
   const [selectedYear, setSelectedYear] = useState('All Years');
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const { toast } = useToast();
+  const { guard, inviteOpen, setInviteOpen, inviteAction } = useExportGuard();
+
+  const handleDownload = (report: typeof reports[0], format?: string) => {
+    guard(
+      () => toast({
+        title: 'Download coming soon',
+        description: format
+          ? `${format} download for "${report.title}" will be available shortly.`
+          : `"${report.title}" download will be available shortly.`,
+      }),
+      'download',
+    );
+  };
 
   const handleCopyEmbed = (report: typeof reports[0]) => {
     const embedCode = `<iframe src="https://ayd.africa/embed/report/${report.id}" width="600" height="400" frameborder="0" title="${report.title}"></iframe>`;
@@ -159,6 +174,7 @@ const Reports = () => {
 
   return (
     <>
+      <GuestInviteModal open={inviteOpen} onOpenChange={setInviteOpen} action={inviteAction} />
       <header className="relative py-8 md:py-12 overflow-hidden">
         <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         <div className="container px-4 md:px-6 relative z-10">
@@ -189,7 +205,7 @@ const Reports = () => {
                     <p className="text-xs sm:text-sm text-gray-400 mb-4 line-clamp-3">{report.description}</p>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">{report.downloads.toLocaleString()} downloads</span>
-                      <Button size="sm" className="gap-1">
+                      <Button size="sm" className="gap-1" onClick={() => handleDownload(report)}>
                         <Download className="h-3 w-3" />
                         Download
                       </Button>
@@ -284,7 +300,13 @@ const Reports = () => {
 
                     <div className="flex flex-wrap gap-2 mt-auto">
                       {report.format.map(format => (
-                        <Button key={format} variant="outline" size="sm" className="gap-1 text-xs flex-1 min-w-0 border-gray-800">
+                        <Button
+                          key={format}
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs flex-1 min-w-0 border-gray-800"
+                          onClick={() => handleDownload(report, format)}
+                        >
                           <Download className="h-3 w-3 flex-shrink-0" />
                           {format}
                         </Button>

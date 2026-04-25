@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - COUNTRY COMPARISON
+// AFRICAN YOUTH OBSERVATORY - COUNTRY COMPARISON
 // Compare countries across multiple indicators
 // ============================================
 

@@ -47,7 +47,7 @@ const SignIn = () => {
               <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold">
                 AYD
               </div>
-              <span className="font-display font-bold text-lg">African Youth Database</span>
+              <span className="font-display font-bold text-lg">African Youth Observatory</span>
             </Link>
             <ThemeToggle />
           </div>
@@ -141,7 +141,7 @@ const SignIn = () => {
                 AYD
               </div>
             </div>
-            <h2 className="text-2xl font-display font-bold">African Youth Database</h2>
+            <h2 className="text-2xl font-display font-bold">African Youth Observatory</h2>
             <p className="text-muted-foreground">
               Access comprehensive youth statistics across all 54 African nations. 
               Power your research with trusted, real-time data.

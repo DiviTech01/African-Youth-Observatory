@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - CHART COMPONENTS
+// AFRICAN YOUTH OBSERVATORY - CHART COMPONENTS
 // Reusable chart components using Recharts
 // ============================================
 

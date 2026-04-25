@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - DASHBOARD BUILDER
+// AFRICAN YOUTH OBSERVATORY - DASHBOARD BUILDER
 // Customizable dashboard with draggable widgets
 // ============================================
 

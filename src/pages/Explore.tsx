@@ -20,7 +20,7 @@ const Explore = () => {
   const [selectedCountry, setSelectedCountry] = useState("All Countries");
   const [selectedTheme, setSelectedTheme] = useState("All Themes");
   const [selectedIndicator, setSelectedIndicator] = useState("Select an indicator");
-  const [yearRange, setYearRange] = useState<[number, number]>([2010, 2023]);
+  const [yearRange, setYearRange] = useState<[number, number]>([2021, 2025]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
   const handleCountrySelect = useCallback((country: string) => {

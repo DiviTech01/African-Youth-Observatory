@@ -1,5 +1,5 @@
 // ============================================
-// AFRICAN YOUTH DATABASE - AI INSIGHTS PAGE
+// AFRICAN YOUTH OBSERVATORY - AI INSIGHTS PAGE
 // Comprehensive AI-powered analysis and recommendations
 // ============================================
 

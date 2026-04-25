@@ -12,7 +12,7 @@ const Footer = () => {
               <span className="font-bold text-white">AY</span>
             </div>
             <span className="font-bold text-sm md:text-base">
-              African Youth Stats
+              AfriYouthStats
             </span>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mb-4">
