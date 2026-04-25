@@ -1,5 +1,5 @@
 import React from 'react';
-import Navbar from '@/components/Navbar';
+import MinimalHeader from '@/components/MinimalHeader';
 import Footer from '@/components/Footer';
 
 interface PublicLayoutProps {
@@ -9,7 +9,7 @@ interface PublicLayoutProps {
 const PublicLayout = ({ children }: PublicLayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col overflow-x-hidden">
-      <Navbar />
+      <MinimalHeader />
       <main className="flex-grow overflow-x-hidden">{children}</main>
       <Footer />
     </div>

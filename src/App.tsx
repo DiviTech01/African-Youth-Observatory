@@ -15,10 +15,11 @@ import PublicLayout from "@/layouts/PublicLayout";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import PageTransition from "@/components/PageTransition";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { AuthRequired } from "@/components/AuthRequired";
+import { PublicOnly } from "@/components/PublicOnly";
 
 // Critical pages - static imports
 import Landing from "./pages/Landing";
-import Index from "./pages/Index";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
 import NotFound from "./pages/NotFound";
@@ -72,50 +73,57 @@ const App = () => (
           <AnimatePresence mode="wait">
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
             <Routes>
-              {/* Landing - standalone layout */}
-              <Route path="/landing" element={<PageTransition><Landing /></PageTransition>} />
+              {/* Public-only routes — bounce authenticated users to /explore */}
+              <Route element={<PublicOnly />}>
+                <Route path="/" element={<PageTransition><Landing /></PageTransition>} />
+                <Route path="/landing" element={<PageTransition><Landing /></PageTransition>} />
+                <Route path="/auth/signin" element={<PageTransition><SignIn /></PageTransition>} />
+                <Route path="/auth/signup" element={<PageTransition><SignUp /></PageTransition>} />
+              </Route>
 
-              {/* Auth - standalone layout */}
-              <Route path="/auth/signin" element={<PageTransition><SignIn /></PageTransition>} />
-              <Route path="/auth/signup" element={<PageTransition><SignUp /></PageTransition>} />
-
-              {/* Public pages - shared Navbar + Footer layout */}
-              <Route path="/" element={<PublicLayout><PageTransition><Index /></PageTransition></PublicLayout>} />
-              <Route path="/explore" element={<PublicLayout><PageTransition><Explore /></PageTransition></PublicLayout>} />
-              <Route path="/compare" element={<PublicLayout><PageTransition><Compare /></PageTransition></PublicLayout>} />
-              <Route path="/themes" element={<PublicLayout><PageTransition><Themes /></PageTransition></PublicLayout>} />
-              <Route path="/countries" element={<PublicLayout><PageTransition><Countries /></PageTransition></PublicLayout>} />
-              <Route path="/countries/:id" element={<PublicLayout><PageTransition><CountryProfilePage /></PageTransition></PublicLayout>} />
+              {/* Truly public — no auth gating either way (minimal header + footer) */}
               <Route path="/about" element={<PublicLayout><PageTransition><About /></PageTransition></PublicLayout>} />
-              <Route path="/reports" element={<PublicLayout><PageTransition><Reports /></PageTransition></PublicLayout>} />
               <Route path="/contact" element={<PublicLayout><PageTransition><Contact /></PageTransition></PublicLayout>} />
-              <Route path="/youth-index" element={<PublicLayout><PageTransition><YouthIndex /></PageTransition></PublicLayout>} />
-              <Route path="/insights" element={<PublicLayout><PageTransition><Insights /></PageTransition></PublicLayout>} />
-              <Route path="/policy-monitor" element={<PublicLayout><PageTransition><PolicyMonitor /></PageTransition></PublicLayout>} />
-              <Route path="/ask" element={<PublicLayout><PageTransition><NaturalLanguageQuery /></PageTransition></PublicLayout>} />
-              <Route path="/experts" element={<PublicLayout><PageTransition><Experts /></PageTransition></PublicLayout>} />
-              <Route path="/resources/glossary" element={<PublicLayout><PageTransition><Glossary /></PageTransition></PublicLayout>} />
-              <Route path="/resources/faq" element={<PublicLayout><PageTransition><FAQ /></PageTransition></PublicLayout>} />
-              <Route path="/resources/methodology" element={<PublicLayout><PageTransition><Methodology /></PageTransition></PublicLayout>} />
-              <Route path="/resources/toolkits" element={<PublicLayout><PageTransition><Toolkits /></PageTransition></PublicLayout>} />
 
-              {/* Dashboard pages */}
-              <Route path="/dashboard" element={<DashboardLayout><PageTransition><Dashboard /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/explore" element={<DashboardLayout><PageTransition><Explore /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/countries" element={<DashboardLayout><PageTransition><Countries /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/themes" element={<DashboardLayout><PageTransition><Themes /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/youth-index" element={<DashboardLayout><PageTransition><YouthIndex /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/compare" element={<DashboardLayout><PageTransition><Compare /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/insights" element={<DashboardLayout><PageTransition><Insights /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/ask" element={<DashboardLayout><PageTransition><NaturalLanguageQuery /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/policy-monitor" element={<DashboardLayout><PageTransition><PolicyMonitor /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/experts" element={<DashboardLayout><PageTransition><Experts /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
-              <Route path="/settings" element={<DashboardLayout><PageTransition><Settings /></PageTransition></DashboardLayout>} />
-              <Route path="/admin" element={<DashboardLayout><PageTransition><Admin /></PageTransition></DashboardLayout>} />
-              <Route path="/admin/cms" element={<DashboardLayout><PageTransition><ContentManager /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/data-upload" element={<DashboardLayout><PageTransition><DataUpload /></PageTransition></DashboardLayout>} />
+              {/* Auth-gated app — sidebar layout for everything */}
+              <Route element={<AuthRequired />}>
+                {/* Primary nav routes */}
+                <Route path="/explore" element={<DashboardLayout><PageTransition><Explore /></PageTransition></DashboardLayout>} />
+                <Route path="/compare" element={<DashboardLayout><PageTransition><Compare /></PageTransition></DashboardLayout>} />
+                <Route path="/themes" element={<DashboardLayout><PageTransition><Themes /></PageTransition></DashboardLayout>} />
+                <Route path="/countries" element={<DashboardLayout><PageTransition><Countries /></PageTransition></DashboardLayout>} />
+                <Route path="/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
+                <Route path="/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
+                <Route path="/youth-index" element={<DashboardLayout><PageTransition><YouthIndex /></PageTransition></DashboardLayout>} />
+                <Route path="/insights" element={<DashboardLayout><PageTransition><Insights /></PageTransition></DashboardLayout>} />
+                <Route path="/policy-monitor" element={<DashboardLayout><PageTransition><PolicyMonitor /></PageTransition></DashboardLayout>} />
+                <Route path="/ask" element={<DashboardLayout><PageTransition><NaturalLanguageQuery /></PageTransition></DashboardLayout>} />
+                <Route path="/experts" element={<DashboardLayout><PageTransition><Experts /></PageTransition></DashboardLayout>} />
+
+                {/* Resources */}
+                <Route path="/resources/glossary" element={<DashboardLayout><PageTransition><Glossary /></PageTransition></DashboardLayout>} />
+                <Route path="/resources/faq" element={<DashboardLayout><PageTransition><FAQ /></PageTransition></DashboardLayout>} />
+                <Route path="/resources/methodology" element={<DashboardLayout><PageTransition><Methodology /></PageTransition></DashboardLayout>} />
+                <Route path="/resources/toolkits" element={<DashboardLayout><PageTransition><Toolkits /></PageTransition></DashboardLayout>} />
+
+                {/* Dashboard + admin */}
+                <Route path="/dashboard" element={<DashboardLayout><PageTransition><Dashboard /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/explore" element={<DashboardLayout><PageTransition><Explore /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/countries" element={<DashboardLayout><PageTransition><Countries /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/themes" element={<DashboardLayout><PageTransition><Themes /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/youth-index" element={<DashboardLayout><PageTransition><YouthIndex /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/compare" element={<DashboardLayout><PageTransition><Compare /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/insights" element={<DashboardLayout><PageTransition><Insights /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/ask" element={<DashboardLayout><PageTransition><NaturalLanguageQuery /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/policy-monitor" element={<DashboardLayout><PageTransition><PolicyMonitor /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/experts" element={<DashboardLayout><PageTransition><Experts /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/data-upload" element={<DashboardLayout><PageTransition><DataUpload /></PageTransition></DashboardLayout>} />
+                <Route path="/settings" element={<DashboardLayout><PageTransition><Settings /></PageTransition></DashboardLayout>} />
+                <Route path="/admin" element={<DashboardLayout><PageTransition><Admin /></PageTransition></DashboardLayout>} />
+                <Route path="/admin/cms" element={<DashboardLayout><PageTransition><ContentManager /></PageTransition></DashboardLayout>} />
+              </Route>
 
               {/* Catch-all */}
               <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />

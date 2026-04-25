@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { AuthSwitch } from '@/components/ui/auth-switch';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,14 +7,18 @@ import { useToast } from '@/hooks/use-toast';
 
 const SignIn = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
+
+  // If the user was redirected here by AuthRequired, send them back where they were going.
+  const from = (location.state as { from?: string } | null)?.from || '/explore';
 
   const handleSignIn = async (data: { email: string; password: string }) => {
     try {
       await signIn(data.email, data.password);
       toast({ title: "Welcome back!", description: "You have successfully signed in." });
-      navigate('/dashboard');
+      navigate(from, { replace: true });
     } catch (err) {
       toast({ title: "Sign in failed", description: err instanceof Error ? err.message : "Invalid credentials.", variant: "destructive" });
     }
