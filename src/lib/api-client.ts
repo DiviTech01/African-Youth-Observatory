@@ -1,7 +1,9 @@
 // API Client utility for AYD Platform
 // Wraps fetch with typed responses, error handling, and base URL configuration
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== '/api'
+  ? import.meta.env.VITE_API_URL
+  : 'https://african-youth-observatory.onrender.com/api';
 
 // ─── Shared Types (API Contract) ─────────────────────────────────────────────
 
