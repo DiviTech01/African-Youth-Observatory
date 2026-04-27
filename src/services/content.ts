@@ -1,12 +1,23 @@
 // CMS / Content API client — fetches published content, admin CRUD helpers.
 
-const _viteUrl = import.meta.env.VITE_API_URL as string | undefined;
-export const CONTENT_API_BASE =
-  _viteUrl && _viteUrl.startsWith('http')
-    ? _viteUrl
-    : import.meta.env.PROD
-      ? 'https://african-youth-observatory.onrender.com/api'
-      : '/api';
+// Cloudflare Pages serves the SPA but has no /api proxy, so a relative "/api"
+// would return the index.html and break JSON parsing. Always resolve to the
+// Render backend when running anywhere other than localhost.
+const RENDER_API_URL = 'https://african-youth-observatory.onrender.com/api';
+
+function resolveContentApiBase(): string {
+  const viteUrl = import.meta.env.VITE_API_URL as string | undefined;
+  if (viteUrl && /^https?:\/\//i.test(viteUrl)) return viteUrl;
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
+    if (!isLocal) return RENDER_API_URL;
+    return '/api';
+  }
+  return import.meta.env.PROD ? RENDER_API_URL : '/api';
+}
+
+export const CONTENT_API_BASE = resolveContentApiBase();
 
 export type ContentType = 'TEXT' | 'RICH_TEXT' | 'IMAGE';
 
