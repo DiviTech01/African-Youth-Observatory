@@ -1,9 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, ChevronDown, ChevronUp, Download, CheckCircle, XCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Shield, ChevronDown, ChevronUp, Download, CheckCircle, XCircle,
+  Search, FileCheck2, Trophy, AlertTriangle, BookCheck, Calendar, Star,
+} from 'lucide-react';
 import CountryFlag from '@/components/CountryFlag';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -303,43 +310,74 @@ const policyData: PolicyData[] = [
   },
 ];
 
-const getScoreColor = (score: number) => {
-  if (score > 70) return 'bg-green-500';
-  if (score >= 50) return 'bg-amber-500';
-  return 'bg-red-500';
-};
+type Tier = 'high' | 'medium' | 'low';
 
-const getScoreTextColor = (score: number) => {
-  if (score > 70) return 'text-green-600 dark:text-green-400';
-  if (score >= 50) return 'text-amber-600 dark:text-amber-400';
-  return 'text-red-600 dark:text-red-400';
+const tierFor = (score: number): Tier => (score > 70 ? 'high' : score >= 50 ? 'medium' : 'low');
+
+const TIER_ACCENT: Record<Tier, { hex: string; soft: string; ring: string; label: string }> = {
+  high:   { hex: '#22C55E', soft: 'rgba(34,197,94,0.12)',  ring: 'rgba(34,197,94,0.35)',  label: 'High' },
+  medium: { hex: '#F59E0B', soft: 'rgba(245,158,11,0.12)', ring: 'rgba(245,158,11,0.35)', label: 'Medium' },
+  low:    { hex: '#EF4444', soft: 'rgba(239,68,68,0.12)',  ring: 'rgba(239,68,68,0.35)',  label: 'Low' },
 };
 
 const getArticleStatusBadge = (status: string) => {
   switch (status) {
     case 'compliant':
-      return <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30 text-xs">Compliant</Badge>;
+      return <Badge className="bg-green-500/15 text-green-400 border-green-500/30 text-[10px] uppercase tracking-wider">Compliant</Badge>;
     case 'partial':
-      return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 text-xs">Partial</Badge>;
+      return <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[10px] uppercase tracking-wider">Partial</Badge>;
     case 'non-compliant':
-      return <Badge className="bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30 text-xs">Non-compliant</Badge>;
+      return <Badge className="bg-red-500/15 text-red-400 border-red-500/30 text-[10px] uppercase tracking-wider">Non-compliant</Badge>;
     default:
       return null;
   }
+};
+
+/* Circular score gauge (SVG) */
+const ScoreGauge: React.FC<{ score: number; size?: number }> = ({ score, size = 56 }) => {
+  const tier = tierFor(score);
+  const accent = TIER_ACCENT[tier].hex;
+  const r = size / 2 - 5;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - score / 100);
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={accent}
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="font-bold tabular-nums" style={{ fontSize: size * 0.32, color: accent }}>{score}</span>
+      </div>
+    </div>
+  );
 };
 
 const PolicyMonitor = () => {
   const { t } = useLanguage();
   const { preferences } = useUserPreferences();
   const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [tierFilter, setTierFilter] = useState<'all' | Tier>('all');
+  const [sortBy, setSortBy] = useState<'score-desc' | 'score-asc' | 'name'>('score-desc');
 
   // Fetch real rankings from API
-  const { data: apiRankings, isError } = useQuery({
+  const { data: apiRankings } = useQuery({
     queryKey: ['policy-rankings'],
     queryFn: () => api.policyMonitor.rankings(),
   });
 
-  // Use API data or fallback to mock
   const activePolicyData = useMemo(() => {
     const apiData = (apiRankings as any)?.data || apiRankings;
     if (Array.isArray(apiData) && apiData.length > 0) {
@@ -358,16 +396,57 @@ const PolicyMonitor = () => {
   }, [apiRankings]);
 
   const toggleExpand = (country: string) => {
-    setExpandedCountry(prev => (prev === country ? null : country));
+    setExpandedCountry((prev) => (prev === country ? null : country));
   };
 
-  const ratifiedCount = activePolicyData.filter(d => d.aycRatified).length;
-  const withPolicyCount = activePolicyData.filter(d => d.nationalYouthPolicy).length;
-  const avgScore = activePolicyData.length > 0 ? Math.round(activePolicyData.reduce((sum, d) => sum + d.complianceScore, 0) / activePolicyData.length) : 0;
+  const ratifiedCount = activePolicyData.filter((d) => d.aycRatified).length;
+  const withPolicyCount = activePolicyData.filter((d) => d.nationalYouthPolicy).length;
+  const avgScore =
+    activePolicyData.length > 0
+      ? Math.round(activePolicyData.reduce((sum, d) => sum + d.complianceScore, 0) / activePolicyData.length)
+      : 0;
+  const wpayCount = activePolicyData.filter((d) => d.wpay).length;
+
+  // Tier breakdown for the distribution visualization
+  const distribution = useMemo(() => {
+    const high = activePolicyData.filter((d) => tierFor(d.complianceScore) === 'high').length;
+    const medium = activePolicyData.filter((d) => tierFor(d.complianceScore) === 'medium').length;
+    const low = activePolicyData.filter((d) => tierFor(d.complianceScore) === 'low').length;
+    const total = activePolicyData.length || 1;
+    return {
+      high, medium, low, total,
+      highPct: (high / total) * 100,
+      mediumPct: (medium / total) * 100,
+      lowPct: (low / total) * 100,
+    };
+  }, [activePolicyData]);
+
+  // Search + filter + sort
+  const visiblePolicyData = useMemo(() => {
+    let arr = activePolicyData;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      arr = arr.filter((d) => d.country.toLowerCase().includes(q));
+    }
+    if (tierFilter !== 'all') {
+      arr = arr.filter((d) => tierFor(d.complianceScore) === tierFilter);
+    }
+    arr = [...arr].sort((a, b) => {
+      if (sortBy === 'score-desc') return b.complianceScore - a.complianceScore;
+      if (sortBy === 'score-asc') return a.complianceScore - b.complianceScore;
+      return a.country.localeCompare(b.country);
+    });
+    return arr;
+  }, [activePolicyData, search, tierFilter, sortBy]);
+
+  const topPerformer = useMemo(
+    () => [...activePolicyData].sort((a, b) => b.complianceScore - a.complianceScore)[0],
+    [activePolicyData],
+  );
 
   return (
     <>
-      <header className="relative py-8 md:py-12 overflow-hidden">
+      <header className="relative pt-6 pb-3 md:pt-8 md:pb-4 overflow-hidden">
         <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         <div className="relative z-10 container px-4 md:px-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -388,186 +467,282 @@ const PolicyMonitor = () => {
         </div>
       </header>
 
-      <div className="py-6 md:py-8">
+      <div className="pt-2 md:pt-3 pb-6 md:pb-8">
         <div className="container px-4 md:px-6">
-          {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-4 mb-8">
-            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
-              <CardContent className="p-4 text-center">
-                <p className="text-3xl font-bold text-primary">{ratifiedCount}/{activePolicyData.length}</p>
-                <p className="text-sm text-gray-400 mt-1">AYC Ratified</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
-              <CardContent className="p-4 text-center">
-                <p className="text-3xl font-bold text-primary">{withPolicyCount}/{activePolicyData.length}</p>
-                <p className="text-sm text-gray-400 mt-1">National Youth Policy</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
-              <CardContent className="p-4 text-center">
-                <p className={`text-3xl font-bold ${getScoreTextColor(avgScore)}`}>{avgScore}%</p>
-                <p className="text-sm text-gray-400 mt-1">Avg. Compliance Score</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
-              <CardContent className="p-4 text-center">
-                <p className="text-3xl font-bold text-primary">{activePolicyData.filter(d => d.wpay).length}</p>
-                <p className="text-sm text-gray-400 mt-1">WPAY Aligned</p>
-              </CardContent>
-            </Card>
+          {/* Summary Cards — richer design with icons + accent bars */}
+          <div className="grid gap-3 md:grid-cols-4 mb-5">
+            {[
+              { icon: FileCheck2, label: 'AYC Ratified', value: ratifiedCount, of: activePolicyData.length, accent: '#22C55E', sub: 'Charter signed & ratified' },
+              { icon: BookCheck, label: 'National Youth Policy', value: withPolicyCount, of: activePolicyData.length, accent: '#3B82F6', sub: 'In-force national framework' },
+              { icon: Trophy, label: 'Avg. Compliance', value: avgScore, of: 100, accent: avgScore > 70 ? '#22C55E' : avgScore >= 50 ? '#F59E0B' : '#EF4444', sub: 'Across tracked countries', isPercent: true },
+              { icon: Star, label: 'WPAY Aligned', value: wpayCount, of: activePolicyData.length, accent: '#A855F7', sub: 'World Programme of Action for Youth' },
+            ].map((s) => {
+              const Icon = s.icon;
+              const pct = (s.value / Math.max(s.of, 1)) * 100;
+              return (
+                <Card key={s.label} className="bg-gradient-to-b from-white/[0.04] to-white/[0.01] border-gray-800/80 rounded-2xl overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center"
+                        style={{ background: s.accent + '20', color: s.accent }}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{s.label}</span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-3xl font-bold tabular-nums" style={{ color: s.accent }}>
+                        {s.value}{s.isPercent ? '%' : ''}
+                      </span>
+                      {!s.isPercent && (
+                        <span className="text-sm text-gray-500 font-medium">/ {s.of}</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">{s.sub}</p>
+                    <div className="h-1 bg-white/[0.06] rounded-full mt-3 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${Math.min(100, pct)}%`, background: s.accent }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
-          {/* Compliance Score Table */}
-          <Card className="mb-8 bg-white/[0.03] border-gray-800 rounded-2xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                Compliance Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-800/50">
-                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400">Country</th>
-                      <th className="text-center py-3 px-2 text-xs font-medium text-gray-400">AYC Ratified</th>
-                      <th className="text-center py-3 px-2 text-xs font-medium text-gray-400">Nat. Youth Policy</th>
-                      <th className="text-center py-3 px-2 text-xs font-medium text-gray-400">Policy Year</th>
-                      <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 min-w-[200px]">Compliance Score</th>
-                      <th className="text-center py-3 px-2 text-xs font-medium text-gray-400">WPAY</th>
-                      <th className="text-center py-3 px-2 text-xs font-medium text-gray-400">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activePolicyData.map((item) => {
-                      const isMyCountry = preferences.myCountry && item.country.toLowerCase() === preferences.myCountry.toLowerCase();
-                      return (
-                      <React.Fragment key={item.country}>
-                        <tr className={`border-b border-gray-800/50 hover:bg-white/[0.04] transition-colors ${isMyCountry ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}>
-                          <td className="py-3 px-2 font-medium">
-                            <span className="inline-flex items-center gap-2">
-                              <CountryFlag country={item.country} size="sm" />
-                              {item.country}
-                              {isMyCountry && <Badge className="ml-1 bg-primary/15 text-primary border-primary/30 text-[10px] px-1.5 py-0">Your Country</Badge>}
-                            </span>
-                          </td>
-                          <td className="py-3 px-2 text-center">
-                            {item.aycRatified ? (
-                              <CheckCircle className="h-5 w-5 text-green-500 inline-block" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-400 inline-block" />
-                            )}
-                          </td>
-                          <td className="py-3 px-2 text-center">
-                            {item.nationalYouthPolicy ? (
-                              <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30">Yes</Badge>
-                            ) : (
-                              <Badge className="bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30">No</Badge>
-                            )}
-                          </td>
-                          <td className="py-3 px-2 text-center text-sm text-gray-400">
-                            {item.policyYear ?? '—'}
-                          </td>
-                          <td className="py-3 px-2">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-grow h-3 bg-secondary rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all ${getScoreColor(item.complianceScore)}`}
-                                  style={{ width: `${item.complianceScore}%` }}
-                                />
-                              </div>
-                              <span className={`text-sm font-bold min-w-[36px] text-right ${getScoreTextColor(item.complianceScore)}`}>
-                                {item.complianceScore}%
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-2 text-center">
-                            {item.wpay ? (
-                              <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 text-xs">WPAY</Badge>
-                            ) : (
-                              <span className="text-gray-400 text-xs">—</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-2 text-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleExpand(item.country)}
-                              className="h-8 w-8 p-0"
-                            >
-                              {expandedCountry === item.country ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </td>
-                        </tr>
-                        {expandedCountry === item.country && (
-                          <tr className="bg-white/[0.03]">
-                            <td colSpan={7} className="p-4">
-                              <div className="grid gap-6 md:grid-cols-2">
-                                {/* AYC Article Breakdown */}
-                                <div>
-                                  <h4 className="font-semibold text-sm mb-3">AYC Article Compliance</h4>
-                                  <div className="space-y-2">
-                                    {item.aycArticles.map((art) => (
-                                      <div key={art.article} className="flex items-center justify-between py-1 px-2 rounded bg-background">
-                                        <span className="text-sm">{art.article}</span>
-                                        {getArticleStatusBadge(art.status)}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                                {/* Policy Timeline */}
-                                <div>
-                                  <h4 className="font-semibold text-sm mb-3">Policy Timeline</h4>
-                                  <div className="relative pl-4 border-l-2 border-primary/30 space-y-4">
-                                    {item.timelineEvents.map((evt, idx) => (
-                                      <div key={idx} className="relative">
-                                        <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-primary border-2 border-background" />
-                                        <p className="text-xs font-bold text-primary">{evt.year}</p>
-                                        <p className="text-sm text-gray-400">{evt.event}</p>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Distribution + Top performer */}
+          <div className="grid gap-3 md:grid-cols-3 mb-6">
+            <Card className="md:col-span-2 bg-gradient-to-b from-white/[0.04] to-white/[0.01] border-gray-800/80 rounded-2xl">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Compliance Distribution</h3>
+                    <p className="text-[11px] text-gray-500 mt-0.5">Where each country sits in the framework</p>
+                  </div>
+                  <span className="text-xs text-gray-500 tabular-nums">{distribution.total} countries</span>
+                </div>
+                <div className="flex h-9 rounded-lg overflow-hidden border border-white/[0.06]">
+                  <div className="flex items-center justify-center text-[11px] font-semibold text-white" style={{ width: `${distribution.highPct}%`, background: '#22C55E' }}>
+                    {distribution.high > 0 && <span className="px-2 truncate">{distribution.high} High</span>}
+                  </div>
+                  <div className="flex items-center justify-center text-[11px] font-semibold text-white" style={{ width: `${distribution.mediumPct}%`, background: '#F59E0B' }}>
+                    {distribution.medium > 0 && <span className="px-2 truncate">{distribution.medium} Medium</span>}
+                  </div>
+                  <div className="flex items-center justify-center text-[11px] font-semibold text-white" style={{ width: `${distribution.lowPct}%`, background: '#EF4444' }}>
+                    {distribution.low > 0 && <span className="px-2 truncate">{distribution.low} Low</span>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mt-4">
+                  {(['high','medium','low'] as Tier[]).map((t) => {
+                    const accent = TIER_ACCENT[t];
+                    const cnt = distribution[t];
+                    const pct = distribution[(`${t}Pct`) as keyof typeof distribution] as number;
+                    return (
+                      <div key={t} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: accent.hex }} />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-gray-200 leading-tight">{accent.label}</p>
+                          <p className="text-[10px] text-gray-500">{cnt} · {pct.toFixed(0)}%</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Legend / Methodology Note */}
-          <div className="p-4 bg-white/[0.03] border border-gray-800 rounded-lg">
-            <h3 className="font-bold mb-2">Scoring Methodology</h3>
-            <p className="text-sm text-gray-400 mb-3">
-              Compliance scores are calculated based on alignment with the African Youth Charter (AYC) articles,
-              the World Programme of Action for Youth (WPAY) indicators, and the existence and currency of a
-              national youth policy framework.
+            {topPerformer && (
+              <Card className="bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20 rounded-2xl">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Trophy className="h-4 w-4 text-emerald-400" />
+                    <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-semibold">Top Performer</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <ScoreGauge score={topPerformer.complianceScore} size={64} />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <CountryFlag country={topPerformer.country} size="md" />
+                        <h3 className="text-base font-bold text-white truncate">{topPerformer.country}</h3>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        Policy adopted {topPerformer.policyYear ?? '—'} · {topPerformer.aycRatified ? 'AYC ratified' : 'AYC not ratified'}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Filters bar */}
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+              <Input
+                placeholder="Search country…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-9 text-xs bg-white/[0.03] border-gray-800"
+              />
+            </div>
+            <Select value={tierFilter} onValueChange={(v) => setTierFilter(v as 'all' | Tier)}>
+              <SelectTrigger className="w-full sm:w-[150px] h-9 text-xs bg-white/[0.03] border-gray-800">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">All tiers</SelectItem>
+                <SelectItem value="high" className="text-xs">High (&gt;70%)</SelectItem>
+                <SelectItem value="medium" className="text-xs">Medium (50–70%)</SelectItem>
+                <SelectItem value="low" className="text-xs">Low (&lt;50%)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="w-full sm:w-[170px] h-9 text-xs bg-white/[0.03] border-gray-800">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="score-desc" className="text-xs">Highest score</SelectItem>
+                <SelectItem value="score-asc" className="text-xs">Lowest score</SelectItem>
+                <SelectItem value="name" className="text-xs">A → Z</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Country card grid */}
+          {visiblePolicyData.length === 0 ? (
+            <div className="text-center py-16 rounded-2xl border border-dashed border-gray-800 bg-white/[0.02]">
+              <AlertTriangle className="h-8 w-8 text-gray-500 mx-auto mb-2" />
+              <p className="text-sm text-gray-400">No countries match your filter.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {visiblePolicyData.map((item) => {
+                const isMyCountry = preferences.myCountry && item.country.toLowerCase() === preferences.myCountry.toLowerCase();
+                const tier = tierFor(item.complianceScore);
+                const accent = TIER_ACCENT[tier];
+                const isExpanded = expandedCountry === item.country;
+                return (
+                  <Card
+                    key={item.country}
+                    className={`bg-gradient-to-b from-white/[0.04] to-white/[0.01] border-gray-800/80 rounded-2xl overflow-hidden hover:border-gray-700 transition-all ${
+                      isMyCountry ? 'ring-1 ring-[#D4A017]/40' : ''
+                    } ${isExpanded ? 'md:col-span-2 xl:col-span-3' : ''}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <ScoreGauge score={item.complianceScore} size={56} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <CountryFlag country={item.country} size="sm" />
+                            <h3 className="text-sm font-bold text-white truncate">{item.country}</h3>
+                            {isMyCountry && (
+                              <Badge className="bg-[#D4A017]/15 text-[#D4A017] border-[#D4A017]/30 text-[9px] px-1.5 py-0 h-4">YOU</Badge>
+                            )}
+                          </div>
+                          <Badge
+                            className="text-[9px] uppercase tracking-wider border"
+                            style={{ background: accent.soft, color: accent.hex, borderColor: accent.ring }}
+                          >
+                            {accent.label} compliance
+                          </Badge>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-[11px]">
+                            <span className="inline-flex items-center gap-1 text-gray-400">
+                              {item.aycRatified ? <CheckCircle className="h-3 w-3 text-emerald-400" /> : <XCircle className="h-3 w-3 text-red-400" />}
+                              AYC
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-gray-400">
+                              {item.nationalYouthPolicy ? <CheckCircle className="h-3 w-3 text-emerald-400" /> : <XCircle className="h-3 w-3 text-red-400" />}
+                              NYP
+                            </span>
+                            {item.policyYear && (
+                              <span className="inline-flex items-center gap-1 text-gray-500">
+                                <Calendar className="h-3 w-3" />
+                                {item.policyYear}
+                              </span>
+                            )}
+                            {item.wpay && (
+                              <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/30 text-[9px] px-1.5 py-0 h-4 uppercase tracking-wider">WPAY</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleExpand(item.country)}
+                          className="h-7 w-7 p-0 -mr-1 text-gray-400 hover:text-white"
+                        >
+                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </div>
+
+                      {isExpanded && (item.aycArticles.length > 0 || item.timelineEvents.length > 0) && (
+                        <div className="mt-4 pt-4 border-t border-white/[0.06] grid gap-5 md:grid-cols-2">
+                          {item.aycArticles.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-xs uppercase tracking-wider text-gray-400 mb-3">AYC Article Compliance</h4>
+                              <div className="space-y-1.5">
+                                {item.aycArticles.map((art) => {
+                                  const dot = art.status === 'compliant' ? '#22C55E' : art.status === 'partial' ? '#F59E0B' : '#EF4444';
+                                  return (
+                                    <div key={art.article} className="flex items-center justify-between py-1.5 px-2.5 rounded bg-white/[0.02] border border-white/[0.04]">
+                                      <span className="inline-flex items-center gap-2 text-xs text-gray-300 min-w-0">
+                                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dot }} />
+                                        <span className="truncate">{art.article}</span>
+                                      </span>
+                                      {getArticleStatusBadge(art.status)}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {item.timelineEvents.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-xs uppercase tracking-wider text-gray-400 mb-3">Policy Timeline</h4>
+                              <div className="relative pl-5 border-l-2 border-[#D4A017]/30 space-y-3">
+                                {item.timelineEvents.map((evt, idx) => (
+                                  <div key={idx} className="relative">
+                                    <div className="absolute -left-[27px] top-0.5 w-3.5 h-3.5 rounded-full bg-[#D4A017] border-[3px] border-background" />
+                                    <p className="text-xs font-bold text-[#D4A017] tabular-nums">{evt.year}</p>
+                                    <p className="text-[11px] text-gray-400 leading-snug mt-0.5">{evt.event}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Methodology — compact */}
+          <div className="mt-6 p-4 bg-white/[0.02] border border-gray-800/60 rounded-xl flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-[#D4A017]" />
+              <h3 className="font-semibold text-sm text-white">Scoring methodology</h3>
+            </div>
+            <p className="text-xs text-gray-400 leading-relaxed flex-1">
+              Compliance scores are computed from alignment with African Youth Charter (AYC) articles,
+              World Programme of Action for Youth (WPAY) indicators, and the currency of a national youth policy.
             </p>
-            <div className="flex flex-wrap gap-4 text-xs">
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-full bg-green-500" />
-                High compliance (&gt;70%)
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-full bg-amber-500" />
-                Moderate compliance (50–70%)
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block w-3 h-3 rounded-full bg-red-500" />
-                Low compliance (&lt;50%)
-              </span>
+            <div className="flex flex-wrap gap-3 text-[10px]">
+              {(['high','medium','low'] as Tier[]).map((t) => {
+                const a = TIER_ACCENT[t];
+                return (
+                  <span key={t} className="flex items-center gap-1.5 text-gray-400">
+                    <span className="w-2 h-2 rounded-full" style={{ background: a.hex }} />
+                    {t === 'high' ? '>70%' : t === 'medium' ? '50–70%' : '<50%'}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>

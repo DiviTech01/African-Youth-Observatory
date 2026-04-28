@@ -14,7 +14,7 @@ const statsData = [
     trend: '+2.3%',
     glowColor: 'green' as const,
     icon: Users,
-    link: '/explore?theme=population'
+    link: '/auth/signin'
   },
   {
     slug: 'education',
@@ -24,7 +24,7 @@ const statsData = [
     trend: '+5.7%',
     glowColor: 'blue' as const,
     icon: GraduationCap,
-    link: '/explore?theme=education'
+    link: '/auth/signin'
   },
   {
     slug: 'health',
@@ -34,7 +34,7 @@ const statsData = [
     trend: '+3.1%',
     glowColor: 'purple' as const,
     icon: Heart,
-    link: '/explore?theme=health'
+    link: '/auth/signin'
   },
   {
     slug: 'employment',
@@ -44,7 +44,7 @@ const statsData = [
     trend: '-1.2%',
     glowColor: 'orange' as const,
     icon: Briefcase,
-    link: '/explore?theme=employment'
+    link: '/auth/signin'
   },
   {
     slug: 'entrepreneurship',
@@ -54,7 +54,7 @@ const statsData = [
     trend: '+4.5%',
     glowColor: 'green' as const,
     icon: BookOpen,
-    link: '/explore?theme=entrepreneurship'
+    link: '/auth/signin'
   }
 ];
 

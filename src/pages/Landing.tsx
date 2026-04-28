@@ -207,7 +207,7 @@ const Landing = () => {
               animate="visible"
               custom={0.45}
             >
-              <Link to="/auth/signup">
+              <Link to="/auth/signin">
                 <Button size="lg" className="w-full sm:w-auto text-base gap-2 px-8">
                   <Database className="h-5 w-5" />
                   <Content as="span" id="landing.hero.cta_primary" fallback="Start Exploring Data" />

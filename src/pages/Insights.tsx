@@ -242,7 +242,7 @@ const Insights: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* ── Header ──────────────────────────────────────────────── */}
-      <header className="relative py-8 md:py-12 overflow-hidden">
+      <header className="relative pt-6 pb-3 md:pt-8 md:pb-4 overflow-hidden">
         <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -265,7 +265,7 @@ const Insights: React.FC = () => {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 pt-2 pb-10 md:pt-3 sm:px-6 lg:px-8">
 
         {/* ── Filters ─────────────────────────────────────────────── */}
         <motion.div

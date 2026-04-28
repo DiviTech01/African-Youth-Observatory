@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { AuthSwitch } from '@/components/ui/auth-switch';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,18 +7,16 @@ import { useToast } from '@/hooks/use-toast';
 
 const SignIn = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
 
-  // If the user was redirected here by AuthRequired, send them back where they were going.
-  const from = (location.state as { from?: string } | null)?.from || '/explore';
-
+  // No manual post-signin navigate — PublicOnly redirects to /dashboard
+  // as soon as the auth context reports the user. Navigating eagerly here
+  // races the async profile fetch and bounces through AuthRequired.
   const handleSignIn = async (data: { email: string; password: string }) => {
     try {
       await signIn(data.email, data.password);
       toast({ title: "Welcome back!", description: "You have successfully signed in." });
-      navigate(from, { replace: true });
     } catch (err) {
       toast({ title: "Sign in failed", description: err instanceof Error ? err.message : "Invalid credentials.", variant: "destructive" });
     }

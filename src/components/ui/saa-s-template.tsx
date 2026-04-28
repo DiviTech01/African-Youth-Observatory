@@ -38,13 +38,13 @@ const SaaSHero = React.memo(() => {
 
           {/* CTA */}
           <div className="flex items-center justify-center gap-4">
-            <Link to="/explore">
+            <Link to="/auth/signin">
               <Button size="lg" className="tracking-tight gap-2">
                 Start Exploring
                 <ArrowRight size={16} />
               </Button>
             </Link>
-            <Link to="/youth-index">
+            <Link to="/auth/signin">
               <Button
                 variant="outline"
                 size="lg"

@@ -7,10 +7,11 @@ interface AuthSwitchProps {
   onSignIn?: (data: { email: string; password: string }) => void;
   onSignUp?: (data: { name: string; email: string; password: string }) => void;
   className?: string;
+  initialMode?: 'signin' | 'signup';
 }
 
-export function AuthSwitch({ onSignIn, onSignUp, className }: AuthSwitchProps) {
-  const [isSignUp, setIsSignUp] = useState(false);
+export function AuthSwitch({ onSignIn, onSignUp, className, initialMode = 'signin' }: AuthSwitchProps) {
+  const [isSignUp, setIsSignUp] = useState(initialMode === 'signup');
   const [signInData, setSignInData] = useState({ email: "", password: "" });
   const [signUpData, setSignUpData] = useState({ name: "", email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);

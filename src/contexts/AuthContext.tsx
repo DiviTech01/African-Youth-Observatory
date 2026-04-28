@@ -33,24 +33,25 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 // Ensures a row exists in our backend DB for the authenticated Supabase user.
 // Hitting GET /auth/profile triggers jwt.strategy.ts which JIT-provisions the
-// user row on first login. Runs to completion (no timeout) so Render cold
-// starts can't short-circuit provisioning for Google OAuth / other providers.
+// user row on first login. Fire-and-forget — the frontend never needs to wait
+// on this; awaiting it can pin the loading spinner during Render cold starts
+// (up to 60s on free tier) or when the backend rejects tokens.
 async function syncBackendUser(accessToken: string): Promise<void> {
   try {
     const res = await fetch(`${API_BASE}/auth/profile`, {
       headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) {
-      // fetch only throws on network errors; 401/500 still resolve. Surface them.
       const body = await res.text().catch(() => '');
-      console.error(
-        `[auth-sync] Backend /auth/profile returned ${res.status} ${res.statusText}. Body: ${body.slice(0, 200)}`,
+      console.warn(
+        `[auth-sync] Backend /auth/profile returned ${res.status}. Non-fatal — continuing with Supabase profile. Body: ${body.slice(0, 120)}`,
       );
       return;
     }
     console.log('[auth-sync] Backend user row confirmed / provisioned');
   } catch (e) {
-    console.error('[auth-sync] Network error calling /auth/profile:', e);
+    console.warn('[auth-sync] /auth/profile call failed. Non-fatal — continuing with Supabase profile.', e);
   }
 }
 
@@ -116,41 +117,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const hasError = typeof window !== 'undefined' && (window.location.hash.includes('error') || window.location.search.includes('error'));
     console.log('[auth] mount — url hints:', { hasHashToken, hasCode, hasError, href: window.location.href });
 
+    let mounted = true;
+    // Hard deadline: never keep the app on the loading spinner longer than 3s,
+    // even if Supabase or the backend stalls. After this fires, isLoading goes
+    // false and routing proceeds; setUser may still arrive later.
+    const loadingDeadline = setTimeout(() => {
+      if (mounted) setIsLoading(false);
+    }, 3000);
+
     supabase.auth.getSession().then(async ({ data: { session: s }, error }) => {
       console.log('[auth] getSession resolved —', { hasSession: !!s, email: s?.user?.email, error: error?.message });
+      if (!mounted) return;
       setSession(s);
       if (s) {
-        await syncBackendUser(s.access_token);
-        const profile = await fetchProfile(s.access_token, {
-          id: s.user.id,
-          email: s.user.email ?? '',
-          name: s.user.user_metadata?.name,
-        });
-        setUser(profile);
-        triggerDashboardSync();
+        // Fire-and-forget — non-essential to render the app
+        void syncBackendUser(s.access_token);
+        try {
+          const profile = await fetchProfile(s.access_token, {
+            id: s.user.id,
+            email: s.user.email ?? '',
+            name: s.user.user_metadata?.name,
+          });
+          if (mounted) {
+            setUser(profile);
+            triggerDashboardSync();
+          }
+        } catch (e) {
+          console.warn('[auth] fetchProfile failed:', e);
+        }
       }
-      setIsLoading(false);
+      if (mounted) {
+        setIsLoading(false);
+        clearTimeout(loadingDeadline);
+      }
+    }).catch((e) => {
+      console.warn('[auth] getSession threw:', e);
+      if (mounted) setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
       console.log('[auth] onAuthStateChange —', { event, hasSession: !!s, email: s?.user?.email, provider: s?.user?.app_metadata?.provider });
+      if (!mounted) return;
       setSession(s);
       if (s) {
-        await syncBackendUser(s.access_token);
-        const profile = await fetchProfile(s.access_token, {
-          id: s.user.id,
-          email: s.user.email ?? '',
-          name: s.user.user_metadata?.name,
-        });
-        setUser(profile);
-        // Sync dashboards from server on login
-        triggerDashboardSync();
+        void syncBackendUser(s.access_token);
+        try {
+          const profile = await fetchProfile(s.access_token, {
+            id: s.user.id,
+            email: s.user.email ?? '',
+            name: s.user.user_metadata?.name,
+          });
+          if (mounted) {
+            setUser(profile);
+            triggerDashboardSync();
+          }
+        } catch (e) {
+          console.warn('[auth] fetchProfile failed:', e);
+        }
       } else {
         setUser(null);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(loadingDeadline);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {

@@ -1,11 +1,17 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, BarChart3, ChevronDown, ChevronUp, Brain, Cpu, TrendingUp, Send, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  Sparkles, Brain, Cpu, TrendingUp, Send, Download, Plus, Image as ImageIcon,
+  Paperclip, X, Trash2, MessageSquare, Loader2, ChevronLeft, ChevronRight, Bot, User as UserIcon,
+} from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 
+/* ─── Types ──────────────────────────────────────────────────── */
 interface AiVisualization {
   type: 'bar_chart' | 'line_chart' | 'radar_chart' | 'pie_chart' | 'scatter_plot' | 'table' | 'stat_cards';
   title: string;
@@ -15,32 +21,96 @@ interface AiVisualization {
   headers?: string[];
   rows?: string[][];
 }
+interface AiDataCitation { indicator: string; country?: string; value: number; year: number; source?: string; }
 
-interface AiDataCitation {
-  indicator: string;
-  country?: string;
-  value: number;
-  year: number;
-  source?: string;
+interface Attachment {
+  id: string;
+  name: string;
+  type: string;
+  dataUrl: string; // base64
 }
 
-interface QueryResult {
-  answer: string;
-  keyFindings: string[];
-  dataCitations: AiDataCitation[];
-  visualization: AiVisualization | null;
-  followUpQuestions: string[];
-  confidence: number;
-  dataAvailability: 'full' | 'partial' | 'limited';
-  source: 'ai' | 'rule-based';
-  processingTime?: number;
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  attachments?: Attachment[];
+  visualization?: AiVisualization | null;
+  citations?: AiDataCitation[];
+  source?: 'ai' | 'rule-based';
+  confidence?: number;
+  timestamp: number;
 }
+
+interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+const STORAGE_KEY_BASE = 'ayo_ai_conversations_v1';
+const LEGACY_STORAGE_KEY = 'ayo_ai_conversations_v1';
+const storageKeyFor = (userId: string | null | undefined) =>
+  userId ? `${STORAGE_KEY_BASE}_${userId}` : `${STORAGE_KEY_BASE}_guest`;
 
 const suggestedQuestions = [
-  "Which 5 African countries have the highest Youth Index scores and why?",
-  "Compare Nigeria and Kenya across education, employment, and health indicators",
-  "What are the biggest data gaps in Southern Africa?",
+  'Which 5 African countries have the highest Youth Index scores and why?',
+  'Compare Nigeria and Kenya across education, employment, and health indicators',
+  'What are the biggest data gaps in Southern Africa?',
+  'Show me youth unemployment trends in West Africa from 2018 to 2024',
 ];
+
+/* ─── Helpers ────────────────────────────────────────────────── */
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+function loadConversationsFor(userId: string | null | undefined): Conversation[] {
+  try {
+    const raw = localStorage.getItem(storageKeyFor(userId));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+    // First-time migration: if there's pre-scoping data and the user has no
+    // scoped data yet, claim the legacy data for this user (only once).
+    if (userId) {
+      const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          localStorage.setItem(storageKeyFor(userId), legacy);
+          localStorage.removeItem(LEGACY_STORAGE_KEY);
+          return parsed;
+        }
+      }
+    }
+  } catch {}
+  return [];
+}
+
+function saveConversationsFor(userId: string | null | undefined, convs: Conversation[]) {
+  try { localStorage.setItem(storageKeyFor(userId), JSON.stringify(convs)); } catch {}
+}
+
+function titleFromMessage(text: string): string {
+  const trimmed = text.trim().replace(/\s+/g, ' ');
+  if (trimmed.length <= 48) return trimmed;
+  return trimmed.slice(0, 45).trim() + '…';
+}
+
+function relativeTime(ts: number): string {
+  const diff = Date.now() - ts;
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return 'just now';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}d ago`;
+  return new Date(ts).toLocaleDateString();
+}
 
 function renderMarkdown(text: string): string {
   return text
@@ -53,18 +123,6 @@ function renderMarkdown(text: string): string {
     .replace(/\n/g, '<br/>');
 }
 
-function ConfidenceBadge({ confidence }: { confidence: number }) {
-  if (confidence > 0.8) return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">High confidence</Badge>;
-  if (confidence > 0.5) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Medium confidence</Badge>;
-  return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Low confidence</Badge>;
-}
-
-function SourceBadge({ source }: { source: 'ai' | 'rule-based' }) {
-  if (source === 'ai') return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 gap-1"><Brain className="h-3 w-3" />AI-powered</Badge>;
-  return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 gap-1"><Cpu className="h-3 w-3" />Rule-based</Badge>;
-}
-
-/** Download an SVG element as a .svg file */
 function downloadVisualizationSvg(containerId: string, filename: string) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -72,7 +130,6 @@ function downloadVisualizationSvg(containerId: string, filename: string) {
   if (!svg) return;
   const clone = svg.cloneNode(true) as SVGSVGElement;
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  // Apply a dark background so it looks the same when opened externally
   const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
   bg.setAttribute('width', '100%');
   bg.setAttribute('height', '100%');
@@ -89,7 +146,6 @@ function downloadVisualizationSvg(containerId: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/** Custom glass-morphism tooltip for Recharts */
 function GlassTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
@@ -195,9 +251,7 @@ function VisualizationRenderer({ viz, id }: { viz: AiVisualization; id: string }
   }
 }
 
-/** Try to extract structured visualization JSON from an AI text response */
 function parseVisualizationFromText(text: string): AiVisualization | null {
-  // Look for ```json ... ``` blocks that contain visualization data
   const jsonBlockRegex = /```json\s*([\s\S]*?)```/g;
   let match: RegExpExecArray | null;
   while ((match = jsonBlockRegex.exec(text)) !== null) {
@@ -214,350 +268,606 @@ function parseVisualizationFromText(text: string): AiVisualization | null {
           rows: parsed.rows,
         };
       }
-    } catch {
-      // not valid JSON, skip
-    }
+    } catch { /* skip */ }
   }
   return null;
 }
 
-/** Strip visualization JSON blocks from the answer text so they don't render as raw code */
 function stripVisualizationBlocks(text: string): string {
   return text.replace(/```json\s*\{[\s\S]*?"type"\s*:\s*"(bar_chart|line_chart|radar_chart|pie_chart|scatter_plot|table|stat_cards)"[\s\S]*?```/g, '').trim();
 }
 
-const NaturalLanguageQuery = () => {
-  const [displayedText, setDisplayedText] = useState('');
-  const [result, setResult] = useState<QueryResult | null>(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showExtras, setShowExtras] = useState(false);
-  const [lastQuery, setLastQuery] = useState('');
-  const [showCitations, setShowCitations] = useState(false);
-  const [inputValue, setInputValue] = useState('');
-  const typingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+/* ─── Sidebar ────────────────────────────────────────────────── */
+function ConversationSidebar({
+  conversations,
+  activeId,
+  onSelect,
+  onNew,
+  onDelete,
+  collapsed,
+  onToggleCollapsed,
+}: {
+  conversations: Conversation[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  onNew: () => void;
+  onDelete: (id: string) => void;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+}) {
+  if (collapsed) {
+    return (
+      <div className="hidden md:flex flex-col items-center gap-2 w-12 py-3 border-r border-gray-800 bg-white/[0.02]">
+        <button onClick={onToggleCollapsed} className="p-2 rounded-lg hover:bg-white/[0.05] text-gray-400 hover:text-white transition-colors" title="Show history">
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <button onClick={onNew} className="p-2 rounded-lg bg-[#D4A017]/10 text-[#D4A017] hover:bg-[#D4A017]/20 transition-colors" title="New chat">
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
+  const sorted = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
+
+  return (
+    <aside className="hidden md:flex flex-col w-64 border-r border-gray-800 bg-white/[0.02]">
+      <div className="p-3 border-b border-gray-800/60 flex items-center justify-between gap-2">
+        <Button onClick={onNew} size="sm" className="flex-1 gap-2 h-8 text-xs">
+          <Plus className="h-3.5 w-3.5" /> New chat
+        </Button>
+        <button onClick={onToggleCollapsed} className="p-1.5 rounded-lg hover:bg-white/[0.05] text-gray-400 hover:text-white transition-colors" title="Hide history">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <p className="px-2 pt-1 pb-2 text-[10px] uppercase tracking-wider text-gray-500 font-semibold">History</p>
+        {sorted.length === 0 && (
+          <p className="px-2 text-xs text-gray-500 italic">No conversations yet</p>
+        )}
+        {sorted.map((c) => {
+          const isActive = c.id === activeId;
+          return (
+            <div
+              key={c.id}
+              className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors ${
+                isActive ? 'bg-[#D4A017]/10 border border-[#D4A017]/30' : 'hover:bg-white/[0.04] border border-transparent'
+              }`}
+              onClick={() => onSelect(c.id)}
+            >
+              <MessageSquare className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-[#D4A017]' : 'text-gray-500'}`} />
+              <div className="min-w-0 flex-1">
+                <p className={`text-xs font-medium truncate ${isActive ? 'text-white' : 'text-gray-300'}`}>{c.title}</p>
+                <p className="text-[10px] text-gray-500">{relativeTime(c.updatedAt)} · {c.messages.length} msg</p>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
+                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/15 text-gray-400 hover:text-red-400 transition-all"
+                title="Delete"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </aside>
+  );
+}
+
+/* ─── Message bubble ─────────────────────────────────────────── */
+function MessageBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === 'user';
+  const vizId = `viz-${message.id}`;
+
+  return (
+    <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
+        isUser ? 'bg-[#D4A017] text-black' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+      }`}>
+        {isUser ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+      </div>
+      <div className={`flex-1 min-w-0 max-w-[78%] ${isUser ? 'flex flex-col items-end' : ''}`}>
+        <div className={`rounded-2xl px-4 py-3 ${
+          isUser
+            ? 'bg-[#D4A017]/12 border border-[#D4A017]/30 text-white'
+            : 'bg-white/[0.04] border border-gray-800 text-gray-100'
+        }`}>
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {message.attachments.map((a) => (
+                <div key={a.id} className="rounded-lg overflow-hidden border border-white/10 max-w-[180px]">
+                  {a.type.startsWith('image/') ? (
+                    <img src={a.dataUrl} alt={a.name} className="block max-h-44 object-cover" />
+                  ) : (
+                    <div className="px-3 py-2 text-xs text-gray-300 bg-white/[0.03]">{a.name}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {message.content && (
+            <div
+              className="prose prose-invert prose-sm max-w-none [&_p]:m-0 [&_p+p]:mt-2 leading-relaxed text-sm"
+              dangerouslySetInnerHTML={{ __html: '<p>' + renderMarkdown(message.content) + '</p>' }}
+            />
+          )}
+          {message.visualization && (
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-gray-300">{message.visualization.title}</p>
+                <button
+                  onClick={() => downloadVisualizationSvg(vizId, message.visualization!.title.replace(/\s+/g, '-').toLowerCase())}
+                  className="inline-flex items-center gap-1 text-[10px] text-gray-500 hover:text-[#D4A017] transition-colors"
+                >
+                  <Download className="h-3 w-3" /> SVG
+                </button>
+              </div>
+              <VisualizationRenderer viz={message.visualization} id={vizId} />
+            </div>
+          )}
+        </div>
+        {!isUser && (message.source || message.confidence !== undefined) && (
+          <div className="flex items-center gap-2 mt-1.5 ml-1">
+            {message.source === 'ai' && (
+              <Badge className="bg-purple-500/15 text-purple-400 border-purple-500/30 gap-1 text-[10px] py-0 px-1.5 h-5">
+                <Brain className="h-2.5 w-2.5" /> AI
+              </Badge>
+            )}
+            {message.source === 'rule-based' && (
+              <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/30 gap-1 text-[10px] py-0 px-1.5 h-5">
+                <Cpu className="h-2.5 w-2.5" /> Rule-based
+              </Badge>
+            )}
+            {message.confidence !== undefined && (
+              <span className="text-[10px] text-gray-500">{Math.round(message.confidence * 100)}% confidence</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Composer (input at the bottom) ─────────────────────────── */
+function Composer({
+  value,
+  onChange,
+  onSubmit,
+  isLoading,
+  attachments,
+  onAddAttachments,
+  onRemoveAttachment,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+  isLoading: boolean;
+  attachments: Attachment[];
+  onAddAttachments: (files: FileList | File[]) => void;
+  onRemoveAttachment: (id: string) => void;
+}) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const vizContainerId = useRef(`viz-${Date.now()}`);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const clearTyping = useCallback(() => {
-    if (typingInterval.current) {
-      clearInterval(typingInterval.current);
-      typingInterval.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    return () => clearTyping();
-  }, [clearTyping]);
-
-  // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current;
     if (ta) {
       ta.style.height = 'auto';
-      ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
+      ta.style.height = `${Math.min(ta.scrollHeight, 180)}px`;
     }
-  }, [inputValue]);
-
-  const handleQuery = useCallback(
-    async (q: string) => {
-      clearTyping();
-      setLastQuery(q);
-      setDisplayedText('');
-      setShowExtras(false);
-      setShowCitations(false);
-      setIsTyping(true);
-      setIsLoading(true);
-      setResult(null);
-      vizContainerId.current = `viz-${Date.now()}`;
-
-      const apiBase = import.meta.env.VITE_API_URL || '/api';
-      let queryResult: QueryResult;
-
-      // ------ Try 1: /ai/chat (Claude-powered) ------
-      try {
-        const res = await fetch(`${apiBase}/ai/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: q,
-            context: 'African youth data analysis platform. The user is asking about youth indicators, demographics, education, employment, health, and policy compliance across African countries.',
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const rawAnswer: string = data.answer || 'No answer available.';
-          // Try to parse a visualization from the AI text if none was returned explicitly
-          const parsedViz = data.visualization || parseVisualizationFromText(rawAnswer);
-          const cleanAnswer = parsedViz && !data.visualization ? stripVisualizationBlocks(rawAnswer) : rawAnswer;
-          queryResult = {
-            answer: cleanAnswer,
-            keyFindings: data.keyFindings || [],
-            dataCitations: data.dataCitations || [],
-            visualization: parsedViz,
-            followUpQuestions: data.followUpQuestions || [],
-            confidence: data.confidence ?? 0.85,
-            dataAvailability: data.dataAvailability || 'partial',
-            source: data.source || 'ai',
-            processingTime: data.processingTime,
-          };
-        } else {
-          throw new Error('AI endpoint returned non-OK');
-        }
-      } catch {
-        // ------ Try 2: /nlq/query (legacy rule-based fallback) ------
-        try {
-          const res = await fetch(`${apiBase}/nlq/query`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: q }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            queryResult = {
-              answer: data.answer || 'No answer available.',
-              keyFindings: data.keyFindings || [],
-              dataCitations: data.dataCitations || [],
-              visualization: data.visualization || null,
-              followUpQuestions: data.followUpQuestions || [],
-              confidence: data.confidence || 0.5,
-              dataAvailability: data.dataAvailability || 'partial',
-              source: data.source || 'rule-based',
-              processingTime: data.processingTime,
-            };
-          } else {
-            throw new Error('NLQ endpoint returned non-OK');
-          }
-        } catch {
-          // ------ Try 3: Offline fallback ------
-          queryResult = {
-            answer:
-              `It looks like both the AI service and the query engine are unavailable right now. This usually means the backend server isn't running or there's a network issue.\n\n**What you can try:**\n- Check that the API server is running\n- Verify your internet connection\n- Refresh the page and try again\n\nIn the meantime, you can still browse the data dashboards and country profiles directly.`,
-            keyFindings: [],
-            dataCitations: [],
-            visualization: null,
-            followUpQuestions: suggestedQuestions,
-            confidence: 0,
-            dataAvailability: 'limited',
-            source: 'rule-based',
-          };
-        }
-      }
-
-      setResult(queryResult);
-      setIsLoading(false);
-
-      let idx = 0;
-      const text = queryResult.answer;
-      typingInterval.current = setInterval(() => {
-        idx++;
-        setDisplayedText(text.slice(0, idx));
-        if (idx >= text.length) {
-          clearTyping();
-          setIsTyping(false);
-          setShowExtras(true);
-        }
-      }, 10);
-    },
-    [clearTyping],
-  );
-
-  const handleSubmit = () => {
-    const trimmed = inputValue.trim();
-    if (!trimmed || isLoading) return;
-    setInputValue('');
-    handleQuery(trimmed);
-  };
+  }, [value]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      onSubmit();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const files = Array.from(e.clipboardData.files || []);
+    if (files.length > 0) {
+      e.preventDefault();
+      onAddAttachments(files);
     }
   };
 
   return (
-    <div className="relative min-h-[80vh] flex flex-col">
-      {/* Grid BG */}
-      <div
-        className="absolute inset-0 opacity-20 w-full
-        bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)]
-        bg-[size:6rem_5rem]
-        [mask-image:radial-gradient(ellipse_60%_50%_at_50%_30%,#000_30%,transparent_100%)]"
+    <div className="px-4 pb-4 pt-2 border-t border-gray-800/40 bg-gradient-to-t from-black/30 to-transparent">
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2 max-w-3xl mx-auto">
+          {attachments.map((a) => (
+            <div key={a.id} className="relative group">
+              {a.type.startsWith('image/') ? (
+                <img src={a.dataUrl} alt={a.name} className="h-16 w-16 object-cover rounded-lg border border-gray-700" />
+              ) : (
+                <div className="h-16 w-16 rounded-lg border border-gray-700 bg-white/[0.03] flex items-center justify-center text-[10px] text-gray-400 px-1 text-center">
+                  {a.name.slice(0, 14)}
+                </div>
+              )}
+              <button
+                onClick={() => onRemoveAttachment(a.id)}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="relative flex items-end gap-2 max-w-3xl mx-auto bg-white/[0.04] border border-gray-800 rounded-2xl px-3 py-2.5 focus-within:border-[#D4A017]/40 transition-colors">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,.pdf,.csv,.xlsx,.xls,.txt"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files) onAddAttachments(e.target.files);
+            e.target.value = '';
+          }}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading}
+          className="flex-shrink-0 p-2 rounded-lg hover:bg-white/[0.05] text-gray-400 hover:text-[#D4A017] transition-colors disabled:opacity-30"
+          title="Attach file"
+        >
+          <Paperclip className="h-4 w-4" />
+        </button>
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          placeholder="Ask anything about African youth data… (Shift+Enter for new line)"
+          rows={1}
+          disabled={isLoading}
+          className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 resize-none outline-none max-h-44 leading-relaxed disabled:opacity-50 py-1"
+        />
+        <button
+          onClick={onSubmit}
+          disabled={(!value.trim() && attachments.length === 0) || isLoading}
+          className="flex-shrink-0 p-2 rounded-xl bg-[#D4A017] text-black hover:bg-[#E0B030] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          aria-label="Send"
+        >
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        </button>
+      </div>
+      <p className="text-[10px] text-gray-600 text-center mt-2 max-w-3xl mx-auto">
+        AI can make mistakes. Verify critical data points against the source.
+      </p>
+    </div>
+  );
+}
+
+/* ─── Main page ──────────────────────────────────────────────── */
+const NaturalLanguageQuery = () => {
+  const { user } = useAuth();
+  const userKey = user?.id ?? null; // null while auth loads / signed out
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [input, setInput] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const dragCounter = useRef(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const activeConversation = useMemo(
+    () => conversations.find((c) => c.id === activeId) ?? null,
+    [conversations, activeId],
+  );
+  const messages = activeConversation?.messages ?? [];
+
+  // Hydrate per user — re-runs whenever the signed-in user changes so each
+  // account sees only its own chat history on this device.
+  useEffect(() => {
+    setHydrated(false);
+    const stored = loadConversationsFor(userKey);
+    setConversations(stored);
+    setActiveId(stored.length > 0 ? stored.sort((a, b) => b.updatedAt - a.updatedAt)[0].id : null);
+    setInput('');
+    setAttachments([]);
+    setHydrated(true);
+  }, [userKey]);
+
+  // Persist (per-user key). Skip until hydrated to avoid stomping on the
+  // stored layout with the empty initial state.
+  useEffect(() => {
+    if (!hydrated) return;
+    const key = storageKeyFor(userKey);
+    if (conversations.length > 0) {
+      saveConversationsFor(userKey, conversations);
+    } else if (localStorage.getItem(key)) {
+      localStorage.removeItem(key);
+    }
+  }, [conversations, userKey, hydrated]);
+
+  // Scroll to bottom when new message arrives
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages.length, isLoading]);
+
+  /* ── Conversation actions ── */
+  const newConversation = useCallback(() => {
+    const c: Conversation = {
+      id: uid(),
+      title: 'New chat',
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setConversations((prev) => [c, ...prev]);
+    setActiveId(c.id);
+    setInput('');
+    setAttachments([]);
+  }, []);
+
+  const deleteConversation = useCallback((id: string) => {
+    setConversations((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      if (id === activeId) {
+        setActiveId(next.length > 0 ? next[0].id : null);
+      }
+      return next;
+    });
+  }, [activeId]);
+
+  /* ── Attachment handlers ── */
+  const addAttachments = useCallback((files: FileList | File[]) => {
+    const arr = Array.from(files);
+    arr.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = String(reader.result || '');
+        setAttachments((prev) => [...prev, { id: uid(), name: file.name, type: file.type || 'application/octet-stream', dataUrl }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const removeAttachment = useCallback((id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  /* ── Drag & drop ── */
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      dragCounter.current++;
+      setIsDragging(true);
+    }
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) setIsDragging(false);
+  };
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter.current = 0;
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addAttachments(e.dataTransfer.files);
+    }
+  };
+
+  /* ── Send message ── */
+  const sendMessage = useCallback(async (text: string, files: Attachment[]) => {
+    if (!text.trim() && files.length === 0) return;
+    let convId = activeId;
+    let prevMessages: ChatMessage[] = [];
+
+    // Ensure a conversation exists
+    if (!convId) {
+      const c: Conversation = {
+        id: uid(), title: titleFromMessage(text || 'New chat'),
+        messages: [], createdAt: Date.now(), updatedAt: Date.now(),
+      };
+      setConversations((p) => [c, ...p]);
+      setActiveId(c.id);
+      convId = c.id;
+    } else {
+      const existing = conversations.find((c) => c.id === convId);
+      prevMessages = existing?.messages ?? [];
+    }
+
+    // Append user message
+    const userMsg: ChatMessage = {
+      id: uid(), role: 'user', content: text, attachments: files.length > 0 ? files : undefined,
+      timestamp: Date.now(),
+    };
+    setConversations((prev) => prev.map((c) => {
+      if (c.id !== convId) return c;
+      const isFirst = c.messages.length === 0;
+      return {
+        ...c,
+        title: isFirst && text ? titleFromMessage(text) : c.title,
+        messages: [...c.messages, userMsg],
+        updatedAt: Date.now(),
+      };
+    }));
+    setInput('');
+    setAttachments([]);
+    setIsLoading(true);
+
+    // Build conversation context for the API
+    const historyText = prevMessages.map((m) => `${m.role}: ${m.content}`).join('\n');
+    const context = `African youth data analysis platform. The user is asking about youth indicators, demographics, education, employment, health, and policy compliance across African countries.${
+      historyText ? `\n\nConversation history:\n${historyText}` : ''
+    }${files.length > 0 ? `\n\nThe user attached ${files.length} file(s): ${files.map((f) => f.name).join(', ')}.` : ''}`;
+
+    const apiBase = import.meta.env.VITE_API_URL || '/api';
+
+    let assistantContent = '';
+    let visualization: AiVisualization | null = null;
+    let citations: AiDataCitation[] = [];
+    let source: 'ai' | 'rule-based' = 'ai';
+    let confidence = 0.85;
+
+    // Try AI endpoint first, fall back to NLQ, then offline
+    try {
+      const res = await fetch(`${apiBase}/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, context }),
+      });
+      if (!res.ok) throw new Error('ai chat non-ok');
+      const data = await res.json();
+      const rawAnswer: string = data.answer || 'No answer available.';
+      visualization = data.visualization || parseVisualizationFromText(rawAnswer);
+      assistantContent = visualization && !data.visualization ? stripVisualizationBlocks(rawAnswer) : rawAnswer;
+      citations = data.dataCitations || [];
+      source = data.source || 'ai';
+      confidence = data.confidence ?? 0.85;
+    } catch {
+      try {
+        const res = await fetch(`${apiBase}/nlq/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: text }),
+        });
+        if (!res.ok) throw new Error('nlq non-ok');
+        const data = await res.json();
+        assistantContent = data.answer || 'No answer available.';
+        visualization = data.visualization || null;
+        citations = data.dataCitations || [];
+        source = 'rule-based';
+        confidence = data.confidence ?? 0.5;
+      } catch {
+        assistantContent =
+          "I can't reach the AI backend right now. The chat will keep your message history, and you can retry once the service is back. In the meantime, you can browse data dashboards and country profiles directly.";
+        source = 'rule-based';
+        confidence = 0;
+      }
+    }
+
+    const assistantMsg: ChatMessage = {
+      id: uid(), role: 'assistant', content: assistantContent, visualization,
+      citations: citations.length > 0 ? citations : undefined,
+      source, confidence, timestamp: Date.now(),
+    };
+    setConversations((prev) => prev.map((c) => c.id === convId
+      ? { ...c, messages: [...c.messages, assistantMsg], updatedAt: Date.now() }
+      : c,
+    ));
+    setIsLoading(false);
+  }, [activeId, conversations]);
+
+  const handleSubmit = () => {
+    sendMessage(input.trim(), attachments);
+  };
+
+  const handleSuggested = (q: string) => {
+    sendMessage(q, []);
+  };
+
+  /* ── Render ── */
+  return (
+    <div
+      className="flex h-[calc(100vh-7rem)] -m-4 md:-m-6 relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none bg-[#D4A017]/10 border-2 border-dashed border-[#D4A017]/60 rounded-2xl m-2">
+          <div className="text-center">
+            <ImageIcon className="h-10 w-10 text-[#D4A017] mx-auto mb-2" />
+            <p className="text-sm font-semibold text-[#D4A017]">Drop to attach</p>
+          </div>
+        </div>
+      )}
+
+      <ConversationSidebar
+        conversations={conversations}
+        activeId={activeId}
+        onSelect={setActiveId}
+        onNew={newConversation}
+        onDelete={deleteConversation}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
       />
 
-      <div className="relative z-10 flex-1 flex flex-col">
-        {/* Header */}
-        {!result && (
-          <div className="text-center pt-16 pb-6">
-            <h1 className="text-3xl md:text-4xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent mb-3">
-              What can I help you explore?
-            </h1>
-            <p className="text-[#A89070] max-w-lg mx-auto">
-              Ask questions about African youth data. Get instant insights with narrative answers and visualizations.
-            </p>
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/60">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="h-4 w-4 text-[#D4A017] flex-shrink-0" />
+            <h1 className="text-sm font-semibold truncate">{activeConversation?.title || 'Ask AI'}</h1>
           </div>
-        )}
+          <Button onClick={newConversation} variant="ghost" size="sm" className="md:hidden gap-1.5 text-xs h-8">
+            <Plus className="h-3.5 w-3.5" /> New
+          </Button>
+        </div>
 
-        {/* Chat input — always at the TOP */}
-        <div className="px-4 pt-4 pb-2 max-w-3xl mx-auto w-full">
-          <div className="relative flex items-end gap-2 bg-white/[0.04] border border-gray-800 rounded-2xl px-4 py-3 focus-within:border-[#D4A017]/40 transition-colors">
-            <textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask anything about African youth data..."
-              rows={1}
-              disabled={isLoading}
-              className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 resize-none outline-none max-h-40 leading-relaxed disabled:opacity-50"
-            />
-            <button
-              onClick={handleSubmit}
-              disabled={!inputValue.trim() || isLoading}
-              className="flex-shrink-0 p-2 rounded-xl bg-[#D4A017] text-black hover:bg-[#E0B030] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              aria-label="Send message"
-            >
-              <Send className="h-4 w-4" />
-            </button>
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          {messages.length === 0 && !isLoading && (
+            <div className="max-w-2xl mx-auto h-full flex flex-col items-center justify-center text-center py-10">
+              <div className="h-12 w-12 rounded-full bg-[#D4A017]/15 flex items-center justify-center mb-4">
+                <Sparkles className="h-6 w-6 text-[#D4A017]" />
+              </div>
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent mb-2">
+                What can I help you explore?
+              </h2>
+              <p className="text-sm text-gray-400 max-w-md mb-6">
+                Ask questions about African youth data. Drop images, share data files, get insights with charts.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-xl">
+                {suggestedQuestions.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => handleSuggested(q)}
+                    className="px-3 py-2.5 rounded-xl bg-white/[0.03] border border-gray-800/60 text-xs text-gray-400 hover:text-gray-200 hover:bg-white/[0.06] hover:border-[#D4A017]/30 transition-all text-left"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="max-w-3xl mx-auto space-y-5">
+            {messages.map((m) => (
+              <MessageBubble key={m.id} message={m} />
+            ))}
+            {isLoading && (
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                  <Bot className="h-4 w-4" />
+                </div>
+                <div className="rounded-2xl px-4 py-3 bg-white/[0.04] border border-gray-800 flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
+                  <span className="text-xs text-gray-400">Thinking…</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
         </div>
 
-        {/* Suggested Questions — below chat input, only before first query */}
-        {!result && !isLoading && (
-          <div className="flex flex-wrap justify-center gap-2 pt-3 pb-6 px-4 max-w-3xl mx-auto">
-            {suggestedQuestions.map((q) => (
-              <button
-                key={q}
-                onClick={() => { setInputValue(''); handleQuery(q); }}
-                className="px-4 py-2 rounded-xl bg-white/[0.03] border border-gray-800/60 text-xs text-gray-500 hover:text-gray-300 hover:bg-white/[0.06] hover:border-gray-700 transition-all text-left"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Loading indicator */}
-        {isLoading && !result && (
-          <div className="flex items-center gap-3 px-4 max-w-3xl mx-auto w-full mt-6">
-            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#D4A017]/20 flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-[#D4A017] animate-pulse" />
-            </div>
-            <span className="text-sm text-gray-400 animate-pulse">Thinking...</span>
-          </div>
-        )}
-
-        {/* Results */}
-        {result && (
-          <div className="flex-1 px-4 md:px-6 max-w-3xl mx-auto w-full mb-8 mt-2">
-            {/* User query */}
-            <div className="flex justify-end mb-6">
-              <div className="bg-[#D4A017]/20 border border-[#D4A017]/30 rounded-2xl rounded-tr-sm px-4 py-3 max-w-md">
-                <p className="text-sm text-white">{lastQuery}</p>
-              </div>
-            </div>
-
-            {/* AI response */}
-            <div className="flex gap-3 mb-6">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#D4A017]/20 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-[#D4A017]" />
-              </div>
-              <div className="flex-1 space-y-4">
-                {/* Badges */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <SourceBadge source={result.source} />
-                  <ConfidenceBadge confidence={result.confidence} />
-                  {result.processingTime !== undefined && (
-                    <span className="text-xs text-gray-500">{result.processingTime.toFixed(1)}s</span>
-                  )}
-                </div>
-
-                {/* Answer text with typing animation */}
-                <div className="text-sm text-gray-300 leading-relaxed">
-                  <span dangerouslySetInnerHTML={{ __html: renderMarkdown(displayedText) }} />
-                  {isTyping && <span className="inline-block w-1.5 h-4 bg-[#D4A017] ml-0.5 animate-pulse" />}
-                </div>
-
-                {/* Key Findings */}
-                {showExtras && result.keyFindings.length > 0 && (
-                  <div className="bg-[#D4A017]/5 border border-[#D4A017]/20 rounded-xl p-4">
-                    <h4 className="text-xs font-semibold text-[#D4A017] mb-2 uppercase tracking-wider">Key Findings</h4>
-                    <ul className="space-y-1.5">
-                      {result.keyFindings.map((f, i) => (
-                        <li key={i} className="text-sm text-gray-300 flex gap-2">
-                          <span className="text-[#D4A017] mt-0.5">•</span>
-                          <span>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Visualization */}
-                {showExtras && result.visualization && (
-                  <div className="bg-white/[0.03] border border-gray-800 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-[#D4A017]" />
-                        <span className="text-xs text-gray-400">{result.visualization.title}</span>
-                      </div>
-                      {result.visualization.type !== 'table' && result.visualization.type !== 'stat_cards' && (
-                        <button
-                          onClick={() => downloadVisualizationSvg(vizContainerId.current, result.visualization?.title?.replace(/\s+/g, '_') || 'chart')}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.05] border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-600 transition-all"
-                          title="Download as SVG"
-                        >
-                          <Download className="h-3 w-3" />
-                          SVG
-                        </button>
-                      )}
-                    </div>
-                    <VisualizationRenderer viz={result.visualization} id={vizContainerId.current} />
-                  </div>
-                )}
-
-                {/* Data Citations (collapsible) */}
-                {showExtras && result.dataCitations.length > 0 && (
-                  <div className="border border-gray-800 rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => setShowCitations(!showCitations)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-gray-400 hover:bg-white/[0.02] transition-colors"
-                    >
-                      <span>Data Sources ({result.dataCitations.length} citations)</span>
-                      {showCitations ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    </button>
-                    {showCitations && (
-                      <div className="px-4 pb-3 space-y-1.5">
-                        {result.dataCitations.map((c, i) => (
-                          <div key={i} className="text-xs text-gray-500">
-                            {c.country ? `${c.country} — ` : ''}{c.indicator}: {c.value} ({c.year}){c.source ? ` — ${c.source}` : ''}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Follow-up questions */}
-                {showExtras && result.followUpQuestions.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {result.followUpQuestions.map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => handleQuery(q)}
-                        className="px-3 py-1.5 rounded-lg bg-white/[0.05] border border-gray-800 text-xs text-gray-400 hover:text-white hover:border-gray-700 transition-all"
-                      >
-                        {q}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        {/* Composer */}
+        <Composer
+          value={input}
+          onChange={setInput}
+          onSubmit={handleSubmit}
+          isLoading={isLoading}
+          attachments={attachments}
+          onAddAttachments={addAttachments}
+          onRemoveAttachment={removeAttachment}
+        />
+      </main>
     </div>
   );
 };

@@ -322,8 +322,24 @@ const ContentManager: React.FC = () => {
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                      No entries. Run the frontend refactor sweep to register keys, or adjust your filters.
+                    <TableCell colSpan={5} className="py-10">
+                      <div className="text-center space-y-3 max-w-md mx-auto">
+                        <FileText className="h-10 w-10 text-muted-foreground/50 mx-auto" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">No content entries to edit yet</p>
+                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                            The CMS lists every <span className="font-mono text-foreground/80">&lt;Content id=&quot;…&quot;/&gt;</span> key found in the codebase
+                            (page titles, button labels, footer copy, etc). Two reasons this list could be empty:
+                          </p>
+                        </div>
+                        <ul className="text-left text-xs text-muted-foreground space-y-1.5 pl-4 list-disc">
+                          <li><span className="text-foreground">Backend connection</span> — the API token may be rejected. Check the storage banner above and the server console.</li>
+                          <li><span className="text-foreground">Keys not synced</span> — run <span className="font-mono bg-muted px-1.5 py-0.5 rounded">npm run cms:sync</span> from the project root to register all keys from the codebase to the backend.</li>
+                        </ul>
+                        <p className="text-[11px] text-muted-foreground italic pt-2">
+                          Once entries appear, click any row to edit text, rich text, or images and publish changes live.
+                        </p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (

@@ -20,6 +20,7 @@ import { PublicOnly } from "@/components/PublicOnly";
 
 // Critical pages - static imports
 import Landing from "./pages/Landing";
+import Index from "./pages/Index";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
 import NotFound from "./pages/NotFound";
@@ -45,8 +46,10 @@ const FAQ = lazy(() => import("./pages/resources/FAQ"));
 const Methodology = lazy(() => import("./pages/resources/Methodology"));
 const Toolkits = lazy(() => import("./pages/resources/Toolkits"));
 const CountryProfilePage = lazy(() => import("./pages/CountryProfilePage"));
+const CountryDataProfile = lazy(() => import("./pages/CountryDataProfile"));
 const DataUpload = lazy(() => import("./pages/DataUpload"));
 const ContentManager = lazy(() => import("./pages/admin/ContentManager"));
+const ReportsManager = lazy(() => import("./pages/admin/ReportsManager"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,9 +76,9 @@ const App = () => (
           <AnimatePresence mode="wait">
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
             <Routes>
-              {/* Public-only routes — bounce authenticated users to /explore */}
+              {/* Public-only routes — bounce authenticated users to /dashboard */}
               <Route element={<PublicOnly />}>
-                <Route path="/" element={<PageTransition><Landing /></PageTransition>} />
+                <Route path="/" element={<PublicLayout><PageTransition><Index /></PageTransition></PublicLayout>} />
                 <Route path="/landing" element={<PageTransition><Landing /></PageTransition>} />
                 <Route path="/auth/signin" element={<PageTransition><SignIn /></PageTransition>} />
                 <Route path="/auth/signup" element={<PageTransition><SignUp /></PageTransition>} />
@@ -95,6 +98,8 @@ const App = () => (
                 <Route path="/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
                 <Route path="/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
                 <Route path="/youth-index" element={<DashboardLayout><PageTransition><YouthIndex /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/profile/:slug" element={<DashboardLayout><PageTransition><CountryDataProfile /></PageTransition></DashboardLayout>} />
+                <Route path="/profile/:slug" element={<DashboardLayout><PageTransition><CountryDataProfile /></PageTransition></DashboardLayout>} />
                 <Route path="/insights" element={<DashboardLayout><PageTransition><Insights /></PageTransition></DashboardLayout>} />
                 <Route path="/policy-monitor" element={<DashboardLayout><PageTransition><PolicyMonitor /></PageTransition></DashboardLayout>} />
                 <Route path="/ask" element={<DashboardLayout><PageTransition><NaturalLanguageQuery /></PageTransition></DashboardLayout>} />
@@ -123,6 +128,7 @@ const App = () => (
                 <Route path="/settings" element={<DashboardLayout><PageTransition><Settings /></PageTransition></DashboardLayout>} />
                 <Route path="/admin" element={<DashboardLayout><PageTransition><Admin /></PageTransition></DashboardLayout>} />
                 <Route path="/admin/cms" element={<DashboardLayout><PageTransition><ContentManager /></PageTransition></DashboardLayout>} />
+                <Route path="/admin/reports" element={<DashboardLayout><PageTransition><ReportsManager /></PageTransition></DashboardLayout>} />
               </Route>
 
               {/* Catch-all */}

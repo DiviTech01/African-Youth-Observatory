@@ -1,13 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, Share, ExternalLink, BarChart3, TrendingUp, Layers, Activity } from 'lucide-react';
+import { Download, Share, ExternalLink, BarChart3, CircleDot, Footprints, ArrowLeftRight, Activity } from 'lucide-react';
 import {
   BarChart,
   Bar,
-  LineChart,
+  ComposedChart,
   Line,
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -15,36 +13,34 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Cell,
+  Scatter,
+  Area,
 } from 'recharts';
 
-type ChartType = 'bar' | 'line' | 'area';
+type ChartType = 'bar' | 'lollipop' | 'step-trend' | 'yoy';
 
-// Sophisticated color palette
 const COLORS = {
   green: '#22C55E',
   greenLight: '#4ADE80',
+  greenDark: '#15803D',
   gold: '#F59E0B',
   goldLight: '#FBBF24',
   blue: '#3B82F6',
   blueLight: '#60A5FA',
   teal: '#14B8A6',
+  red: '#EF4444',
+  redLight: '#F87171',
   purple: '#8B5CF6',
 };
 
-/** Seeded pseudo-random to keep data stable across re-renders */
 function seededRandom(seed: number) {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
 }
 
-function generateMockData(
-  indicator: string,
-  yearRange: [number, number],
-  country: string,
-) {
+function generateMockData(indicator: string, yearRange: [number, number], country: string) {
   const [startYear, endYear] = yearRange;
-  const seed =
-    indicator.length * 7 + country.length * 13 + startYear + endYear;
+  const seed = indicator.length * 7 + country.length * 13 + startYear + endYear;
 
   let base = 45;
   let variance = 15;
@@ -52,48 +48,58 @@ function generateMockData(
   const lower = indicator.toLowerCase();
 
   if (lower.includes('unemployment') || lower.includes('poverty')) {
-    base = 35;
-    variance = 8;
-    trend = -0.6;
+    base = 35; variance = 8; trend = -0.6;
   } else if (lower.includes('enrollment') || lower.includes('literacy')) {
-    base = 55;
-    variance = 10;
-    trend = 1.5;
+    base = 55; variance = 10; trend = 1.5;
   } else if (lower.includes('population') || lower.includes('growth')) {
-    base = 2.5;
-    variance = 0.4;
-    trend = 0.05;
+    base = 2.5; variance = 0.4; trend = 0.05;
   } else if (lower.includes('employment') || lower.includes('participation')) {
-    base = 40;
-    variance = 12;
-    trend = 0.9;
+    base = 40; variance = 12; trend = 0.9;
   }
 
   const data = [];
   for (let year = startYear; year <= endYear; year++) {
     const idx = year - startYear;
     const noise = (seededRandom(seed + idx * 31) - 0.5) * variance;
-    const value = Math.max(
-      0,
-      Math.round((base + trend * idx + noise) * 10) / 10,
-    );
+    const value = Math.max(0, Math.round((base + trend * idx + noise) * 10) / 10);
     data.push({ year: year.toString(), value });
   }
   return data;
 }
 
+// Linear regression for the trend line
+function linearRegression(data: { year: string; value: number }[]) {
+  const n = data.length;
+  if (n < 2) return { slope: 0, intercept: 0, r2: 0 };
+  const xs = data.map((_, i) => i);
+  const ys = data.map((d) => d.value);
+  const meanX = xs.reduce((a, b) => a + b, 0) / n;
+  const meanY = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0, denX = 0, denY = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i] - meanX) * (ys[i] - meanY);
+    denX += (xs[i] - meanX) ** 2;
+    denY += (ys[i] - meanY) ** 2;
+  }
+  const slope = denX === 0 ? 0 : num / denX;
+  const intercept = meanY - slope * meanX;
+  const r2 = denX === 0 || denY === 0 ? 0 : (num * num) / (denX * denY);
+  return { slope, intercept, r2 };
+}
+
 /* ---------- Custom Tooltip ---------- */
-const ChartTooltip = ({ active, payload, label, indicator }: any) => {
+const ChartTooltip = ({ active, payload, label, indicator, kind }: any) => {
   if (!active || !payload?.length) return null;
-  const val = payload[0].value;
+  const main = payload.find((p: any) => p.dataKey === 'value' || p.dataKey === 'delta') ?? payload[0];
+  const val = main.value;
   return (
-    <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-2xl px-4 py-3 min-w-[160px]">
-      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">
-        {label}
-      </p>
+    <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-2xl px-4 py-3 min-w-[170px]">
+      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">{label}</p>
       <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-bold text-white">{val}</span>
-        <span className="text-xs text-gray-400">{indicator}</span>
+        <span className={`text-2xl font-bold ${kind === 'yoy' && val < 0 ? 'text-red-400' : 'text-white'}`}>
+          {kind === 'yoy' ? (val > 0 ? '+' : '') : ''}{typeof val === 'number' ? val.toFixed(1) : val}
+        </span>
+        <span className="text-xs text-gray-400">{kind === 'yoy' ? 'change vs. prev year' : indicator}</span>
       </div>
       <div className="mt-1.5 h-[2px] rounded-full bg-gradient-to-r from-[#22C55E] via-[#F59E0B] to-transparent" />
     </div>
@@ -101,7 +107,7 @@ const ChartTooltip = ({ active, payload, label, indicator }: any) => {
 };
 
 /* ---------- Summary Stats ---------- */
-const SummaryStats = ({ data, indicator }: { data: any[]; indicator: string }) => {
+const SummaryStats = ({ data }: { data: { year: string; value: number }[] }) => {
   if (!data.length) return null;
   const values = data.map((d) => d.value);
   const latest = values[values.length - 1];
@@ -113,10 +119,10 @@ const SummaryStats = ({ data, indicator }: { data: any[]; indicator: string }) =
   const min = Math.min(...values);
 
   const stats = [
-    { label: 'Latest', value: latest, color: 'text-white' },
+    { label: 'Latest', value: latest.toFixed(1), color: 'text-white' },
     { label: 'Change', value: `${change > 0 ? '+' : ''}${change.toFixed(1)} (${change > 0 ? '+' : ''}${changePercent}%)`, color: change >= 0 ? 'text-emerald-400' : 'text-red-400' },
     { label: 'Average', value: avg, color: 'text-gray-300' },
-    { label: 'Range', value: `${min} – ${max}`, color: 'text-gray-300' },
+    { label: 'Range', value: `${min.toFixed(1)} – ${max.toFixed(1)}`, color: 'text-gray-300' },
   ];
 
   return (
@@ -144,12 +150,10 @@ const DataChart = ({
 }) => {
   const [chartType, setChartType] = useState<ChartType>('bar');
 
-  const hasSelection =
-    theme !== 'All Themes' && indicator !== 'Select an indicator';
+  const hasSelection = theme !== 'All Themes' && indicator !== 'Select an indicator';
 
   const data = useMemo(
-    () =>
-      hasSelection ? generateMockData(indicator, yearRange, country) : [],
+    () => (hasSelection ? generateMockData(indicator, yearRange, country) : []),
     [indicator, yearRange, country, hasSelection],
   );
 
@@ -158,83 +162,30 @@ const DataChart = ({
     return data.reduce((a, b) => a + b.value, 0) / data.length;
   }, [data]);
 
+  // Lollipop = scatter dots + bars with tiny width.
+  // Step+Trend = step area + regression line.
+  // YoY = diverging bars of (year_n - year_n-1).
+  const lollipopData = useMemo(() => data, [data]);
+  const stepTrendData = useMemo(() => {
+    if (!data.length) return [];
+    const { slope, intercept } = linearRegression(data);
+    return data.map((d, i) => ({ ...d, trend: +(intercept + slope * i).toFixed(2) }));
+  }, [data]);
+  const yoyData = useMemo(() => {
+    if (data.length < 2) return [];
+    return data.slice(1).map((d, i) => ({
+      year: d.year,
+      delta: +(d.value - data[i].value).toFixed(2),
+    }));
+  }, [data]);
+
   const renderChart = () => {
     const gridStyle = { stroke: 'rgba(255,255,255,0.04)', strokeDasharray: '0' };
-    const xAxisStyle = {
-      fontSize: 11,
-      fill: 'rgba(255,255,255,0.4)',
-      fontWeight: 500,
-    };
-    const yAxisStyle = {
-      fontSize: 11,
-      fill: 'rgba(255,255,255,0.3)',
-    };
+    const xAxisStyle = { fontSize: 11, fill: 'rgba(255,255,255,0.4)', fontWeight: 500 };
+    const yAxisStyle = { fontSize: 11, fill: 'rgba(255,255,255,0.3)' };
 
     switch (chartType) {
-      case 'line':
-        return (
-          <LineChart data={data} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="lineGlow" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor={COLORS.green} />
-                <stop offset="100%" stopColor={COLORS.teal} />
-              </linearGradient>
-              <filter id="lineShadow">
-                <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor={COLORS.green} floodOpacity="0.3" />
-              </filter>
-            </defs>
-            <CartesianGrid {...gridStyle} vertical={false} />
-            <XAxis dataKey="year" tick={xAxisStyle} tickLine={false} axisLine={false} />
-            <YAxis tick={yAxisStyle} tickLine={false} axisLine={false} width={45} />
-            <Tooltip content={<ChartTooltip indicator={indicator} />} cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 }} />
-            <ReferenceLine y={avgValue} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" label={{ value: `avg ${avgValue.toFixed(1)}`, position: 'right', fill: 'rgba(255,255,255,0.2)', fontSize: 10 }} />
-            <Line
-              type="monotone"
-              dataKey="value"
-              name={indicator}
-              stroke="url(#lineGlow)"
-              strokeWidth={3}
-              dot={{ r: 4, fill: '#111', stroke: COLORS.green, strokeWidth: 2 }}
-              activeDot={{ r: 7, fill: COLORS.green, stroke: '#111', strokeWidth: 3, filter: 'url(#lineShadow)' }}
-              animationDuration={1200}
-              animationEasing="ease-out"
-            />
-          </LineChart>
-        );
-      case 'area':
-        return (
-          <AreaChart data={data} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={COLORS.green} stopOpacity={0.35} />
-                <stop offset="40%" stopColor={COLORS.teal} stopOpacity={0.15} />
-                <stop offset="100%" stopColor={COLORS.green} stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="areaStroke" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor={COLORS.green} />
-                <stop offset="50%" stopColor={COLORS.teal} />
-                <stop offset="100%" stopColor={COLORS.blue} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid {...gridStyle} vertical={false} />
-            <XAxis dataKey="year" tick={xAxisStyle} tickLine={false} axisLine={false} />
-            <YAxis tick={yAxisStyle} tickLine={false} axisLine={false} width={45} />
-            <Tooltip content={<ChartTooltip indicator={indicator} />} cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 }} />
-            <ReferenceLine y={avgValue} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" />
-            <Area
-              type="monotone"
-              dataKey="value"
-              name={indicator}
-              stroke="url(#areaStroke)"
-              strokeWidth={2.5}
-              fill="url(#areaFill)"
-              animationDuration={1200}
-              animationEasing="ease-out"
-              dot={{ r: 3, fill: '#111', stroke: COLORS.green, strokeWidth: 2 }}
-              activeDot={{ r: 6, fill: COLORS.green, stroke: '#111', strokeWidth: 2 }}
-            />
-          </AreaChart>
-        );
+      // ─── 1. BAR (kept) ───
       default: {
         const maxVal = Math.max(...data.map((d) => d.value));
         return (
@@ -254,19 +205,119 @@ const DataChart = ({
             <YAxis tick={yAxisStyle} tickLine={false} axisLine={false} width={45} />
             <Tooltip content={<ChartTooltip indicator={indicator} />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
             <ReferenceLine y={avgValue} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" label={{ value: `avg ${avgValue.toFixed(1)}`, position: 'right', fill: 'rgba(255,255,255,0.2)', fontSize: 10 }} />
-            <Bar
-              dataKey="value"
-              name={indicator}
-              radius={[6, 6, 0, 0]}
-              maxBarSize={40}
-              animationDuration={1200}
-              animationEasing="ease-out"
-            >
+            <Bar dataKey="value" name={indicator} radius={[6, 6, 0, 0]} maxBarSize={40} animationDuration={1200} animationEasing="ease-out">
               {data.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={entry.value === maxVal ? 'url(#barGradientGold)' : 'url(#barGradient)'}
-                />
+                <Cell key={`cell-${index}`} fill={entry.value === maxVal ? 'url(#barGradientGold)' : 'url(#barGradient)'} />
+              ))}
+            </Bar>
+          </BarChart>
+        );
+      }
+
+      // ─── 2. LOLLIPOP — Cleveland-style discrete value plot ───
+      case 'lollipop': {
+        const maxVal = Math.max(...data.map((d) => d.value));
+        return (
+          <ComposedChart data={lollipopData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="lollipopStem" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={COLORS.green} stopOpacity={0.6} />
+                <stop offset="100%" stopColor={COLORS.green} stopOpacity={0.15} />
+              </linearGradient>
+              <radialGradient id="lollipopHead">
+                <stop offset="0%" stopColor={COLORS.greenLight} />
+                <stop offset="100%" stopColor={COLORS.green} />
+              </radialGradient>
+              <filter id="lollipopGlow"><feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={COLORS.green} floodOpacity="0.5" /></filter>
+            </defs>
+            <CartesianGrid {...gridStyle} vertical={false} />
+            <XAxis dataKey="year" tick={xAxisStyle} tickLine={false} axisLine={false} />
+            <YAxis tick={yAxisStyle} tickLine={false} axisLine={false} width={45} />
+            <Tooltip content={<ChartTooltip indicator={indicator} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
+            <ReferenceLine y={avgValue} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" label={{ value: `avg ${avgValue.toFixed(1)}`, position: 'right', fill: 'rgba(255,255,255,0.2)', fontSize: 10 }} />
+            {/* Stems */}
+            <Bar dataKey="value" maxBarSize={3} fill="url(#lollipopStem)" animationDuration={900} isAnimationActive />
+            {/* Heads */}
+            <Scatter dataKey="value" shape={(props: any) => {
+              const { cx, cy, payload } = props;
+              const isMax = payload.value === maxVal;
+              return (
+                <g>
+                  <circle cx={cx} cy={cy} r={9} fill={isMax ? COLORS.gold : 'url(#lollipopHead)'} stroke="#0a0e14" strokeWidth={2} filter="url(#lollipopGlow)" />
+                  <circle cx={cx} cy={cy} r={3} fill="white" opacity={0.85} />
+                </g>
+              );
+            }} />
+          </ComposedChart>
+        );
+      }
+
+      // ─── 3. STEP + TREND — step series with linear regression overlay ───
+      case 'step-trend': {
+        const reg = linearRegression(data);
+        const slopeLabel = reg.slope > 0 ? `↑ +${reg.slope.toFixed(2)}/yr` : `↓ ${reg.slope.toFixed(2)}/yr`;
+        const r2Label = `R² = ${reg.r2.toFixed(2)}`;
+        return (
+          <ComposedChart data={stepTrendData} margin={{ top: 20, right: 90, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="stepFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={COLORS.green} stopOpacity={0.25} />
+                <stop offset="100%" stopColor={COLORS.green} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid {...gridStyle} vertical={false} />
+            <XAxis dataKey="year" tick={xAxisStyle} tickLine={false} axisLine={false} />
+            <YAxis tick={yAxisStyle} tickLine={false} axisLine={false} width={45} />
+            <Tooltip content={<ChartTooltip indicator={indicator} />} cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 }} />
+            <ReferenceLine y={avgValue} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" />
+            {/* Step area showing actual values */}
+            <Area type="stepAfter" dataKey="value" stroke={COLORS.green} strokeWidth={2.5} fill="url(#stepFill)" dot={{ r: 4, fill: '#0a0e14', stroke: COLORS.green, strokeWidth: 2 }} activeDot={{ r: 6, fill: COLORS.green, stroke: '#0a0e14', strokeWidth: 2 }} animationDuration={1100} />
+            {/* Linear regression trend line */}
+            <Line type="linear" dataKey="trend" stroke={COLORS.gold} strokeWidth={2} strokeDasharray="6 4" dot={false} activeDot={false} animationDuration={1100} />
+            {/* Slope + R² annotation */}
+            <ReferenceLine
+              y={stepTrendData[stepTrendData.length - 1]?.trend ?? 0}
+              stroke="transparent"
+              label={{
+                value: `${slopeLabel}  ·  ${r2Label}`,
+                position: 'right',
+                fill: COLORS.gold,
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            />
+          </ComposedChart>
+        );
+      }
+
+      // ─── 4. YEAR-OVER-YEAR CHANGE — diverging bars showing deltas ───
+      case 'yoy': {
+        if (yoyData.length === 0) {
+          return (
+            <BarChart data={[]}><XAxis dataKey="year" tick={xAxisStyle} /><YAxis tick={yAxisStyle} /></BarChart>
+          );
+        }
+        const maxAbs = Math.max(...yoyData.map((d) => Math.abs(d.delta)));
+        return (
+          <BarChart data={yoyData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="yoyPositive" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={COLORS.green} stopOpacity={0.95} />
+                <stop offset="100%" stopColor={COLORS.greenDark} stopOpacity={0.6} />
+              </linearGradient>
+              <linearGradient id="yoyNegative" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stopColor={COLORS.red} stopOpacity={0.95} />
+                <stop offset="100%" stopColor="#7F1D1D" stopOpacity={0.6} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid {...gridStyle} vertical={false} />
+            <XAxis dataKey="year" tick={xAxisStyle} tickLine={false} axisLine={false} />
+            <YAxis tick={yAxisStyle} tickLine={false} axisLine={false} width={45} domain={[-maxAbs * 1.2, maxAbs * 1.2]} />
+            <Tooltip content={<ChartTooltip indicator={indicator} kind="yoy" />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+            <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeWidth={1} />
+            <Bar dataKey="delta" radius={[4, 4, 0, 0]} maxBarSize={50} animationDuration={1100}>
+              {yoyData.map((entry, index) => (
+                <Cell key={`yoy-${index}`} fill={entry.delta >= 0 ? 'url(#yoyPositive)' : 'url(#yoyNegative)'} />
               ))}
             </Bar>
           </BarChart>
@@ -275,10 +326,11 @@ const DataChart = ({
     }
   };
 
-  const chartTypeButtons: { type: ChartType; icon: React.ElementType; label: string }[] = [
-    { type: 'bar', icon: BarChart3, label: 'Bar' },
-    { type: 'line', icon: TrendingUp, label: 'Line' },
-    { type: 'area', icon: Layers, label: 'Area' },
+  const chartTypeButtons: { type: ChartType; icon: React.ElementType; label: string; hint: string }[] = [
+    { type: 'bar', icon: BarChart3, label: 'Bar', hint: 'Compare values across years' },
+    { type: 'lollipop', icon: CircleDot, label: 'Lollipop', hint: 'Discrete points, less ink than bars' },
+    { type: 'step-trend', icon: Footprints, label: 'Step + Trend', hint: 'Annual steps + regression line' },
+    { type: 'yoy', icon: ArrowLeftRight, label: 'Year-over-Year', hint: 'Diverging bars: delta vs. prev year' },
   ];
 
   return (
@@ -298,27 +350,25 @@ const DataChart = ({
         </div>
         <div className="flex gap-1.5">
           <Button variant="ghost" size="sm" className="gap-1.5 text-gray-400 hover:text-white hover:bg-white/[0.06] h-8 px-2.5 text-xs">
-            <Download className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Export</span>
+            <Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">Export</span>
           </Button>
           <Button variant="ghost" size="sm" className="gap-1.5 text-gray-400 hover:text-white hover:bg-white/[0.06] h-8 px-2.5 text-xs">
-            <Share className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Share</span>
+            <Share className="h-3.5 w-3.5" /><span className="hidden sm:inline">Share</span>
           </Button>
           <Button variant="ghost" size="sm" className="gap-1.5 text-gray-400 hover:text-white hover:bg-white/[0.06] h-8 px-2.5 text-xs">
-            <ExternalLink className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Embed</span>
+            <ExternalLink className="h-3.5 w-3.5" /><span className="hidden sm:inline">Embed</span>
           </Button>
         </div>
       </div>
 
       {/* Chart type selector */}
       {hasSelection && (
-        <div className="flex gap-1 mb-5 p-1 rounded-lg bg-white/[0.03] border border-gray-800/40 w-fit">
-          {chartTypeButtons.map(({ type, icon: Icon, label }) => (
+        <div className="flex flex-wrap gap-1 mb-5 p-1 rounded-lg bg-white/[0.03] border border-gray-800/40 w-fit">
+          {chartTypeButtons.map(({ type, icon: Icon, label, hint }) => (
             <button
               key={type}
               onClick={() => setChartType(type)}
+              title={hint}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                 chartType === type
                   ? 'bg-emerald-500/15 text-emerald-400 shadow-sm shadow-emerald-500/10'
@@ -333,7 +383,7 @@ const DataChart = ({
       )}
 
       {/* Summary stats */}
-      {hasSelection && <SummaryStats data={data} indicator={indicator} />}
+      {hasSelection && <SummaryStats data={data} />}
 
       {/* Chart area */}
       <div className="min-h-[360px] rounded-xl bg-black/20 border border-gray-800/30 p-4 flex items-center justify-center">
@@ -351,14 +401,22 @@ const DataChart = ({
         )}
       </div>
 
+      {/* Per-chart explainer (so a researcher knows what they're looking at) */}
+      {hasSelection && (
+        <div className="mt-4 px-3 py-2 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/10 text-[11px] text-emerald-300/70 leading-relaxed">
+          {chartType === 'bar' && 'Discrete annual values. Tallest bar (gold) marks the peak year.'}
+          {chartType === 'lollipop' && 'Cleveland-style lollipop: dot at the actual value, thin stem to baseline. Less visual weight than bars; easier to compare exact points.'}
+          {chartType === 'step-trend' && 'Step-after series (annual measurement, constant between observations) with overlaid linear regression. Slope and R² shown to the right.'}
+          {chartType === 'yoy' && 'Year-over-year change: bars above zero are gains vs. the previous year, bars below are declines. Use to scan for inflection points.'}
+        </div>
+      )}
+
       {/* Data source note */}
-      <div className="mt-5 flex items-start gap-2 px-3 py-2.5 bg-white/[0.02] border border-gray-800/30 rounded-lg">
+      <div className="mt-3 flex items-start gap-2 px-3 py-2.5 bg-white/[0.02] border border-gray-800/30 rounded-lg">
         <div className="w-1 h-full min-h-[20px] rounded-full bg-gradient-to-b from-emerald-500/40 to-transparent flex-shrink-0 mt-0.5" />
         <p className="text-[11px] text-gray-500 leading-relaxed">
           {hasSelection
-            ? `${indicator} for ${
-                country !== 'All Countries' ? country : 'all African countries'
-              }, ${yearRange[0]}–${yearRange[1]}. Source: African Union, UNDP Africa, World Bank Open Data.`
+            ? `${indicator} for ${country !== 'All Countries' ? country : 'all African countries'}, ${yearRange[0]}–${yearRange[1]}. Source: African Union, UNDP Africa, World Bank Open Data.`
             : 'Select data filters to view source attribution and methodology notes.'}
         </p>
       </div>

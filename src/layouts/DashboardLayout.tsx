@@ -19,21 +19,14 @@ import {
   Menu,
   ShieldCheck,
   Upload,
-  User,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 
 const adminLinks = [
   { to: '/admin', label: 'Admin Panel', icon: ShieldCheck },
+  { to: '/admin/cms', label: 'Content Manager', icon: FileText },
+  { to: '/admin/reports', label: 'Reports & Files', icon: FileText },
   { to: '/dashboard/data-upload', label: 'Upload Data', icon: Upload },
 ];
 
@@ -65,6 +58,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
+  const [isDesktop, setIsDesktop] = React.useState(
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
+  );
+  React.useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
   // Desktop sidebar shows icons-only by default; expands on hover.
   // Existing render code is keyed off `collapsed`, so we derive it.
   const collapsed = !hovered;
@@ -353,6 +355,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   // Derive topbar title from current path
   const pageTitle = (() => {
     const p = location.pathname;
+    if (p === '/admin/cms') return 'Content Manager';
+    if (p === '/admin/reports') return 'Reports & Files';
     if (p === '/admin') return 'Admin Panel';
     if (p === '/dashboard') return 'Overview';
     if (p.includes('explore')) return 'Data Explorer';
@@ -374,7 +378,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <div className="min-h-screen flex overflow-x-hidden">
-      {/* Desktop Sidebar — fixed, hover-to-expand. Overlays content; main has lg:ml-16 so nothing is hidden. */}
+      {/* Desktop Sidebar — fixed, hover-to-expand. Main content shifts right to match. */}
       <aside
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -384,8 +388,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <DesktopSidebarContent />
       </aside>
 
-      {/* Main Content — left margin reserved for the collapsed sidebar (64px). */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden lg:ml-16">
+      {/* Main Content — left margin tracks the sidebar width so content shifts on hover. */}
+      <div
+        className="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden transition-[margin-left] duration-200 ease-in-out"
+        style={{ marginLeft: isDesktop ? (hovered ? 240 : 64) : 0 }}
+      >
         <LiveDataTicker />
 
         {/* Top Bar */}
@@ -421,80 +428,24 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
           </div>
 
-          {/* Right side: user profile dropdown */}
+          {/* Right side: avatar links straight to the profile tab in /settings */}
           <div className="flex items-center gap-3">
             {user && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                    <div
-                      className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-opacity hover:opacity-80 ${
-                        isAdmin
-                          ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30'
-                          : 'bg-primary/20 text-primary ring-1 ring-primary/30'
-                      }`}
-                    >
-                      {userInitial}
-                    </div>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {user.name || user.email}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="p-0 focus:bg-transparent">
-                    <div className="px-2 py-1.5">
-                      {isAdmin && (
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
-                          ADMIN
-                        </span>
-                      )}
-                      {isContributor && (
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                          CONTRIBUTOR
-                        </span>
-                      )}
-                      {!isAdmin && !isContributor && (
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                          {user.role}
-                        </span>
-                      )}
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
-                      <User className="h-4 w-4" />
-                      Edit Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      to="/settings"
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Change Password
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleSignOut}
-                    className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Link
+                to="/settings#profile"
+                title="Open profile"
+                className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <div
+                  className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-opacity hover:opacity-80 ${
+                    isAdmin
+                      ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30'
+                      : 'bg-primary/20 text-primary ring-1 ring-primary/30'
+                  }`}
+                >
+                  {userInitial}
+                </div>
+              </Link>
             )}
           </div>
         </header>

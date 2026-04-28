@@ -14,7 +14,7 @@ const SignUp = () => {
     try {
       await signIn(data.email, data.password);
       toast({ title: "Welcome back!", description: "You have successfully signed in." });
-      navigate('/dashboard');
+      // PublicOnly redirects to /dashboard once auth context lands the user.
     } catch (err) {
       toast({ title: "Sign in failed", description: err instanceof Error ? err.message : "Invalid credentials.", variant: "destructive" });
     }
@@ -51,6 +51,7 @@ const SignUp = () => {
         <AuthSwitch
           onSignIn={handleSignIn}
           onSignUp={handleSignUp}
+          initialMode="signup"
         />
       </div>
     </div>

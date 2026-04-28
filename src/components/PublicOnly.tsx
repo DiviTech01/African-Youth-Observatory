@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Wrapper for routes that should only be visible to unauthenticated users
-// (landing page, sign in, sign up). Authenticated users get bounced to /explore.
+// (landing page, sign in, sign up). Authenticated users get bounced to /dashboard.
 export function PublicOnly() {
   const { user, isLoading } = useAuth();
 
@@ -15,7 +15,7 @@ export function PublicOnly() {
   }
 
   if (user) {
-    return <Navigate to="/explore" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;

@@ -43,7 +43,7 @@ const Explore = () => {
   
   return (
     <>
-      <div className="relative overflow-hidden py-8 md:py-12">
+      <div className="relative overflow-hidden pt-6 pb-3 md:pt-8 md:pb-4">
         <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         <div className="container px-4 md:px-6 relative">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -77,7 +77,7 @@ const Explore = () => {
         </div>
       </div>
       
-      <div className="py-6 md:py-8">
+      <div className="pt-2 md:pt-3 pb-6 md:pb-8">
         <div className="container px-4 md:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
             {/* Desktop Filters */}
@@ -87,14 +87,24 @@ const Explore = () => {
 
             <div className="lg:col-span-3 space-y-6 md:space-y-8">
               <div className="rounded-2xl border border-gray-800 bg-white/[0.03] p-4 md:p-6">
-                <Content as="h3" id="explore.map.title" fallback="Africa Map" className="text-lg md:text-xl font-bold mb-3 md:mb-4 text-white" />
-                <Content
-                  as="p"
-                  id="explore.map.description"
-                  fallback="Click on a country to view its youth data."
-                  className="text-xs sm:text-sm text-gray-400 mb-4"
-                />
-                <div className="h-[300px] sm:h-[350px] md:h-[400px]">
+                <div className="flex items-start justify-between mb-3 md:mb-4 gap-3">
+                  <div>
+                    <Content as="h3" id="explore.map.title" fallback="Africa Map" className="text-lg md:text-xl font-bold text-white" />
+                    <Content
+                      as="p"
+                      id="explore.map.description"
+                      fallback="Click on a country to view its youth data."
+                      className="text-xs sm:text-sm text-gray-400 mt-1"
+                    />
+                  </div>
+                  {selectedCountry !== 'All Countries' && (
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-500">Selected</p>
+                      <p className="text-sm font-semibold text-emerald-400">{selectedCountry}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="h-[480px] sm:h-[560px] md:h-[640px] lg:h-[720px]">
                   <AfricaMap onCountrySelect={handleCountrySelect} selectedCountry={selectedCountry} />
                 </div>
               </div>

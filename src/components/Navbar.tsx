@@ -56,15 +56,7 @@ const Navbar = () => {
   const { user, isAuthenticated, signOut } = useAuth();
   const { t } = useLanguage();
 
-  const navLinks = [
-    { to: '/', label: t('nav.home') },
-    { to: '/explore', label: t('nav.explore') },
-    { to: '/youth-index', label: t('nav.youthIndex') },
-    { to: '/compare', label: t('nav.compare') },
-    { to: '/countries', label: t('nav.countries') },
-    { to: '/reports', label: t('nav.reports') },
-    { to: '/about', label: t('nav.about') },
-  ];
+  const navLinks: { to: string; label: string }[] = [];
 
   const getInitials = (name: string) =>
     name

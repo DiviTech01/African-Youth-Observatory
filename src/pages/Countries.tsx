@@ -5,9 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, ArrowLeft, ChevronRight, Globe, MapPin, Star } from 'lucide-react';
-import CountryProfile from '@/components/countries/CountryProfile';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, ChevronRight, Globe, MapPin, Star, FileText, Clock } from 'lucide-react';
+import CountryReportCard from '@/pages/CountryReportCard';
 import CountryFlag from '@/components/CountryFlag';
+import { hasStaticReport } from '@/data/countryReports';
 import { getCountryMeta } from '@/lib/country-flags';
 import { SparklineChart } from '@/components/SparklineChart';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
@@ -55,6 +57,7 @@ const Countries = () => {
   const { preferences, trackCountryView } = useUserPreferences();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [comingSoonCountry, setComingSoonCountry] = useState<string | null>(null);
   const [activeRegion, setActiveRegion] = useState('All');
 
   // Fetch countries from API
@@ -122,11 +125,19 @@ const Countries = () => {
           <div className="flex flex-col gap-3 md:gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Globe className="h-6 w-6 text-[#D4A017]" />
-                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('countries.title')}</h1>
+                <FileText className="h-6 w-6 text-[#D4A017]" />
+                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter">
+                  <span className="text-white/60">Country</span>{' '}
+                  <span
+                    className="bg-gradient-to-r from-[#D4A017] via-[#F5D575] to-[#D4A017] bg-clip-text text-transparent font-bold"
+                    style={{ textShadow: '0 0 24px rgba(212, 160, 23, 0.35)' }}
+                  >
+                    Report Card
+                  </span>
+                </h1>
               </div>
               <p className="text-sm sm:text-base text-[#A89070]">
-                {t('countries.subtitle')}
+                Promise Kept · Promise Broken — youth empowerment audit across all 54 African nations.
               </p>
             </div>
 
@@ -164,18 +175,7 @@ const Countries = () => {
 
       <div className="py-6 md:py-8">
         {selectedCountry ? (
-          <div className="container px-4 md:px-6">
-            <Button
-              variant="outline"
-              onClick={() => setSelectedCountry(null)}
-              className="mb-4 md:mb-6 gap-2 text-sm border-gray-800"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <Content as="span" id="countries.back_button" fallback="Back to Country List" />
-            </Button>
-
-            <CountryProfile country={selectedCountry} />
-          </div>
+          <CountryReportCard country={selectedCountry} onBack={() => setSelectedCountry(null)} />
         ) : (
           <div className="container px-4 md:px-6">
             {isLoading ? (
@@ -199,11 +199,6 @@ const Countries = () => {
               </div>
             ) : (
               <>
-                {isError && (
-                  <Badge variant="secondary" className="mb-4 text-xs">
-                    <Content as="span" id="countries.offline_notice" fallback="Showing offline data" />
-                  </Badge>
-                )}
                 <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                   {filteredCountries.map(({ country, region }: any) => {
                     const sparklineData = getSparklineData(country);
@@ -214,7 +209,11 @@ const Countries = () => {
                         className={`hover-lift cursor-pointer group rounded-2xl border border-gray-800 bg-white/[0.03] hover:border-gray-600 transition-colors ${isMyCountry ? 'ring-2 ring-[#D4A017] border-[#D4A017]/50' : ''}`}
                         onClick={() => {
                           trackCountryView(country);
-                          setSelectedCountry(country);
+                          if (hasStaticReport(country)) {
+                            setSelectedCountry(country);
+                          } else {
+                            setComingSoonCountry(country);
+                          }
                         }}
                       >
                         <CardContent className="p-2.5 sm:p-4 flex flex-col gap-1.5 sm:gap-2.5">
@@ -260,12 +259,9 @@ const Countries = () => {
                           </div>
 
                           <div className="flex items-center justify-between mt-1">
-                            <Content
-                              as="span"
-                              id="countries.card.view_profile"
-                              fallback="View Profile"
-                              className="text-[11px] sm:text-xs text-gray-500 font-medium group-hover:text-[#D4A017] transition-colors"
-                            />
+                            <span className="text-[11px] sm:text-xs text-gray-500 font-medium group-hover:text-[#D4A017] transition-colors">
+                              View Report Card
+                            </span>
                             <ChevronRight className="h-3.5 w-3.5 text-gray-500 group-hover:text-[#D4A017] group-hover:translate-x-0.5 transition-all" />
                           </div>
                         </CardContent>
@@ -278,6 +274,38 @@ const Countries = () => {
           </div>
         )}
       </div>
+
+      {/* Coming Soon dialog for countries without a full report yet */}
+      <Dialog open={!!comingSoonCountry} onOpenChange={(open) => !open && setComingSoonCountry(null)}>
+        <DialogContent className="sm:max-w-md bg-[#0a0e14] border-gray-800">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              {comingSoonCountry && <CountryFlag country={comingSoonCountry} size="lg" />}
+              <Clock className="h-5 w-5 text-[#D4A017]" />
+            </div>
+            <DialogTitle className="text-xl font-bold tracking-tight">
+              {comingSoonCountry} Report Card — Coming Soon
+            </DialogTitle>
+            <DialogDescription className="text-gray-400 leading-relaxed pt-2">
+              The Promise Kept · Promise Broken framework is currently fully populated for <span className="text-[#D4A017] font-medium">Nigeria</span>. PACSDA is rolling out the same forensic country audit for the remaining 53 African nations. Check back soon.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-2">
+            <Button variant="outline" onClick={() => setComingSoonCountry(null)} className="border-gray-700">
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setComingSoonCountry(null);
+                setSelectedCountry('Nigeria');
+              }}
+              className="bg-[#D4A017] text-black hover:bg-[#D4A017]/90"
+            >
+              View Nigeria Report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

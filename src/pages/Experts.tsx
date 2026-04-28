@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Users, Search, UserPlus, MapPin, Briefcase, Globe, Check } from 'lucide-react';
+import { Users, Search, UserPlus, MapPin, Briefcase, Globe, Check, X, Sparkles, Languages, GraduationCap, ArrowRight } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import CountryFlag from '@/components/CountryFlag';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -314,7 +314,7 @@ const Experts = () => {
 
   return (
     <>
-      <header className="relative py-8 md:py-12 overflow-hidden">
+      <header className="relative pt-6 pb-3 md:pt-8 md:pb-4 overflow-hidden">
         <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         <div className="container px-4 md:px-6 relative">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -466,135 +466,220 @@ const Experts = () => {
         </div>
       </header>
 
-      <div className="py-6 md:py-8">
+      <div className="pt-2 md:pt-3 pb-6 md:pb-8">
         <div className="container px-4 md:px-6">
-          {/* Search & Filters */}
-          <Card className="mb-8 bg-white/[0.03] border-gray-800 rounded-2xl">
-            <CardContent className="p-4">
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="relative md:col-span-4 lg:col-span-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search experts..."
-                    className="pl-9 border-gray-800 bg-white/[0.03]"
-                  />
-                </div>
-                <Select value={countryFilter} onValueChange={setCountryFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Countries</SelectItem>
-                    {allCountries.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={specFilter} onValueChange={setSpecFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Specialization" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Specializations</SelectItem>
-                    {allSpecializations.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={langFilter} onValueChange={setLangFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Languages</SelectItem>
-                    {allLanguages.map((l) => (
-                      <SelectItem key={l} value={l}>
-                        {l}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Results count */}
-          <p className="text-sm text-gray-400 mb-4">
-            {isLoading ? 'Loading experts...' : `Showing ${filtered.length} of ${allExperts.length} experts`}
-            {isError && <Badge variant="secondary" className="ml-2 text-xs">Offline</Badge>}
-          </p>
-
-          {/* Expert Grid */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((expert) => (
-              <Card key={expert.id} className="hover:shadow-lg transition-shadow bg-white/[0.03] border-gray-800 rounded-2xl">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4 mb-4">
-                    <Avatar className="h-14 w-14 text-lg">
-                      <AvatarFallback className={`${expert.color} text-white font-bold`}>
-                        {expert.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-grow min-w-0">
-                      <h3 className="font-bold text-base truncate">{expert.name}</h3>
-                      <p className="text-sm text-gray-400 truncate">{expert.title}</p>
-                      <p className="text-sm text-gray-400 truncate flex items-center gap-1">
-                        <Briefcase className="h-3 w-3 shrink-0" />
-                        {expert.organization}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                      <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                        <CountryFlag country={expert.country} size="xs" />
-                        {expert.country}
-                      </Badge>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {expert.specializations.map((spec) => (
-                        <Badge
-                          key={spec}
-                          className="bg-primary/10 text-primary border-primary/20 text-xs hover:bg-primary/20"
-                        >
-                          {spec}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                      <Globe className="h-3.5 w-3.5 shrink-0" />
-                      {expert.languages.join(', ')}
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    className="w-full mt-4"
-                    size="sm"
-                    onClick={() => handleViewProfile(expert)}
+          {/* Hero stats — directory at a glance */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            {[
+              { icon: Users, label: 'Experts', value: allExperts.length, accent: '#22C55E' },
+              { icon: MapPin, label: 'Countries', value: allCountries.length, accent: '#3B82F6' },
+              { icon: GraduationCap, label: 'Specializations', value: allSpecializations.length, accent: '#D4A017' },
+              { icon: Languages, label: 'Languages', value: allLanguages.length, accent: '#A855F7' },
+            ].map((s) => {
+              const Icon = s.icon;
+              return (
+                <div
+                  key={s.label}
+                  className="rounded-2xl p-4 bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-gray-800/80 flex items-center gap-3"
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: s.accent + '20', color: s.accent }}
                   >
-                    View Profile
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: s.accent }}>
+                      {isLoading ? '—' : s.value}
+                    </p>
+                    <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold mt-1">{s.label}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          {filtered.length === 0 && (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-lg font-medium">No experts found</p>
-              <p className="text-sm text-gray-400">Try adjusting your search or filters.</p>
+          {/* Compact filter bar */}
+          <div className="flex flex-col sm:flex-row gap-2 mb-3">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name, organization, or expertise…"
+                className="pl-9 h-9 text-xs bg-white/[0.03] border-gray-800"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                  aria-label="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <Select value={countryFilter} onValueChange={setCountryFilter}>
+              <SelectTrigger className="w-full sm:w-[160px] h-9 text-xs bg-white/[0.03] border-gray-800">
+                <SelectValue placeholder="Country" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">All countries</SelectItem>
+                {allCountries.map((c) => (
+                  <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={specFilter} onValueChange={setSpecFilter}>
+              <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs bg-white/[0.03] border-gray-800">
+                <SelectValue placeholder="Specialization" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">All specializations</SelectItem>
+                {allSpecializations.map((s) => (
+                  <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={langFilter} onValueChange={setLangFilter}>
+              <SelectTrigger className="w-full sm:w-[140px] h-9 text-xs bg-white/[0.03] border-gray-800">
+                <SelectValue placeholder="Language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">All languages</SelectItem>
+                {allLanguages.map((l) => (
+                  <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Active filter chips */}
+          {(countryFilter !== 'all' || specFilter !== 'all' || langFilter !== 'all') && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-4">
+              <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mr-1">Active:</span>
+              {countryFilter !== 'all' && (
+                <button
+                  onClick={() => setCountryFilter('all')}
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] bg-white/[0.05] border border-gray-800 hover:border-gray-700 text-gray-300"
+                >
+                  <MapPin className="h-3 w-3" /> {countryFilter} <X className="h-3 w-3" />
+                </button>
+              )}
+              {specFilter !== 'all' && (
+                <button
+                  onClick={() => setSpecFilter('all')}
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] bg-white/[0.05] border border-gray-800 hover:border-gray-700 text-gray-300"
+                >
+                  <Sparkles className="h-3 w-3" /> {specFilter} <X className="h-3 w-3" />
+                </button>
+              )}
+              {langFilter !== 'all' && (
+                <button
+                  onClick={() => setLangFilter('all')}
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] bg-white/[0.05] border border-gray-800 hover:border-gray-700 text-gray-300"
+                >
+                  <Languages className="h-3 w-3" /> {langFilter} <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Results count */}
+          <p className="text-xs text-gray-500 mb-4">
+            {isLoading ? 'Loading experts…' : (
+              <>
+                <span className="text-gray-300 font-semibold tabular-nums">{filtered.length}</span> of{' '}
+                <span className="text-gray-300 font-semibold tabular-nums">{allExperts.length}</span> experts
+              </>
+            )}
+            {isError && <Badge variant="secondary" className="ml-2 text-[10px]">Offline</Badge>}
+          </p>
+
+          {/* Expert grid */}
+          {isLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-56 rounded-2xl bg-white/[0.03]" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 rounded-2xl border border-dashed border-gray-800 bg-white/[0.02]">
+              <Users className="h-10 w-10 text-gray-500 mx-auto mb-3" />
+              <p className="text-base font-medium text-gray-300">No experts found</p>
+              <p className="text-xs text-gray-500 mt-1">Try adjusting your search or filters.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((expert) => (
+                <button
+                  key={expert.id}
+                  onClick={() => handleViewProfile(expert)}
+                  className="group text-left relative rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-gray-800/80 overflow-hidden hover:border-gray-700 hover:-translate-y-0.5 transition-all"
+                >
+                  {/* Top accent stripe — colored per expert */}
+                  <div
+                    className="h-1 w-full"
+                    style={{ background: `linear-gradient(90deg, ${expert.color.replace('bg-', '#').replace('pan-green-500', '22C55E').replace('pan-blue-500', '3B82F6').replace('pan-gold-500', 'F59E0B').replace('pan-red-500', 'EF4444').replace('purple-500', 'A855F7').replace('teal-500', '14B8A6')}aa, transparent)` }}
+                  />
+                  <div className="p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                      <Avatar className="h-12 w-12 text-base ring-2 ring-white/[0.06] flex-shrink-0">
+                        <AvatarFallback className={`${expert.color} text-white font-bold`}>
+                          {expert.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-sm text-white truncate group-hover:text-[#D4A017] transition-colors">{expert.name}</h3>
+                        <p className="text-xs text-gray-400 truncate">{expert.title}</p>
+                        <p className="text-[11px] text-gray-500 truncate inline-flex items-center gap-1 mt-0.5">
+                          <Briefcase className="h-2.5 w-2.5 flex-shrink-0" />
+                          {expert.organization}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Country pill */}
+                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] text-[11px] text-gray-300">
+                      <CountryFlag country={expert.country} size="xs" />
+                      {expert.country}
+                    </div>
+
+                    {/* Specializations */}
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {expert.specializations.slice(0, 3).map((spec) => (
+                        <span
+                          key={spec}
+                          className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20"
+                        >
+                          {spec}
+                        </span>
+                      ))}
+                      {expert.specializations.length > 3 && (
+                        <span className="text-[10px] text-gray-500 self-center">+{expert.specializations.length - 3}</span>
+                      )}
+                    </div>
+
+                    {/* Languages */}
+                    <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-white/[0.04]">
+                      <Languages className="h-3 w-3 text-gray-500 flex-shrink-0" />
+                      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                        {expert.languages.map((l, i) => (
+                          <span key={l} className="text-[10px] uppercase tracking-wider text-gray-400 font-mono">
+                            {l.slice(0, 3)}{i < expert.languages.length - 1 && <span className="text-gray-700 ml-1.5">·</span>}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* CTA */}
+                    <div className="mt-4 inline-flex items-center gap-1 text-[11px] text-gray-500 group-hover:text-[#D4A017] transition-colors">
+                      View profile
+                      <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
           )}
         </div>

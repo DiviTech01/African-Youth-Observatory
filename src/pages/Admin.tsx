@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -12,12 +14,13 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Shield, Users, Globe, Database, Activity,
-  Upload, RefreshCw, Trash2, FileText, CheckCircle, XCircle, Clock, UserCheck,
+  Shield, Users, Globe, Database, Activity, Search, ArrowRight,
+  Upload, Trash2, FileText, CheckCircle, XCircle, Clock, UserCheck, Wrench,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { getAdminReports } from '@/services/adminContent';
 
 type UserRole = 'PUBLIC' | 'REGISTERED' | 'RESEARCHER' | 'CONTRIBUTOR' | 'INSTITUTIONAL' | 'ADMIN';
 
@@ -119,144 +122,214 @@ const Admin = () => {
     }
   };
 
+  // Filter user list by search query
+  const [userSearch, setUserSearch] = useState('');
+  const filteredUsers = useMemo(() => {
+    if (!userRows) return [];
+    if (!userSearch.trim()) return userRows;
+    const q = userSearch.toLowerCase();
+    return userRows.filter((u) => (u.name?.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)));
+  }, [userRows, userSearch]);
+
+  const adminReportsCount = useMemo(() => getAdminReports().length, []);
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="space-y-6 max-w-6xl">
       {/* Header */}
-      <div className="bg-muted/30 border-b">
-        <div className="container px-4 md:px-6 py-6 flex items-center gap-3">
-          <Shield className="h-7 w-7 text-primary" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Shield className="h-6 w-6 text-[#D4A017]" />
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Manage users, data, and platform operations</p>
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">
+              Admin Console
+            </h1>
+            <p className="text-xs text-[#A89070] mt-0.5">Users, content, data, and platform operations.</p>
           </div>
-          {!platformStats && <Badge variant="secondary" className="ml-auto text-xs">Offline mode</Badge>}
         </div>
+        {!platformStats && <Badge variant="secondary" className="text-[10px] self-start">Offline mode</Badge>}
       </div>
 
-      <div className="container px-4 md:px-6 py-8 space-y-8">
-        {/* Stat Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <Card key={stat.label}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                <stat.icon className="h-5 w-5 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                {stat.change && <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <Tabs defaultValue="overview" className="space-y-5">
+        <TabsList className="grid w-full grid-cols-4 bg-white/[0.03] border border-gray-800/80 h-10 p-1">
+          <TabsTrigger value="overview" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" /> Overview</TabsTrigger>
+          <TabsTrigger value="users" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
+          <TabsTrigger value="experts" className="gap-1.5 text-xs"><UserCheck className="h-3.5 w-3.5" /> Experts</TabsTrigger>
+          <TabsTrigger value="tools" className="gap-1.5 text-xs"><Wrench className="h-3.5 w-3.5" /> Tools</TabsTrigger>
+        </TabsList>
 
-        {/* User Management */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">User Management</h2>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {usersLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : !userRows?.length ? (
-              <p className="text-sm text-muted-foreground py-4">No users found.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-muted-foreground">
-                      <th className="pb-3 pr-4 font-medium">Name</th>
-                      <th className="pb-3 pr-4 font-medium">Email</th>
-                      <th className="pb-3 pr-4 font-medium">Current Role</th>
-                      <th className="pb-3 pr-4 font-medium">Change Role</th>
-                      <th className="pb-3 font-medium">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {userRows.map((u) => {
-                      const pendingRole = pendingRoles[u.id];
-                      const isDirty = pendingRole && pendingRole !== u.role;
-                      return (
-                        <tr key={u.id} className="py-2">
-                          <td className="py-3 pr-4 font-medium">{u.name || '—'}</td>
-                          <td className="py-3 pr-4 text-muted-foreground">{u.email}</td>
-                          <td className="py-3 pr-4">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${roleBadgeVariant[u.role]}`}>
-                              {u.role}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <Select
-                              value={pendingRole ?? u.role}
-                              onValueChange={(val) =>
-                                setPendingRoles(prev => ({ ...prev, [u.id]: val as UserRole }))
-                              }
-                            >
-                              <SelectTrigger className="w-36 h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {ROLES.map(r => (
-                                  <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          <td className="py-3">
-                            <Button
-                              size="sm"
-                              variant={isDirty ? 'default' : 'ghost'}
-                              disabled={!isDirty || updateRole.isPending}
-                              className="h-8 gap-1 text-xs"
-                              onClick={() => updateRole.mutate({ userId: u.id, role: pendingRole! })}
-                            >
-                              <CheckCircle className="h-3.5 w-3.5" />
-                              Save
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Pending Expert Registrations */}
-        <PendingExperts />
-
-        {/* Quick Actions */}
-        <Card className="max-w-sm">
-          <CardHeader>
-            <h2 className="text-lg font-semibold">Quick Actions</h2>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+        {/* ─── OVERVIEW ─── */}
+        <TabsContent value="overview" className="space-y-5">
+          {/* Quick-action tiles */}
+          <div className="grid gap-3 md:grid-cols-3">
             {[
-              { label: 'Import Data', icon: Upload, variant: 'default' as const, onClick: undefined },
-              { label: 'Recalculate Index', icon: RefreshCw, variant: 'outline' as const, onClick: undefined },
-              { label: 'Clear Cache', icon: Trash2, variant: 'outline' as const, onClick: handleClearCache },
-              { label: 'View Logs', icon: FileText, variant: 'outline' as const, onClick: undefined },
-            ].map((action) => (
-              <Button
-                key={action.label}
-                variant={action.variant}
-                className="w-full justify-start gap-2"
-                onClick={action.onClick}
+              { to: '/admin/cms', icon: FileText, accent: '#D4A017', label: 'Content Manager', hint: 'Edit copy, labels, and CMS content site-wide.' },
+              { to: '/admin/reports', icon: FileText, accent: '#A855F7', label: 'Reports & Files', hint: `Upload PDFs and briefs. ${adminReportsCount} on file.` },
+              { to: '/dashboard/data-upload', icon: Upload, accent: '#22C55E', label: 'Upload Data', hint: 'Bulk-import indicators, youth-index, and policy records.' },
+            ].map(({ to, icon: Icon, accent, label, hint }) => (
+              <Link
+                key={to}
+                to={to}
+                className="group flex items-start gap-3 p-4 rounded-2xl border border-gray-800 bg-gradient-to-br from-white/[0.04] to-transparent hover:border-gray-700 transition-all"
+                style={{ borderColor: undefined }}
               >
-                <action.icon className="h-4 w-4" />
-                {action.label}
-              </Button>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accent + '20', color: accent }}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm group-hover:text-white transition-colors flex items-center gap-1">
+                    {label} <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 -ml-0.5 group-hover:ml-0 transition-all" />
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p>
+                </div>
+              </Link>
             ))}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {stats.map((stat) => (
+              <Card key={stat.label} className="bg-gradient-to-b from-white/[0.04] to-white/[0.01] border-gray-800/80 rounded-2xl">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{stat.label}</p>
+                    <stat.icon className="h-4 w-4 text-gray-500" />
+                  </div>
+                  <div className="text-2xl font-bold tabular-nums text-white">{stat.value}</div>
+                  {stat.change && <p className="text-[11px] text-gray-500 mt-1">{stat.change}</p>}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* ─── USERS ─── */}
+        <TabsContent value="users" className="space-y-3">
+          <Card className="bg-white/[0.03] border-gray-800/80 rounded-2xl">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-[#D4A017]" />
+                  <h2 className="text-base font-semibold">User Management</h2>
+                  <Badge className="bg-white/[0.05] text-gray-400 border-gray-700 text-[10px] tabular-nums">
+                    {userRows?.length ?? 0}
+                  </Badge>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                  <Input
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    placeholder="Search by name or email"
+                    className="pl-9 h-9 text-xs bg-white/[0.04] border-gray-800"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {usersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  {userRows?.length ? 'No users match your search.' : 'No users found.'}
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-800 text-left text-gray-500">
+                        <th className="pb-3 pr-4 text-[10px] uppercase tracking-wider font-semibold">Name</th>
+                        <th className="pb-3 pr-4 text-[10px] uppercase tracking-wider font-semibold">Email</th>
+                        <th className="pb-3 pr-4 text-[10px] uppercase tracking-wider font-semibold">Current role</th>
+                        <th className="pb-3 pr-4 text-[10px] uppercase tracking-wider font-semibold">Change role</th>
+                        <th className="pb-3 text-[10px] uppercase tracking-wider font-semibold">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800/60">
+                      {filteredUsers.map((u) => {
+                        const pendingRole = pendingRoles[u.id];
+                        const isDirty = pendingRole && pendingRole !== u.role;
+                        return (
+                          <tr key={u.id} className="hover:bg-white/[0.02]">
+                            <td className="py-3 pr-4 font-medium text-xs">{u.name || '—'}</td>
+                            <td className="py-3 pr-4 text-muted-foreground text-xs">{u.email}</td>
+                            <td className="py-3 pr-4">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${roleBadgeVariant[u.role]}`}>
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4">
+                              <Select
+                                value={pendingRole ?? u.role}
+                                onValueChange={(val) =>
+                                  setPendingRoles(prev => ({ ...prev, [u.id]: val as UserRole }))
+                                }
+                              >
+                                <SelectTrigger className="w-36 h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ROLES.map(r => (
+                                    <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="py-3">
+                              <Button
+                                size="sm"
+                                variant={isDirty ? 'default' : 'ghost'}
+                                disabled={!isDirty || updateRole.isPending}
+                                className="h-8 gap-1 text-xs"
+                                onClick={() => updateRole.mutate({ userId: u.id, role: pendingRole! })}
+                              >
+                                <CheckCircle className="h-3.5 w-3.5" />
+                                Save
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── EXPERTS ─── */}
+        <TabsContent value="experts" className="space-y-3">
+          <PendingExperts />
+        </TabsContent>
+
+        {/* ─── TOOLS ─── */}
+        <TabsContent value="tools" className="space-y-3">
+          <Card className="bg-white/[0.03] border-gray-800/80 rounded-2xl">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Wrench className="h-4 w-4 text-[#D4A017]" />
+                <h2 className="text-base font-semibold">Platform Tools</h2>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-gray-800">
+                <div>
+                  <p className="text-sm font-medium">Clear server cache</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Forces the API to recompute aggregates and indicator caches on next request.</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleClearCache} className="gap-1.5">
+                  <Trash2 className="h-3.5 w-3.5" /> Clear
+                </Button>
+              </div>
+              <p className="text-[11px] text-gray-500 italic">
+                More tooling (re-index, log viewer, audit trail) lands here as it ships.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

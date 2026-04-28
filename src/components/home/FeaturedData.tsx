@@ -17,7 +17,7 @@ const featuredItems = [
     color: 'from-green-500/20 to-green-500/5',
     iconColor: 'text-green-400',
     borderColor: 'border-green-500/20 hover:border-green-500/40',
-    link: '/explore?theme=employment',
+    link: '/auth/signin',
   },
   {
     slug: 'education_gender',
@@ -27,7 +27,7 @@ const featuredItems = [
     color: 'from-blue-500/20 to-blue-500/5',
     iconColor: 'text-blue-400',
     borderColor: 'border-blue-500/20 hover:border-blue-500/40',
-    link: '/explore?theme=education',
+    link: '/auth/signin',
   },
   {
     slug: 'entrepreneurship',
@@ -37,7 +37,7 @@ const featuredItems = [
     color: 'from-orange-500/20 to-orange-500/5',
     iconColor: 'text-orange-400',
     borderColor: 'border-orange-500/20 hover:border-orange-500/40',
-    link: '/explore?theme=entrepreneurship',
+    link: '/auth/signin',
   },
 ];
 
@@ -139,7 +139,7 @@ const FeaturedData = () => {
         </div>
 
         <div className="mt-10 md:mt-14 flex justify-center">
-          <Link to="/reports">
+          <Link to="/auth/signin">
             <Button
               variant="outline"
               className="border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 tracking-tight"
