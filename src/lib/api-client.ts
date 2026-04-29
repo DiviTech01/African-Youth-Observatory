@@ -1,5 +1,6 @@
 // API Client utility for AYD Platform
 // Wraps fetch with typed responses, error handling, and base URL configuration
+import { getSupabaseAccessToken } from '@/lib/supabase-token';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== '/api'
   ? import.meta.env.VITE_API_URL
@@ -183,8 +184,8 @@ async function request<T>(
     ...options.headers,
   };
 
-  // Attach auth token if available
-  const token = localStorage.getItem('ayd_token');
+  // Attach Supabase auth token if available
+  const token = getSupabaseAccessToken();
   if (token) {
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }

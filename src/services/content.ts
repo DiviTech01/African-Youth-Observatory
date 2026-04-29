@@ -1,4 +1,5 @@
 // CMS / Content API client — fetches published content, admin CRUD helpers.
+import { authHeader } from '@/lib/supabase-token';
 
 // Cloudflare Pages serves the SPA but has no /api proxy, so a relative "/api"
 // would return the index.html and break JSON parsing. Always resolve to the
@@ -98,11 +99,6 @@ export interface PageTreeNode {
   page: string;
   sections: Record<string, number>;
   total: number;
-}
-
-function authHeader(): Record<string, string> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('ayd_token') : null;
-  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {

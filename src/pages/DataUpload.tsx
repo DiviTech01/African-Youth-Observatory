@@ -14,13 +14,10 @@ import {
   Clock, Database, BarChart3, FileText, Trash2, Eye, X,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { authHeader } from '@/lib/supabase-token';
 
 const API = `${import.meta.env.VITE_API_URL || '/api'}/data-upload`;
-const token = () => localStorage.getItem('ayd_token');
-const authHeaders = (): Record<string, string> => {
-  const t = token();
-  return t ? { Authorization: `Bearer ${t}` } : {};
-};
+const authHeaders = (): Record<string, string> => authHeader();
 const fetchAuth = (url: string) =>
   fetch(url, { headers: authHeaders() }).then((r) => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
