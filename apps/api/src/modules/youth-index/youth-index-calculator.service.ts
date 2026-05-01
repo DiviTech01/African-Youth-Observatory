@@ -36,6 +36,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
+import { DEFAULT_AGE_GROUP } from '../../shared/constants';
 
 type Direction = 'higher-is-better' | 'lower-is-better';
 
@@ -157,12 +158,15 @@ export class YouthIndexCalculatorService {
     });
     const slugToId = new Map(indicators.map((i) => [i.slug, i.id]));
 
-    // 3. Fetch all indicator values for this year (TOTAL gender)
+    // 3. Fetch all indicator values for this year (TOTAL gender, AU 15-35).
+    // Filtering ageGroup keeps the Youth Index comparable across countries even
+    // if some carry legacy 15-24 rows.
     const indicatorIds = indicators.map((i) => i.id);
     const allValues = await this.prisma.indicatorValue.findMany({
       where: {
         year,
         gender: 'TOTAL',
+        ageGroup: DEFAULT_AGE_GROUP,
         indicatorId: { in: indicatorIds },
       },
       select: { countryId: true, indicatorId: true, value: true },
@@ -400,9 +404,9 @@ export class YouthIndexCalculatorService {
     const results: { year: number; countriesComputed: number; averageScore: number }[] = [];
 
     for (let year = 2000; year <= 2024; year++) {
-      // Check if there's any data for this year
+      // Check if there's any data for this year (15-35 AU only)
       const dataCount = await this.prisma.indicatorValue.count({
-        where: { year, gender: 'TOTAL' },
+        where: { year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP },
       });
 
       if (dataCount === 0) {

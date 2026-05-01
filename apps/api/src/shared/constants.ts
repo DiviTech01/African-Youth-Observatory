@@ -30,6 +30,18 @@ export const AGE_GROUPS = [
   'all',
 ] as const;
 
+/**
+ * The platform's canonical youth age band. Aligns with the African Union
+ * definition (15–35) and the Prisma schema default for `IndicatorValue.ageGroup`.
+ *
+ * **Rule of thumb**: every query that aggregates indicator values for display
+ * (landing-page Key Statistics, Themes totals, Compare, Explore charts,
+ * country profile stats) MUST filter to this constant unless the caller
+ * explicitly passes a different ageGroup. Anything that doesn't filter ends
+ * up mixing 15-35 AU data with 15-24 UN data, and the totals lie.
+ */
+export const DEFAULT_AGE_GROUP = '15-35';
+
 export const DEFAULT_YEAR_RANGE = {
   min: 2010,
   max: 2024,

@@ -377,7 +377,8 @@ export class DataUploadService {
 
         const year = mapping.year || config.year || new Date().getFullYear();
         const gender = (mapping.gender || 'TOTAL') as import('@prisma/client').GenderType;
-        const ageGroup = mapping.ageGroup || '15-24';
+        // Default to AU 15-35 — matches the schema default and the platform's canonical youth band.
+        const ageGroup = mapping.ageGroup || '15-35';
 
         parsedValues!.push({
           countryId: dbCountry.id,

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { DEFAULT_AGE_GROUP } from '../../shared/constants';
 
 interface LatestIndicator {
   value: number;
@@ -36,11 +37,14 @@ export class CountryReportsService {
     // Pull every value the country has, then keep only the latest per (slug, gender).
     // Exclude rows with target years in the future — those are policy-commitment
     // entries (e.g. "100% education access by 2030") rather than measured outcomes.
+    // Filter to AU 15-35 so the report card never blends UN 15-24 leftovers with
+    // canonical youth-band values.
     const currentYear = new Date().getFullYear();
     const rows = await this.prisma.indicatorValue.findMany({
       where: {
         countryId: country.id,
         year: { lte: currentYear },
+        ageGroup: DEFAULT_AGE_GROUP,
       },
       include: {
         indicator: {
@@ -183,6 +187,142 @@ export class CountryReportsService {
     };
   }
 
+  /**
+   * Year-by-year time-series for the /dashboard/profile/:slug page.
+   *
+   * Pulls every IndicatorValue for the country (excluding future-target
+   * commitments), groups by year, and projects into the chart-ready shape
+   * the frontend expects. Each metric is null when no data exists for that
+   * year — the frontend layers parametric fallback per-cell so charts never
+   * have gaps, but every cell with real data wins.
+   */
+  async getTimeSeries(countryRef: string) {
+    const country = await this.resolveCountry(countryRef);
+    if (!country) throw new NotFoundException(`Country not found: ${countryRef}`);
+
+    const currentYear = new Date().getFullYear();
+    const rows = await this.prisma.indicatorValue.findMany({
+      where: {
+        countryId: country.id,
+        year: { lte: currentYear },
+        ageGroup: DEFAULT_AGE_GROUP,
+      },
+      include: {
+        indicator: { select: { slug: true, name: true, unit: true } },
+      },
+      orderBy: [{ year: 'asc' }],
+    });
+
+    // Bucket by (slug, gender) → year → value
+    type GenderKey = 'TOTAL' | 'MALE' | 'FEMALE';
+    const bucket = new Map<string, Map<number, number>>();
+    const allYears = new Set<number>();
+    for (const r of rows) {
+      const key = `${r.indicator.slug}|${r.gender}`;
+      if (!bucket.has(key)) bucket.set(key, new Map());
+      bucket.get(key)!.set(r.year, r.value);
+      allYears.add(r.year);
+    }
+
+    const at = (slug: string, year: number, gender: GenderKey = 'TOTAL'): number | null =>
+      bucket.get(`${slug}|${gender}`)?.get(year) ?? null;
+    const meanAt = (slug: string, year: number): number | null => {
+      const m = at(slug, year, 'MALE');
+      const f = at(slug, year, 'FEMALE');
+      const t = at(slug, year, 'TOTAL');
+      // Prefer disaggregated average when both are present, else TOTAL, else single side.
+      if (m != null && f != null) return (m + f) / 2;
+      if (t != null) return t;
+      if (m != null) return m;
+      if (f != null) return f;
+      return null;
+    };
+
+    // Build the output years: every year that has at least one value, sorted ascending.
+    const yearsSorted = Array.from(allYears).sort((a, b) => a - b);
+    const yearRange = yearsSorted.length
+      ? { min: yearsSorted[0], max: yearsSorted[yearsSorted.length - 1] }
+      : { min: null as number | null, max: null as number | null };
+
+    // ── Population time-series ────────────────────────────────────────────
+    // Pop is in thousands in the DB (we /1000-then-/1000 again to get millions).
+    const population = yearsSorted.map((year) => {
+      const totalThousands = at('total-population', year);
+      const youthThousands = at('youth-population-15-35', year);
+      const total = totalThousands != null ? +(totalThousands / 1000).toFixed(2) : null;
+      // We don't have male/female population in AYIMS — derive from youth share if we
+      // can, otherwise leave null; the frontend fills with parametric.
+      return { year, population: total, youth: youthThousands != null ? +(youthThousands / 1000).toFixed(2) : null, male: null as number | null, female: null as number | null };
+    });
+
+    // ── Education time-series ──────────────────────────────────────────────
+    const education = yearsSorted.map((year) => ({
+      year,
+      literacy: round(meanAt('youth-literacy-rate', year)),
+      secondaryEnrollment: round(meanAt('secondary-school-net-enrollment-rate', year)),
+      tertiaryEnrollment: round(at('tertiary-education-gross-enrollment-rate', year)),
+    }));
+
+    // ── Employment time-series ────────────────────────────────────────────
+    const employment = yearsSorted.map((year) => {
+      const empM = at('youth-employment-to-population-ratio', year, 'MALE');
+      const empF = at('youth-employment-to-population-ratio', year, 'FEMALE');
+      const employmentRate =
+        empM != null && empF != null ? +(((empM + empF) / 2).toFixed(1)) : empM ?? empF ?? null;
+      return {
+        year,
+        employmentRate,
+        formalSector: round(at('youth-employment-in-services', year)), // best proxy we have
+        informalSector: round(at('informal-employment-rate', year)),
+      };
+    });
+
+    // ── Health snapshot (latest values, with year stamps) ─────────────────
+    const latestSnapshot = (slug: string, gender: GenderKey = 'TOTAL'): { value: number | null; year: number | null } => {
+      const m = bucket.get(`${slug}|${gender}`);
+      if (!m || !m.size) return { value: null, year: null };
+      const lastYear = Math.max(...m.keys());
+      return { value: m.get(lastYear)!, year: lastYear };
+    };
+    const hivLatestM = latestSnapshot('hiv-prevalence-rate-youth', 'MALE');
+    const hivLatestF = latestSnapshot('hiv-prevalence-rate-youth', 'FEMALE');
+    const hivLatest =
+      hivLatestM.value != null && hivLatestF.value != null
+        ? { value: +(((hivLatestM.value + hivLatestF.value) / 2).toFixed(2)), year: Math.max(hivLatestM.year!, hivLatestF.year!) }
+        : hivLatestM.value != null
+        ? hivLatestM
+        : hivLatestF;
+    const health = [
+      { indicator: 'Healthcare Access', ...latestSnapshot('births-by-skilled-staff'), benchmark: 75 },
+      { indicator: 'HIV Prev. (15-24)', ...hivLatest, benchmark: 2.5 },
+      { indicator: 'Mental Health Cov.', value: null, year: null, benchmark: 45 },
+      { indicator: 'Physician Density', ...latestSnapshot('physician-density'), benchmark: null },
+      { indicator: 'Health Budget %', ...latestSnapshot('health-budget-share'), benchmark: null },
+      { indicator: 'YPLWHA on ART', ...latestSnapshot('yplwha-treatment-rate'), benchmark: null },
+    ];
+
+    // ── Entrepreneurship snapshot ─────────────────────────────────────────
+    const entrepreneurship = [
+      { metric: 'Internet Access', ...latestSnapshot('internet-access-households') },
+      { metric: 'Microcredit Recipients', ...latestSnapshot('youth-microcredit-recipients') },
+      { metric: 'Startup Survival (1y)', ...latestSnapshot('youth-startup-survival-rate') },
+      { metric: 'Banked Population', ...latestSnapshot('youth-bank-account-ownership') },
+      { metric: 'Movable Collateral Holders', ...latestSnapshot('youth-movable-collateral-holders') },
+      { metric: 'IP Registrations (Youth)', ...latestSnapshot('youth-ip-registrations') },
+    ];
+
+    return {
+      country: country.name,
+      iso3: country.isoCode3,
+      yearRange,
+      population,
+      education,
+      employment,
+      health,
+      entrepreneurship,
+    };
+  }
+
   private async resolveCountry(ref: string) {
     const decoded = decodeURIComponent(ref).trim();
     const slugAsName = decoded.replace(/-/g, ' ');
@@ -202,7 +342,8 @@ export class CountryReportsService {
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function round(n: number, decimals = 1): number {
+function round(n: number | null | undefined, decimals = 1): number | null {
+  if (n === null || n === undefined || Number.isNaN(n)) return null;
   const f = Math.pow(10, decimals);
   return Math.round(n * f) / f;
 }

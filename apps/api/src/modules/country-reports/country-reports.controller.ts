@@ -15,4 +15,13 @@ export class CountryReportsController {
   get(@Param('countryRef') countryRef: string) {
     return this.service.getCountryReport(countryRef);
   }
+
+  @Get(':countryRef/timeseries')
+  @ApiOperation({
+    summary:
+      'Year-by-year time-series for the country data profile (/dashboard/profile/:slug). Returns chart-ready arrays for population / education / employment plus latest-value snapshots for health and entrepreneurship.',
+  })
+  getTimeseries(@Param('countryRef') countryRef: string) {
+    return this.service.getTimeSeries(countryRef);
+  }
 }

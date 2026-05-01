@@ -37,7 +37,7 @@ type UploadKind = 'data' | 'document' | 'ayims' | 'policies';
 type DocType = 'PKPB_REPORT' | 'COUNTRY_REPORT' | 'POLICY_DOCUMENT' | 'RESEARCH_PAPER' | 'OTHER';
 
 const DATA_EXT = ['csv', 'xlsx', 'xls'] as const;
-const DOC_EXT = ['pdf', 'docx', 'doc', 'pptx', 'ppt', 'txt'] as const;
+const DOC_EXT = ['pdf', 'docx', 'doc', 'pptx', 'ppt', 'txt', 'html', 'htm'] as const;
 
 /**
  * Decide which upload pipeline a file belongs to. Detection is filename-based —
@@ -118,7 +118,7 @@ function UniversalUploadTab() {
           <input
             id="universal-file-input"
             type="file"
-            accept=".csv,.xlsx,.xls,.pdf,.docx,.doc,.pptx,.ppt,.txt"
+            accept=".csv,.xlsx,.xls,.pdf,.docx,.doc,.pptx,.ppt,.txt,.html,.htm"
             className="hidden"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
           />
@@ -417,7 +417,57 @@ function DocumentFlow({
     return [];
   }, [countriesData]);
 
+  // Auto-detect country from the filename: any African country whose name
+  // appears as a token wins. We prefer the first whole-word match. Returns
+  // the country.id (or undefined). The contributor can always override.
+  const detectCountryFromFilename = (
+    fname: string,
+    list: any[],
+  ): string | undefined => {
+    if (!list?.length) return undefined;
+    const base = fname.replace(/\.[^.]+$/, '').toLowerCase();
+    // Strip likely-noise tokens that contain country-ish substrings.
+    const noise = base.replace(/[_-]+/g, ' ');
+    // Try longest names first so "South Africa" beats "Africa" / "South".
+    const sorted = [...list].sort((a, b) => b.name.length - a.name.length);
+    for (const c of sorted) {
+      const n = c.name.toLowerCase();
+      // Whole-word-ish match: surround with spaces/underscores in the haystack.
+      const haystack = ` ${noise} `;
+      const needle = ` ${n} `;
+      if (haystack.includes(needle)) return c.id;
+    }
+    // Fallback: ISO3 / ISO2 token match (e.g. "AGO" or "AO").
+    const upper = base.toUpperCase();
+    for (const c of sorted) {
+      if (c.isoCode3 && new RegExp(`(^|[^A-Z])${c.isoCode3}([^A-Z]|$)`).test(upper)) return c.id;
+      if (c.isoCode2 && new RegExp(`(^|[^A-Z])${c.isoCode2}([^A-Z]|$)`).test(upper)) return c.id;
+    }
+    return undefined;
+  };
+
+  const filenameYear = useMemo(() => {
+    const m = file.name.match(/\b(20\d{2})\b/);
+    return m ? parseInt(m[1], 10) : new Date().getFullYear();
+  }, [file.name]);
+
+  const suggestedEdition = useMemo(() => {
+    // Common PKPB edition format: "Mon Year · Vol 01" — we only know the year, so
+    // we suggest "{Year} · Vol 01" and let the contributor refine month/volume.
+    return `${filenameYear} · Vol 01`;
+  }, [filenameYear]);
+
   const [countryId, setCountryId] = useState<string>(defaultCountryId ?? '');
+  // Once countries load, pre-fill from the filename if the contributor hasn't picked one yet.
+  React.useEffect(() => {
+    if (!countryId && countries.length) {
+      const detected = detectCountryFromFilename(file.name, countries);
+      if (detected) setCountryId(detected);
+    }
+    // Intentional: only run when countries arrive or file changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countries.length, file.name]);
+
   const selectedCountry = countries.find((c) => c.id === countryId);
 
   const [type, setType] = useState<DocType>(
@@ -432,9 +482,11 @@ function DocumentFlow({
 
   const [title, setTitle] = useState(file.name.replace(/\.[^.]+$/, ''));
   const [description, setDescription] = useState('');
-  const [source, setSource] = useState('');
-  const [edition, setEdition] = useState('');
-  const [year, setYear] = useState<number | ''>(new Date().getFullYear());
+  // PKPB convention: PACSDA / AfriYouthStats Hub publishes most country reports.
+  // Contributor can override on the form.
+  const [source, setSource] = useState('PACSDA / AfriYouthStats Hub');
+  const [edition, setEdition] = useState(suggestedEdition);
+  const [year, setYear] = useState<number | ''>(filenameYear);
 
   // PKPB structured summary — guided form when type=PKPB_REPORT
   const [pkpbValue, setPkpbValue] = useState<PkpbGuidedValue>(emptyPkpbValue());

@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { ListCountriesDto, CountryStatsQueryDto } from './countries.dto';
 import { formatCountry, formatRegion, parseRegion } from '../../common/utils/format';
+import { DEFAULT_AGE_GROUP } from '../../shared/constants';
 
 @Injectable()
 export class CountriesService {
@@ -78,15 +79,16 @@ export class CountriesService {
     });
     if (!country) throw new NotFoundException(`Country with ID "${id}" not found`);
 
-    // Get additional stats
+    // Get additional stats — restrict to AU 15-35 youth band so totals reflect
+    // only canonical youth data, not legacy 15-24 rows.
     const [indicatorCount, latestDataYear, availableThemes] = await Promise.all([
-      this.prisma.indicatorValue.count({ where: { countryId: id } }),
+      this.prisma.indicatorValue.count({ where: { countryId: id, ageGroup: DEFAULT_AGE_GROUP } }),
       this.prisma.indicatorValue.aggregate({
-        where: { countryId: id },
+        where: { countryId: id, ageGroup: DEFAULT_AGE_GROUP },
         _max: { year: true },
       }),
       this.prisma.indicatorValue.findMany({
-        where: { countryId: id },
+        where: { countryId: id, ageGroup: DEFAULT_AGE_GROUP },
         select: {
           indicator: {
             select: { theme: { select: { id: true, name: true, slug: true, color: true, icon: true } } },
@@ -131,9 +133,9 @@ export class CountriesService {
       this.prisma.youthIndexScore.findFirst({
         where: { countryId: id, year },
       }),
-      // Get per-theme stats
+      // Get per-theme stats — 15-35 only.
       this.prisma.indicatorValue.findMany({
-        where: { countryId: id, year, gender: 'TOTAL' },
+        where: { countryId: id, year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP },
         include: {
           indicator: {
             include: { theme: { select: { id: true, name: true, slug: true } } },

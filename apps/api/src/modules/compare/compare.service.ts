@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { CompareCountriesDto, CompareRegionsDto, CompareThemesDto } from './compare.dto';
 import { formatRegion } from '../../common/utils/format';
+import { DEFAULT_AGE_GROUP } from '../../shared/constants';
 
 @Injectable()
 export class CompareService {
@@ -40,23 +41,25 @@ export class CompareService {
 
     const indIds = indicators.map((i) => i.id);
 
-    // Get values for the requested countries
+    // Get values for the requested countries (15-35 only, to keep ranking fair).
     const values = await this.prisma.indicatorValue.findMany({
       where: {
         countryId: { in: countryIds },
         indicatorId: { in: indIds },
         year,
         gender: 'TOTAL',
+        ageGroup: DEFAULT_AGE_GROUP,
       },
       select: { countryId: true, indicatorId: true, value: true },
     });
 
-    // Get ALL values per indicator for ranking + averages
+    // Get ALL values per indicator for ranking + averages — 15-35 only.
     const allValues = await this.prisma.indicatorValue.findMany({
       where: {
         indicatorId: { in: indIds },
         year,
         gender: 'TOTAL',
+        ageGroup: DEFAULT_AGE_GROUP,
       },
       include: {
         country: { select: { region: true } },
@@ -216,7 +219,7 @@ export class CompareService {
     if (!indicator) throw new NotFoundException(`Indicator ${indicatorId} not found`);
 
     const values = await this.prisma.indicatorValue.findMany({
-      where: { indicatorId, year, gender: 'TOTAL' },
+      where: { indicatorId, year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP },
       include: {
         country: { select: { name: true, region: true } },
       },
@@ -331,23 +334,25 @@ export class CompareService {
         continue;
       }
 
-      // Get this country's values
+      // Get this country's values (15-35 only — keeps theme rollups consistent).
       const countryValues = await this.prisma.indicatorValue.findMany({
         where: {
           countryId,
           indicatorId: { in: indIds },
           year,
           gender: 'TOTAL',
+          ageGroup: DEFAULT_AGE_GROUP,
         },
         select: { indicatorId: true, value: true },
       });
 
-      // Get all country values for normalization + ranking
+      // Get all country values for normalization + ranking — 15-35 only.
       const allValues = await this.prisma.indicatorValue.findMany({
         where: {
           indicatorId: { in: indIds },
           year,
           gender: 'TOTAL',
+          ageGroup: DEFAULT_AGE_GROUP,
         },
         select: { countryId: true, indicatorId: true, value: true },
       });

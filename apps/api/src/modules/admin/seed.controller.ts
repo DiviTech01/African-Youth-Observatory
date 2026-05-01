@@ -58,7 +58,7 @@ export class SeedController {
             year,
             value,
             gender: 'TOTAL' as any,
-            ageGroup: '15-24',
+            ageGroup: '15-35',
             source: 'Sample Data',
             confidence: 0.7,
             isEstimate: true,

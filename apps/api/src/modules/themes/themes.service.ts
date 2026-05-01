@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
+import { DEFAULT_AGE_GROUP } from '../../shared/constants';
 
 @Injectable()
 export class ThemesService {
@@ -49,11 +50,11 @@ export class ThemesService {
 
     const [dataPointCount, countryCount] = await Promise.all([
       this.prisma.indicatorValue.count({
-        where: { indicatorId: { in: indicatorIds }, year },
+        where: { indicatorId: { in: indicatorIds }, year, ageGroup: DEFAULT_AGE_GROUP },
       }),
       this.prisma.indicatorValue.groupBy({
         by: ['countryId'],
-        where: { indicatorId: { in: indicatorIds }, year },
+        where: { indicatorId: { in: indicatorIds }, year, ageGroup: DEFAULT_AGE_GROUP },
       }),
     ]);
 

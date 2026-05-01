@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { formatRegion, parseRegion } from '../../common/utils/format';
+import { DEFAULT_AGE_GROUP } from '../../shared/constants';
 import {
   DataValuesQueryDto,
   TimeSeriesQueryDto,
@@ -40,7 +41,9 @@ export class DataService {
     if (countryIds?.length) where.countryId = { in: countryIds };
     if (indicatorId) where.indicatorId = indicatorId;
     if (gender) where.gender = gender;
-    if (ageGroup) where.ageGroup = ageGroup;
+    // Default to AU 15-35 unless the caller explicitly passes a different ageGroup,
+    // so we never silently mix age bands in aggregates.
+    where.ageGroup = ageGroup ?? DEFAULT_AGE_GROUP;
     if (themeId) where.indicator = { themeId };
     if (region) where.country = { region: parseRegion(region) };
 
@@ -98,12 +101,13 @@ export class DataService {
   }
 
   async getTimeSeries(query: TimeSeriesQueryDto) {
-    const { countryId, indicatorId, gender, yearStart, yearEnd } = query;
+    const { countryId, indicatorId, gender, yearStart, yearEnd, ageGroup } = query as TimeSeriesQueryDto & { ageGroup?: string };
 
     const where: Record<string, unknown> = {
       countryId,
       indicatorId,
       gender: gender || 'TOTAL',
+      ageGroup: ageGroup ?? DEFAULT_AGE_GROUP,
     };
 
     if (yearStart || yearEnd) {
@@ -144,7 +148,7 @@ export class DataService {
     let year: number;
     if (!query.year || query.year === 'latest') {
       const latest = await this.prisma.indicatorValue.aggregate({
-        where: { indicatorId, gender: 'TOTAL' },
+        where: { indicatorId, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP },
         _max: { year: true },
       });
       year = latest._max.year || 2023;
@@ -158,9 +162,9 @@ export class DataService {
       orderBy: { name: 'asc' },
     });
 
-    // Get values for the indicator + year
+    // Get values for the indicator + year (15-35 only — keeps map values consistent across countries).
     const values = await this.prisma.indicatorValue.findMany({
-      where: { indicatorId, year, gender: 'TOTAL' },
+      where: { indicatorId, year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP },
       select: { countryId: true, value: true },
     });
 
@@ -195,6 +199,7 @@ export class DataService {
       countryId: { in: countryIds },
       year,
       gender: 'TOTAL',
+      ageGroup: DEFAULT_AGE_GROUP,
     };
 
     // Support single or multiple indicators
@@ -265,7 +270,7 @@ export class DataService {
     const cached = this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const where: Record<string, unknown> = { year, gender: 'TOTAL' };
+    const where: Record<string, unknown> = { year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP };
     if (indicatorId) where.indicatorId = indicatorId;
 
     const values = await this.prisma.indicatorValue.findMany({
@@ -313,7 +318,7 @@ export class DataService {
     const { indicatorId, year = 2023, limit = 10, sort = 'desc' } = query;
 
     const values = await this.prisma.indicatorValue.findMany({
-      where: { indicatorId, year, gender: 'TOTAL' },
+      where: { indicatorId, year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP },
       include: {
         country: { select: { name: true, isoCode3: true, flagEmoji: true } },
         indicator: { select: { name: true, unit: true } },
@@ -341,7 +346,7 @@ export class DataService {
   async getRegionalSummary(query: RegionalSummaryQueryDto) {
     const { themeId, year = 2023 } = query;
 
-    const where: Record<string, unknown> = { year, gender: 'TOTAL' };
+    const where: Record<string, unknown> = { year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP };
     if (themeId) where.indicator = { themeId };
 
     const values = await this.prisma.indicatorValue.findMany({

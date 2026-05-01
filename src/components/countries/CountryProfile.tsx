@@ -30,6 +30,42 @@ interface RealCountryReport {
     ayemiTier?: string;
   };
 }
+
+interface CountryTimeseries {
+  country: string;
+  iso3: string;
+  yearRange: { min: number | null; max: number | null };
+  population: Array<{
+    year: number;
+    population: number | null;
+    youth: number | null;
+    male: number | null;
+    female: number | null;
+  }>;
+  education: Array<{
+    year: number;
+    literacy: number | null;
+    secondaryEnrollment: number | null;
+    tertiaryEnrollment: number | null;
+  }>;
+  employment: Array<{
+    year: number;
+    employmentRate: number | null;
+    formalSector: number | null;
+    informalSector: number | null;
+  }>;
+  health: Array<{
+    indicator: string;
+    value: number | null;
+    year: number | null;
+    benchmark: number | null;
+  }>;
+  entrepreneurship: Array<{
+    metric: string;
+    value: number | null;
+    year: number | null;
+  }>;
+}
 import {
   Download,
   ExternalLink,
@@ -84,79 +120,104 @@ function seededRandom(seed: number, index: number): number {
 }
 
 /**
- * Build the chart-ready time-series for the country profile page. When
- * `overrides` carries real values (from /api/country-reports/:slug), they
- * win for the latest year — older years stay parametric until proper
- * time-series ingestion lands. Fields with no real value remain parametric.
+ * Build the chart-ready data for the country profile page.
+ *
+ * If a real `timeseries` is provided (from /api/country-profile/:slug/timeseries)
+ * we walk every year it covers and use real values per cell, with parametric
+ * fallback when a specific (year × metric) is missing. Without timeseries we
+ * fall back to a 10-year parametric window — useful for countries that have
+ * no uploaded data yet.
  */
-function generateData(country: string, overrides?: RealCountryReport['real']) {
+function generateData(country: string, timeseries?: CountryTimeseries | null) {
   const seed = hashCode(country);
-  const pickReal = <T extends number | undefined>(real: T, fallback: number): number =>
-    real != null ? Number(real) : fallback;
 
-  const populationData = Array.from({ length: 10 }, (_, i) => {
-    const isLatest = i === 9;
-    const parametricBase = 8.5 + seededRandom(seed, i) * 4 + i * 0.42;
-    const total = isLatest && overrides?.totalPopMillions != null
-      ? overrides.totalPopMillions
-      : +parametricBase.toFixed(1);
+  // Parametric helpers, indexed by a year offset so re-rendering is stable.
+  const idxFor = (year: number) => year - 2014;
+  const paraLiteracy = (year: number) => +(68 + idxFor(year) * 1.6 + seededRandom(seed, idxFor(year) + 300) * 3).toFixed(1);
+  const paraSecondary = (year: number) => +(55 + idxFor(year) * 1.8 + seededRandom(seed, idxFor(year) + 400) * 4).toFixed(1);
+  const paraTertiary = (year: number) => +(10 + idxFor(year) * 1.0 + seededRandom(seed, idxFor(year) + 500) * 2).toFixed(1);
+  const paraEmployment = (year: number) => +(32 + idxFor(year) * 1.2 + seededRandom(seed, idxFor(year) + 700) * 5).toFixed(1);
+  const paraFormal = (year: number) => +(18 + idxFor(year) * 0.8 + seededRandom(seed, idxFor(year) + 800) * 3).toFixed(1);
+  const paraInformal = (year: number) => +(14 + idxFor(year) * 0.4 + seededRandom(seed, idxFor(year) + 900) * 2).toFixed(1);
+  const paraPopulation = (year: number) => +(8.5 + seededRandom(seed, idxFor(year)) * 4 + idxFor(year) * 0.42).toFixed(1);
+
+  // ── Years covered ────────────────────────────────────────────────────
+  // If we have real time-series, use those exact years. Otherwise default
+  // to a stable 10-year parametric window (2014–2023) for legacy compat.
+  const useReal = !!timeseries && timeseries.population.length > 0;
+  const years: number[] = useReal
+    ? timeseries!.population.map((p) => p.year)
+    : Array.from({ length: 10 }, (_, i) => 2014 + i);
+
+  // Build year-keyed lookups from the real timeseries for cell-level fallback.
+  const popByYear = new Map<number, CountryTimeseries['population'][0]>();
+  const eduByYear = new Map<number, CountryTimeseries['education'][0]>();
+  const empByYear = new Map<number, CountryTimeseries['employment'][0]>();
+  if (useReal) {
+    for (const p of timeseries!.population) popByYear.set(p.year, p);
+    for (const e of timeseries!.education) eduByYear.set(e.year, e);
+    for (const e of timeseries!.employment) empByYear.set(e.year, e);
+  }
+
+  // ── Population ───────────────────────────────────────────────────────
+  const populationData = years.map((year) => {
+    const real = popByYear.get(year);
+    const total = real?.population ?? paraPopulation(year);
     return {
-      year: `${2014 + i}`,
+      year: `${year}`,
       population: total,
-      male: +(total * (0.49 + seededRandom(seed, i + 100) * 0.04)).toFixed(1),
-      female: +(total * (0.47 + seededRandom(seed, i + 200) * 0.04)).toFixed(1),
+      male: +(total * (0.49 + seededRandom(seed, idxFor(year) + 100) * 0.04)).toFixed(1),
+      female: +(total * (0.47 + seededRandom(seed, idxFor(year) + 200) * 0.04)).toFixed(1),
     };
   });
 
-  const educationData = Array.from({ length: 10 }, (_, i) => {
-    const isLatest = i === 9;
+  // ── Education ────────────────────────────────────────────────────────
+  const educationData = years.map((year) => {
+    const real = eduByYear.get(year);
     return {
-      year: `${2014 + i}`,
-      literacy: isLatest
-        ? pickReal(overrides?.literacyPct, +(68 + i * 1.6 + seededRandom(seed, i + 300) * 3).toFixed(1))
-        : +(68 + i * 1.6 + seededRandom(seed, i + 300) * 3).toFixed(1),
-      secondaryEnrollment: isLatest
-        ? pickReal(overrides?.secondaryCompletionPct, +(55 + i * 1.8 + seededRandom(seed, i + 400) * 4).toFixed(1))
-        : +(55 + i * 1.8 + seededRandom(seed, i + 400) * 4).toFixed(1),
-      tertiaryEnrollment: isLatest
-        ? pickReal(overrides?.tertiaryGerPct, +(10 + i * 1.0 + seededRandom(seed, i + 500) * 2).toFixed(1))
-        : +(10 + i * 1.0 + seededRandom(seed, i + 500) * 2).toFixed(1),
+      year: `${year}`,
+      literacy: real?.literacy ?? paraLiteracy(year),
+      secondaryEnrollment: real?.secondaryEnrollment ?? paraSecondary(year),
+      tertiaryEnrollment: real?.tertiaryEnrollment ?? paraTertiary(year),
     };
   });
 
+  // ── Employment ───────────────────────────────────────────────────────
+  const employmentData = years.map((year) => {
+    const real = empByYear.get(year);
+    return {
+      year: `${year}`,
+      employmentRate: real?.employmentRate ?? paraEmployment(year),
+      formalSector: real?.formalSector ?? paraFormal(year),
+      informalSector: real?.informalSector ?? paraInformal(year),
+    };
+  });
+
+  // ── Health snapshot ──────────────────────────────────────────────────
+  // Uses the latest-value bag the timeseries endpoint returns. If a metric
+  // has no real value, fall back to a single seeded number — these cards
+  // aren't time-series so per-year fallback isn't needed.
+  const healthByName = new Map<string, CountryTimeseries['health'][0]>();
+  if (timeseries) for (const h of timeseries.health) healthByName.set(h.indicator, h);
   const healthData = [
-    { indicator: 'Healthcare Access', value: +(60 + seededRandom(seed, 600) * 20).toFixed(1), benchmark: 75 },
-    { indicator: 'HIV Prev. (15-24)',
-      value: pickReal(overrides?.hivYouthSharePct, +(1 + seededRandom(seed, 601) * 4).toFixed(1)),
-      benchmark: 2.5 },
-    { indicator: 'Mental Health Cov.', value: +(20 + seededRandom(seed, 602) * 25).toFixed(1), benchmark: 45 },
-    { indicator: 'Health Insurance', value: +(30 + seededRandom(seed, 603) * 30).toFixed(1), benchmark: 55 },
-    { indicator: 'Vaccination Rate', value: +(65 + seededRandom(seed, 604) * 25).toFixed(1), benchmark: 85 },
-    { indicator: 'Nutrition Index', value: +(45 + seededRandom(seed, 605) * 35).toFixed(1), benchmark: 70 },
+    { indicator: 'Healthcare Access',  value: healthByName.get('Healthcare Access')?.value  ?? +(60 + seededRandom(seed, 600) * 20).toFixed(1), benchmark: 75 },
+    { indicator: 'HIV Prev. (15-24)',  value: healthByName.get('HIV Prev. (15-24)')?.value  ?? +(1 + seededRandom(seed, 601) * 4).toFixed(1), benchmark: 2.5 },
+    { indicator: 'Mental Health Cov.', value: healthByName.get('Mental Health Cov.')?.value ?? +(20 + seededRandom(seed, 602) * 25).toFixed(1), benchmark: 45 },
+    { indicator: 'Physician Density',  value: healthByName.get('Physician Density')?.value  ?? +(30 + seededRandom(seed, 603) * 30).toFixed(1), benchmark: null as number | null },
+    { indicator: 'Health Budget %',    value: healthByName.get('Health Budget %')?.value    ?? +(65 + seededRandom(seed, 604) * 25).toFixed(1), benchmark: null as number | null },
+    { indicator: 'YPLWHA on ART',      value: healthByName.get('YPLWHA on ART')?.value      ?? +(45 + seededRandom(seed, 605) * 35).toFixed(1), benchmark: null as number | null },
   ];
 
-  const employmentData = Array.from({ length: 10 }, (_, i) => {
-    const isLatest = i === 9;
-    const informalReal = overrides?.informalEmploymentPct;
-    return {
-      year: `${2014 + i}`,
-      employmentRate: +(32 + i * 1.2 + seededRandom(seed, i + 700) * 5).toFixed(1),
-      formalSector: +(18 + i * 0.8 + seededRandom(seed, i + 800) * 3).toFixed(1),
-      informalSector: isLatest && informalReal != null
-        ? +informalReal.toFixed(1)
-        : +(14 + i * 0.4 + seededRandom(seed, i + 900) * 2).toFixed(1),
-    };
-  });
-
+  // ── Entrepreneurship snapshot ────────────────────────────────────────
+  const entByName = new Map<string, CountryTimeseries['entrepreneurship'][0]>();
+  if (timeseries) for (const e of timeseries.entrepreneurship) entByName.set(e.metric, e);
   const entrepreneurshipData = [
-    { metric: 'Business Ownership', value: +(8 + seededRandom(seed, 1000) * 10).toFixed(1) },
-    { metric: 'Startup Formation', value: +(2 + seededRandom(seed, 1001) * 5).toFixed(1) },
-    { metric: 'Capital Access',
-      value: pickReal(overrides?.bankedPct, +(15 + seededRandom(seed, 1002) * 15).toFixed(1)) },
-    { metric: '5-yr Survival', value: +(25 + seededRandom(seed, 1003) * 20).toFixed(1) },
-    { metric: 'Digital Business',
-      value: pickReal(overrides?.internetAccessPct, +(5 + seededRandom(seed, 1004) * 12).toFixed(1)) },
-    { metric: 'Export Readiness', value: +(3 + seededRandom(seed, 1005) * 8).toFixed(1) },
+    { metric: 'Internet Access',           value: entByName.get('Internet Access')?.value           ?? +(8 + seededRandom(seed, 1000) * 10).toFixed(1) },
+    { metric: 'Microcredit Recipients',    value: entByName.get('Microcredit Recipients')?.value    ?? +(2 + seededRandom(seed, 1001) * 5).toFixed(1) },
+    { metric: 'Startup Survival (1y)',     value: entByName.get('Startup Survival (1y)')?.value     ?? +(15 + seededRandom(seed, 1002) * 15).toFixed(1) },
+    { metric: 'Banked Population',         value: entByName.get('Banked Population')?.value         ?? +(25 + seededRandom(seed, 1003) * 20).toFixed(1) },
+    { metric: 'Movable Collateral',        value: entByName.get('Movable Collateral Holders')?.value ?? +(5 + seededRandom(seed, 1004) * 12).toFixed(1) },
+    { metric: 'IP Registrations (Youth)',  value: entByName.get('IP Registrations (Youth)')?.value  ?? +(3 + seededRandom(seed, 1005) * 8).toFixed(1) },
   ];
 
   return { populationData, educationData, healthData, employmentData, entrepreneurshipData };
@@ -202,6 +263,8 @@ const CountryProfile = ({ country }: CountryProfileProps) => {
   // with real values when the API returns them. Older years stay parametric
   // until full time-series ingestion is wired.
   const slug = country.toLowerCase().replace(/\s+/g, '-');
+
+  // Latest-value overlay (used for stat cards / display values).
   const { data: realReport } = useQuery<RealCountryReport | null>({
     queryKey: ['country-profile-real', slug],
     queryFn: async () => {
@@ -213,8 +276,22 @@ const CountryProfile = ({ country }: CountryProfileProps) => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Year-by-year time-series for the charts. When this lands, every chart
+  // year for which we have real data uses the real number; gaps fall back
+  // to parametric per cell so the charts stay smooth.
+  const { data: timeseries } = useQuery<CountryTimeseries | null>({
+    queryKey: ['country-profile-timeseries', slug],
+    queryFn: async () => {
+      const res = await fetch(`${REPORTS_API}/${encodeURIComponent(slug)}/timeseries`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!slug,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const overrides = realReport?.real;
-  const data = useMemo(() => generateData(country, overrides), [country, overrides]);
+  const data = useMemo(() => generateData(country, timeseries), [country, timeseries]);
   const seed = useMemo(() => hashCode(country), [country]);
 
   /* Display values — prefer real, fall back to seeded parametric */

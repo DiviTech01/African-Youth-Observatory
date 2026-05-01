@@ -7,6 +7,10 @@ dist
 dist-ssr
 build
 
+# Local-disk fallback for R2 uploads (apps/api/uploads/* and ./uploads/*)
+uploads/
+apps/api/uploads/
+
 # Environment
 .env
 .env.local

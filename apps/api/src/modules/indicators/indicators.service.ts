@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { ListIndicatorsDto, IndicatorValuesQueryDto } from './indicators.dto';
+import { DEFAULT_AGE_GROUP } from '../../shared/constants';
 
 @Injectable()
 export class IndicatorsService {
@@ -66,8 +67,10 @@ export class IndicatorsService {
   async getValues(id: string, query: IndicatorValuesQueryDto) {
     const indicator = await this.findById(id);
     const { countryId, yearStart, yearEnd, gender, page = 1, pageSize = 100 } = query;
+    const ageGroup = (query as IndicatorValuesQueryDto & { ageGroup?: string }).ageGroup;
 
-    const where: Record<string, unknown> = { indicatorId: id };
+    // Default to AU 15-35; callers can override via ?ageGroup=15-24 etc.
+    const where: Record<string, unknown> = { indicatorId: id, ageGroup: ageGroup ?? DEFAULT_AGE_GROUP };
     if (countryId) where.countryId = countryId;
     if (gender) where.gender = gender;
     if (yearStart || yearEnd) {

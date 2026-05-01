@@ -183,8 +183,25 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
   }
 
   const handleDownload = () => {
-    // 1. Uploaded PKPB PDF (preferred — comes from a contributor upload via R2).
     if (downloadHref) {
+      // 1a. Uploaded HTML PKPB → open the inline-disposition URL in a new tab,
+      // auto-trigger the browser's Print dialog so the user can pick "Save as PDF".
+      // This gives contributors an HTML→PDF path with zero server-side conversion.
+      const isHtml = !!downloadFilename && /\.(html?|xhtml)$/i.test(downloadFilename);
+      if (isHtml) {
+        const inlineHref = downloadHref.includes('?')
+          ? `${downloadHref}&disposition=inline`
+          : `${downloadHref}?disposition=inline`;
+        const win = window.open(inlineHref, '_blank');
+        if (win) {
+          const onLoad = () => { try { win.print(); } catch { /* ignore */ } };
+          win.addEventListener('load', onLoad, { once: true });
+        } else {
+          toast({ title: 'Pop-up blocked', description: 'Allow pop-ups so we can open the HTML report and trigger Save-as-PDF.' });
+        }
+        return;
+      }
+      // 1b. Uploaded PDF / DOCX / etc. — direct download via the API stream.
       const a = document.createElement('a');
       a.href = downloadHref;
       if (downloadFilename) a.download = downloadFilename;
@@ -195,7 +212,7 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       a.remove();
       return;
     }
-    // 2. High-fidelity HTML reference (Nigeria's PACSDA print template).
+    // 2. High-fidelity HTML reference (Nigeria's PACSDA print template, bundled).
     if (hasStaticReport(report.country)) {
       const win = window.open(`/reports/${report.country}.html`, '_blank');
       if (win) {

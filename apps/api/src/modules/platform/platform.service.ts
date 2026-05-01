@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
+import { DEFAULT_AGE_GROUP } from '../../shared/constants';
 
 @Injectable()
 export class PlatformService {
@@ -16,6 +17,11 @@ export class PlatformService {
     const cached = this.cache.get(cacheKey);
     if (cached) return cached;
 
+    // The landing-page Key Statistics MUST filter to the platform's canonical
+    // youth band (15-35 AU). Without this, totals mix old 15-24 UN seed data
+    // with current contributor uploads and inflate every count.
+    const ageGroupFilter = { ageGroup: DEFAULT_AGE_GROUP };
+
     const [
       totalCountries,
       totalIndicators,
@@ -28,17 +34,20 @@ export class PlatformService {
     ] = await Promise.all([
       this.prisma.country.count(),
       this.prisma.indicator.count(),
-      this.prisma.indicatorValue.count(),
+      this.prisma.indicatorValue.count({ where: ageGroupFilter }),
       this.prisma.theme.count(),
       this.prisma.indicatorValue.aggregate({
+        where: ageGroupFilter,
         _min: { year: true },
         _max: { year: true },
       }),
       this.prisma.indicatorValue.groupBy({
         by: ['countryId'],
+        where: ageGroupFilter,
       }),
       this.prisma.indicatorValue.groupBy({
         by: ['countryId'],
+        where: ageGroupFilter,
         _count: { id: true },
         orderBy: { _count: { id: 'desc' } },
         take: 5,
@@ -61,6 +70,7 @@ export class PlatformService {
     const possiblePairs = totalCountries * totalIndicators;
     const actualPairs = await this.prisma.indicatorValue.groupBy({
       by: ['countryId', 'indicatorId'],
+      where: ageGroupFilter,
     });
 
     const result = {

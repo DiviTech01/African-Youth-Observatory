@@ -82,9 +82,13 @@ const Methodology = () => {
                       <p>To enable cross-country comparison, we apply rigorous standardization procedures:</p>
                       <h4 className="text-foreground font-semibold mt-4">Age Definition</h4>
                       <p>
-                        We standardize all youth indicators to the 15-24 age group, consistent with the UN definition.
-                        Where source data uses different age brackets (e.g., 18-35 for African Union definition),
-                        we note this in metadata and apply statistical adjustments where possible.
+                        Our canonical youth band is <strong>15–35</strong>, consistent with the African Union (AU)
+                        definition and the African Youth Charter. All headline statistics across the platform —
+                        Key Statistics on the landing page, country profiles, the Youth Index, theme rollups,
+                        Compare, and Explore — query <strong>ageGroup = 15–35</strong> by default.
+                        The UN's narrower 15–24 band remains queryable on the Explore page for cross-reference,
+                        and disaggregated 5-year brackets (15–19, 20–24, 25–29, 30–35) are exposed where source data
+                        ships them.
                       </p>
                       <h4 className="text-foreground font-semibold mt-4">Indicator Harmonization</h4>
                       <ul className="space-y-1">

@@ -10,6 +10,8 @@ const ACCEPTED_MIME = new Set([
   'application/vnd.ms-powerpoint',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
   'text/plain',
+  'text/html', // PKPB country reports often arrive as HTML; we render them inline + offer print-to-PDF.
+  'application/xhtml+xml',
 ]);
 
 @Injectable()
@@ -33,9 +35,15 @@ export class DocumentsService {
       throw new BadRequestException('countryId is required for PKPB_REPORT uploads');
     }
 
+    // Resolve the country reference flexibly: accepts the database cuid, ISO3,
+    // ISO2 (case-insensitive), exact name, or slug ("south-africa"). The
+    // frontend's hardcoded country list uses lowercase ISO2 as the id (e.g.
+    // "ao", "dz"), so we need to handle that too.
+    let resolvedCountryId: string | null = null;
     if (dto.countryId) {
-      const country = await this.prisma.country.findUnique({ where: { id: dto.countryId } });
-      if (!country) throw new BadRequestException(`Unknown countryId: ${dto.countryId}`);
+      const country = await this.resolveCountry(dto.countryId);
+      if (!country) throw new BadRequestException(`Unknown country reference: ${dto.countryId}`);
+      resolvedCountryId = country.id;
     }
 
     let extractedText: string | null = null;
@@ -43,6 +51,23 @@ export class DocumentsService {
       extractedText = await this.extractPdfText(file.buffer);
     } else if (file.mimetype === 'text/plain') {
       extractedText = file.buffer.toString('utf-8').slice(0, 200_000);
+    } else if (file.mimetype === 'text/html' || file.mimetype === 'application/xhtml+xml') {
+      // Strip script/style blocks first, then drop all remaining tags. Crude but
+      // good enough to give the AI assistant + search a body of indexable text.
+      const raw = file.buffer.toString('utf-8');
+      const stripped = raw
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+      extractedText = stripped.slice(0, 200_000);
     }
 
     let extractedSummary: PkpbExtractedSummary | null = null;
@@ -62,7 +87,7 @@ export class DocumentsService {
         type: dto.type as any,
         title: dto.title,
         description: dto.description ?? null,
-        countryId: dto.countryId ?? null,
+        countryId: resolvedCountryId,
         originalFilename: file.originalname,
         mimeType: file.mimetype,
         fileSize: file.size,
@@ -151,10 +176,14 @@ export class DocumentsService {
   }
 
   private async resolveCountry(ref: string) {
-    // Accept id, ISO3, ISO2, exact name, or slug-style ("south-africa" → "South Africa").
+    // Accept id, ISO3, ISO2 (case-insensitive), exact name, or slug-style
+    // ("south-africa" → "South Africa"). The frontend's hardcoded country list
+    // sends lowercase ISO2 (e.g. "ao", "dz") as the id — this resolver matches.
+    // Only select fields we can safely serialize to JSON (Country.population
+    // and youthPopulation are BigInt in Prisma; default JSON.stringify chokes).
     const decoded = decodeURIComponent(ref).trim();
     const slugAsName = decoded.replace(/-/g, ' ');
-    const direct = await this.prisma.country.findFirst({
+    return this.prisma.country.findFirst({
       where: {
         OR: [
           { id: decoded },
@@ -164,8 +193,8 @@ export class DocumentsService {
           { name: { equals: slugAsName, mode: 'insensitive' } },
         ],
       },
+      select: { id: true, name: true, isoCode2: true, isoCode3: true, region: true },
     });
-    return direct;
   }
 
   private serialize(doc: any, opts: { withText?: boolean } = {}) {

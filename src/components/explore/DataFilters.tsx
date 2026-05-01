@@ -13,7 +13,11 @@ const YEAR_RANGES: { label: string; range: [number, number] }[] = [
   { label: 'All Years', range: [2000, 2025] },
 ];
 
-const AGE_GROUPS = ['15-20', '21-25', '26-30', '31-35', 'All Ages'];
+// Platform-canonical age bands. Default is the African Union youth definition
+// (15-35) — matches the IndicatorValue.ageGroup default and what AYIMS uploads
+// land at. UN's 15-24 is offered for cross-reference. The narrower 5-year
+// brackets are reserved for indicators that ship disaggregated.
+const AGE_GROUPS = ['15-35', '15-24', '15-19', '20-24', '25-29', '30-35', 'All ages'];
 
 const countries = [
   "All Countries", "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", 
@@ -63,7 +67,7 @@ const DataFilters = ({
     ? indicators[selectedTheme as keyof typeof indicators] || []
     : ["Select a theme first"];
 
-  const [ageGroup, setAgeGroup] = useState<string>('15-20');
+  const [ageGroup, setAgeGroup] = useState<string>('15-35');
 
   const isYearRangeActive = (r: [number, number]) =>
     yearRange[0] === r[0] && yearRange[1] === r[1];
