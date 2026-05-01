@@ -136,7 +136,8 @@ World Bank, ILO, UNESCO, national statistics bureaus`,
     next();
   });
 
-  const port = process.env.API_PORT || 3001;
+  // Render injects $PORT automatically; fall back to API_PORT, then 3001 for local dev.
+  const port = process.env.PORT || process.env.API_PORT || 3001;
   await app.listen(port);
   console.log(`🌍 AYD API running on http://localhost:${port}/api`);
   console.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
