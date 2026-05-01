@@ -280,31 +280,31 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
             'radial-gradient(circle at 82% 65%, rgba(201,148,42,0.22) 0%, transparent 52%),' +
             'radial-gradient(circle at 55% 8%, rgba(192,57,43,0.18) 0%, transparent 42%)',
         }} />
-        <div className="relative container px-6 md:px-12 py-12 md:py-16">
-          <div className="flex justify-between items-start mb-12">
-            <div>
+        <div className="relative container px-4 sm:px-4 sm:px-6 md:px-12 py-8 sm:py-12 md:py-16">
+          <div className="flex justify-between items-start gap-3 mb-8 sm:mb-12">
+            <div className="min-w-0">
               <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-white/45 font-medium">PACSDA · AfriYouthStats AYIMS</div>
-              <div className="text-xs text-white/65 font-light mt-0.5">Pan African Centre for Social Development and Accountability</div>
+              <div className="text-[11px] sm:text-xs text-white/65 font-light mt-0.5">Pan African Centre for Social Development and Accountability</div>
             </div>
-            <span className="font-mono text-[10px] tracking-wider uppercase font-medium px-3 py-1.5 rounded-sm" style={{ background: COLORS.gold, color: COLORS.navy }}>{report.edition}</span>
+            <span className="font-mono text-[10px] tracking-wider uppercase font-medium px-2 sm:px-3 py-1 sm:py-1.5 rounded-sm shrink-0" style={{ background: COLORS.gold, color: COLORS.navy }}>{report.edition}</span>
           </div>
 
-          <div className="space-y-4 mb-10">
+          <div className="space-y-4 mb-8 sm:mb-10">
             <div className="flex items-center gap-3">
               <CountryFlag country={report.country} size="lg" />
-              <span className="text-xs text-white/40 tracking-[0.2em] uppercase font-medium">{report.country} Country Report Card · Youth Empowerment & Development</span>
+              <span className="text-[10px] sm:text-xs text-white/40 tracking-[0.2em] uppercase font-medium">{report.country} Country Report Card · Youth Empowerment & Development</span>
             </div>
-            <h1 className="font-bold leading-none" style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(40px, 6vw, 80px)' }}>
+            <h1 className="font-bold leading-none" style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(28px, 7vw, 80px)' }}>
               <span style={{ color: COLORS.greenBright }}>Promise<br />Kept</span>
               <span className="text-white/15 mx-3 align-middle text-[0.55em]">·</span>
               <span style={{ color: '#E74C3C' }}>Promise<br />Broken</span>
             </h1>
-            <p className="text-sm md:text-base text-white/50 font-light max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm md:text-base text-white/50 font-light max-w-2xl leading-relaxed">
               Implementing the African Youth Charter and the youth lens of Agenda 2063 and the SDGs. A forensic audit of {report.country}'s commitments to its ~{report.totalYouthMillions}M young citizens — evaluated against outcomes.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-x-12 gap-y-6 items-end">
+          <div className="flex flex-wrap gap-x-8 sm:gap-x-12 gap-y-6 items-end">
             <div>
               <div className="font-mono text-[10px] tracking-[0.15em] uppercase text-white/40">AYEMI Score 2025</div>
               <AnimatedNumber
@@ -313,7 +313,7 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
                 duration={1800}
                 suffix="%"
                 className="block font-bold leading-none tabular-nums"
-                style={{ fontFamily: "'Playfair Display', serif", fontSize: 76, color: tierColor }}
+                style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(48px, 12vw, 76px)', color: tierColor }}
               />
               <div className="text-[11px] text-white/30 max-w-xs mt-1 leading-snug">Tier: {report.ayemiTier} · Last reviewed {report.reviewedDate}</div>
             </div>
@@ -344,8 +344,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── 01 EXECUTIVE BRIEF ── */}
-      <section className="bg-[#0a0e14] py-14 md:py-20">
-        <div className="container px-6 md:px-12">
+      <section className="bg-[#0a0e14] py-10 sm:py-14 md:py-20">
+        <div className="container px-4 sm:px-6 md:px-12">
           <SectionHdr num="01" title="Executive Brief" tag={report.ayemiTier === 'Critical' ? 'Score frozen — and a worsening ground reality' : report.ayemiTier === 'Developing' ? 'Mid-band: signals of progress, gaps that persist' : 'Continental leader, with residual gaps'} />
           <p className="text-sm text-gray-400 leading-loose font-light mb-8">{report.executiveBrief}</p>
 
@@ -456,8 +456,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── 02 DEMOGRAPHICS ── */}
-      <section className="bg-background py-14 md:py-20">
-        <div className="container px-6 md:px-12">
+      <section className="bg-background py-10 sm:py-14 md:py-20">
+        <div className="container px-4 sm:px-6 md:px-12">
           <SectionHdr num="02" title="Demographic Stakes" tag={`~${report.totalYouthMillions}M youth (15–35) · ${report.youthBulgePct.toFixed(0)}% of adults · median age ${report.medianAge}`} />
           <div ref={demoRef} className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/[0.06] rounded-xl overflow-hidden mb-10">
             {[
@@ -466,7 +466,7 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
               { num: report.medianAge, prefix: '', u: 'yrs', decimals: 1, label: 'Median age', sub: 'Among the youngest globally', color: '#E67E22' },
               { num: report.projectedYouth2050M, prefix: '~', u: 'M', decimals: 0, label: 'Youth projected by 2050', sub: 'UN World Population Prospects', color: '#E74C3C' },
             ].map((c) => (
-              <div key={c.label} className="bg-[#0a0e14] p-6 flex flex-col gap-2">
+              <div key={c.label} className="bg-[#0a0e14] p-4 sm:p-6 flex flex-col gap-2">
                 <div>
                   <AnimatedNumber
                     value={c.num}
@@ -513,11 +513,11 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
 
       {/* ── 03 PROMISE SPLIT ── */}
       <section className="grid md:grid-cols-2">
-        <div className="p-10 md:p-14" style={{ background: '#2D1B4E', color: 'white' }}>
-          <div className="flex items-center gap-3 mb-9">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold" style={{ background: 'rgba(180,130,255,0.25)' }}>✓</div>
-            <div>
-              <div className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>Promise Kept</div>
+        <div className="p-5 sm:p-8 md:p-14" style={{ background: '#2D1B4E', color: 'white' }}>
+          <div className="flex items-center gap-3 mb-6 sm:mb-9">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0" style={{ background: 'rgba(180,130,255,0.25)' }}>✓</div>
+            <div className="min-w-0">
+              <div className="text-2xl sm:text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>Promise Kept</div>
               <div className="text-[10px] tracking-widest uppercase text-white/40 mt-1">Forensic · Youth-specific · Evidence-grounded</div>
             </div>
           </div>
@@ -534,11 +534,11 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
             ))}
           </div>
         </div>
-        <div className="p-10 md:p-14" style={{ background: '#190808', color: 'white' }}>
-          <div className="flex items-center gap-3 mb-9">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold" style={{ background: 'rgba(192,57,43,0.45)' }}>✗</div>
-            <div>
-              <div className="text-3xl font-bold" style={{ color: '#E74C3C', fontFamily: "'Playfair Display', serif" }}>Promise Broken</div>
+        <div className="p-5 sm:p-8 md:p-14" style={{ background: '#190808', color: 'white' }}>
+          <div className="flex items-center gap-3 mb-6 sm:mb-9">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0" style={{ background: 'rgba(192,57,43,0.45)' }}>✗</div>
+            <div className="min-w-0">
+              <div className="text-2xl sm:text-3xl font-bold" style={{ color: '#E74C3C', fontFamily: "'Playfair Display', serif" }}>Promise Broken</div>
               <div className="text-[10px] tracking-widest uppercase text-white/40 mt-1">Where commitments met reality — and failed</div>
             </div>
           </div>
@@ -558,8 +558,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── 04 KEY INDICATORS ── */}
-      <section className="bg-[#0a0e14] py-14 md:py-20">
-        <div className="container px-6 md:px-12">
+      <section className="bg-[#0a0e14] py-10 sm:py-14 md:py-20">
+        <div className="container px-4 sm:px-6 md:px-12">
           <SectionHdr num="04" title="Key Indicators at a Glance" tag={`The data points that define ${report.country}'s youth situation in 2025`} />
           <div ref={indicatorsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {report.indicators.map((ind, i) => {
@@ -611,8 +611,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── 05 GOVERNANCE ── */}
-      <section className="bg-background py-14 md:py-20">
-        <div className="container px-6 md:px-12">
+      <section className="bg-background py-10 sm:py-14 md:py-20">
+        <div className="container px-4 sm:px-6 md:px-12">
           <SectionHdr num="05" title="The Governance Gap" tag="Young, registered, and structurally excluded" />
           <div className="grid md:grid-cols-2 gap-12">
             <div>
@@ -678,8 +678,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── 06 EDUCATION & BRAIN DRAIN ── */}
-      <section className="py-14 md:py-20" style={{ background: COLORS.navy }}>
-        <div className="container px-6 md:px-12">
+      <section className="py-10 sm:py-14 md:py-20" style={{ background: COLORS.navy }}>
+        <div className="container px-4 sm:px-6 md:px-12">
           <SectionHdr num="06" title="Education & the Brain Drain Crisis" tag={`${report.tertiaryGerPct}% tertiary GER · ${report.literacyPct}% literacy · ${report.brainDrainPct}% emigrating annually`} />
           <div className="grid md:grid-cols-3 gap-5 mb-8">
             {[
@@ -687,8 +687,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
               { v: `${report.tertiaryGerPct}%`, label: 'Tertiary Gross Enrolment Ratio — SDG 4 progress at risk', color: '#FF8080', bg: 'rgba(192,57,43,0.18)', border: 'rgba(192,57,43,0.3)' },
               { v: `~${report.internetAccessPct}%`, label: 'Youth 15–35 with internet access — digital exclusion compounds every gap', color: '#80CFFF', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)' },
             ].map((s) => (
-              <div key={s.label} className="rounded-lg p-6" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
-                <div className="font-bold text-5xl leading-none" style={{ fontFamily: "'Playfair Display', serif", color: s.color }}>{s.v}</div>
+              <div key={s.label} className="rounded-lg p-4 sm:p-6" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
+                <div className="font-bold text-4xl sm:text-5xl leading-none" style={{ fontFamily: "'Playfair Display', serif", color: s.color }}>{s.v}</div>
                 <div className="text-xs text-white/55 mt-2 leading-relaxed">{s.label}</div>
               </div>
             ))}
@@ -729,8 +729,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── 07 HEALTH ── */}
-      <section className="bg-background py-14 md:py-20">
-        <div className="container px-6 md:px-12">
+      <section className="bg-background py-10 sm:py-14 md:py-20">
+        <div className="container px-4 sm:px-6 md:px-12">
           <SectionHdr num="07" title="Youth Health: Compounding Burdens" tag="HIV, mental health, child marriage, and a system under-resourced for youth" />
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             {[
@@ -774,8 +774,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── 08 DIGITAL IDENTITY ── */}
-      <section className="bg-[#0a0e14] py-14 md:py-20">
-        <div className="container px-6 md:px-12">
+      <section className="bg-[#0a0e14] py-10 sm:py-14 md:py-20">
+        <div className="container px-4 sm:px-6 md:px-12">
           <SectionHdr num="08" title="Digital Identity & Data Rights" tag="Building the citizenship infrastructure — and the gaps that remain" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
@@ -784,8 +784,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
               { v: `${report.passportPct}%`, label: 'Passport coverage', sub: 'Mobility severely restricted', color: '#FF8080', bg: '#6B1C1C', prog: report.passportPct },
               { v: `~${report.noFormalIdPct}%`, label: 'Population without formal ID', sub: 'Rural women, IDPs, elderly', color: '#9999FF', bg: '#1C1C6B', prog: report.noFormalIdPct },
             ].map((m) => (
-              <div key={m.label} className="rounded-lg p-5 text-white" style={{ background: m.bg }}>
-                <div className="font-bold text-3xl leading-none" style={{ fontFamily: "'Playfair Display', serif", color: m.color }}>{m.v}</div>
+              <div key={m.label} className="rounded-lg p-4 sm:p-5 text-white" style={{ background: m.bg }}>
+                <div className="font-bold text-2xl sm:text-3xl leading-none" style={{ fontFamily: "'Playfair Display', serif", color: m.color }}>{m.v}</div>
                 <div className="text-[11px] text-white/45 uppercase tracking-wider mt-2">{m.label}</div>
                 <div className="text-[10px] text-white/30 font-light mt-0.5">{m.sub}</div>
                 <div className="h-1 bg-white/10 rounded mt-3 overflow-hidden">
@@ -818,8 +818,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── 09 LEGISLATIVE SCORECARD ── */}
-      <section className="bg-background py-14 md:py-20">
-        <div className="container px-6 md:px-12">
+      <section className="bg-background py-10 sm:py-14 md:py-20">
+        <div className="container px-4 sm:px-6 md:px-12">
           <SectionHdr num="09" title="Legislative Scorecard" tag="Laws on paper versus outcomes on the ground" />
           <p className="text-sm text-gray-400 leading-loose font-light mb-8">
             {report.country} possesses a layered youth statutory framework. The analysis below assesses each instrument by its youth-specific implementation reality.
@@ -850,8 +850,8 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── 10 RECOMMENDATIONS ── */}
-      <section className="py-14 md:py-20" style={{ background: COLORS.navy }}>
-        <div className="container px-6 md:px-12">
+      <section className="py-10 sm:py-14 md:py-20" style={{ background: COLORS.navy }}>
+        <div className="container px-4 sm:px-6 md:px-12">
           <SectionHdr num="10" title="Priorities for a New Compact" tag="Structural, measurable, and time-bound commitments for 2026–2027" />
           <div className="grid md:grid-cols-2 gap-5">
             {report.recommendations.map((r) => (
@@ -868,10 +868,10 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-14 md:py-20 text-center" style={{ background: COLORS.gold }}>
-        <div className="container px-6 md:px-12 max-w-3xl mx-auto">
+      <section className="py-10 sm:py-14 md:py-20 text-center" style={{ background: COLORS.gold }}>
+        <div className="container px-4 sm:px-6 md:px-12 max-w-3xl mx-auto">
           <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-black/45 mb-3">Call to Action · Donor & Partnership Engagement</div>
-          <h2 className="font-bold text-3xl md:text-4xl mb-4 leading-tight" style={{ color: COLORS.navy, fontFamily: "'Playfair Display', serif" }}>
+          <h2 className="font-bold text-2xl sm:text-3xl md:text-4xl mb-4 leading-tight" style={{ color: COLORS.navy, fontFamily: "'Playfair Display', serif" }}>
             Invest in the Annual<br />{report.country} Youth Report Card
           </h2>
           <p className="text-sm text-black/60 leading-relaxed font-light mb-8">
@@ -899,7 +899,7 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, d
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="py-10 md:py-14 px-6 md:px-12 flex flex-col md:flex-row justify-between gap-4" style={{ background: COLORS.navy, borderTop: `4px solid ${COLORS.green}` }}>
+      <footer className="py-10 md:py-14 px-4 sm:px-6 md:px-12 flex flex-col md:flex-row justify-between gap-4" style={{ background: COLORS.navy, borderTop: `4px solid ${COLORS.green}` }}>
         <div>
           <div className="text-sm text-white/65 font-medium">Pan African Centre for Social Development and Accountability</div>
           <div className="font-mono text-[10px] tracking-wider text-white/30 mt-1">PACSDA · AfriYouthStats AYIMS · {report.edition} · Last reviewed {report.reviewedDate}</div>

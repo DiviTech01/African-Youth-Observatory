@@ -535,7 +535,64 @@ export class DataUploadService {
     };
     delete (job as any).parsedValues; // free memory
 
+    // Persistent audit row so the History tab survives API restarts.
+    await this.writeAudit({
+      kind: (job as any).ayims ? 'AYIMS_TEMPLATE' : 'GENERIC_DATA',
+      fileName: job.fileName,
+      fileSize: job.fileSize,
+      status: errCount > 0 ? 'PARTIAL' : 'SUCCESS',
+      rowsAffected: inserted,
+      countryId: (job as any).ayims?.countryId ?? null,
+      source: job.config?.source ?? null,
+      notes: job.config?.notes ?? null,
+      uploadedById: job.userId,
+      durationMs: job.result.duration,
+      errorMessage: errCount > 0 ? `${errCount} batch errors during commit` : null,
+    });
+
     return job.result;
+  }
+
+  /**
+   * Insert one audit row for an upload commit. Wraps Prisma in a try/catch so
+   * an audit-write failure never breaks a successful commit. The row is the
+   * source of truth for the History tab.
+   */
+  private async writeAudit(data: {
+    kind: 'AYIMS_TEMPLATE' | 'POLICIES_DATABASE' | 'DOCUMENT' | 'GENERIC_DATA';
+    fileName: string;
+    fileSize: number;
+    status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
+    rowsAffected: number;
+    countryId?: string | null;
+    documentId?: string | null;
+    source?: string | null;
+    notes?: string | null;
+    uploadedById?: string | null;
+    durationMs?: number | null;
+    errorMessage?: string | null;
+  }) {
+    try {
+      await this.prisma.uploadAudit.create({
+        data: {
+          kind: data.kind as any,
+          fileName: data.fileName,
+          fileSize: data.fileSize,
+          status: data.status as any,
+          rowsAffected: data.rowsAffected,
+          countryId: data.countryId ?? null,
+          documentId: data.documentId ?? null,
+          source: data.source ?? null,
+          notes: data.notes ?? null,
+          uploadedById: data.uploadedById && data.uploadedById !== 'anonymous' ? data.uploadedById : null,
+          durationMs: data.durationMs ?? null,
+          errorMessage: data.errorMessage ?? null,
+        },
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[upload-audit] failed to write audit row:', (err as Error).message);
+    }
   }
 
   /**
@@ -1027,6 +1084,20 @@ export class DataUploadService {
 
     job.status = 'committed';
     job.result = { inserted, updated, skipped, errors: errCount, duration: Date.now() - startTime };
+
+    await this.writeAudit({
+      kind: 'POLICIES_DATABASE',
+      fileName: job.fileName,
+      fileSize: job.fileSize,
+      status: errCount > 0 ? 'PARTIAL' : 'SUCCESS',
+      rowsAffected: inserted + updated,
+      source: job.source ?? null,
+      notes: job.notes ?? null,
+      uploadedById: job.userId,
+      durationMs: job.result.duration,
+      errorMessage: errCount > 0 ? `${errCount} record errors during commit` : null,
+    });
+
     return job.result;
   }
 
@@ -1040,40 +1111,61 @@ export class DataUploadService {
 
   // ── History ────────────────────────────────────────────────────────────────
 
-  getHistory(userId: string, isAdmin: boolean) {
-    cleanExpiredJobs();
-    const jobs: any[] = [];
-    for (const job of jobStore.values()) {
-      if (isAdmin || job.userId === userId) {
-        jobs.push({
-          id: job.id,
-          fileName: job.fileName,
-          fileSize: job.fileSize,
-          uploadedAt: job.uploadedAt,
-          status: job.status,
-          source: job.config.source,
-          valuesTotal: job.summary.valuesTotal,
-          valuesInserted: job.result?.inserted ?? null,
-          countriesCount: job.summary.countriesMatched,
-          indicatorsCount: job.summary.indicatorsMapped,
-          notes: job.config.notes,
-        });
-      }
-    }
-    return jobs.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+  /**
+   * History — every committed upload, persisted in the UploadAudit table.
+   * Admins see everything; contributors see their own uploads. Survives API
+   * restarts (the prior in-memory jobStore did not — that's why team uploads
+   * were vanishing from the History tab whenever Render redeployed).
+   */
+  async getHistory(userId: string, isAdmin: boolean) {
+    const where = isAdmin ? {} : { uploadedById: userId };
+    const rows = await this.prisma.uploadAudit.findMany({
+      where,
+      include: {
+        country: { select: { id: true, name: true, isoCode3: true } },
+        uploadedBy: { select: { id: true, name: true, email: true } },
+        document: { select: { id: true, type: true, title: true } },
+      },
+      orderBy: { uploadedAt: 'desc' },
+      take: 200,
+    });
+
+    return rows.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      fileName: r.fileName,
+      fileSize: r.fileSize,
+      status: r.status,
+      rowsAffected: r.rowsAffected,
+      country: r.country,
+      source: r.source,
+      notes: r.notes,
+      document: r.document,
+      uploadedBy: r.uploadedBy,
+      uploadedAt: r.uploadedAt,
+      durationMs: r.durationMs,
+      errorMessage: r.errorMessage,
+    }));
   }
 
-  getHistoryDetail(id: string, userId: string, isAdmin: boolean) {
-    const job = jobStore.get(id);
-    if (!job) throw new NotFoundException('Upload not found');
-    if (!isAdmin && job.userId !== userId) throw new NotFoundException('Upload not found');
-    const { parsedValues, ...rest } = job;
-    return rest;
+  async getHistoryDetail(id: string, userId: string, isAdmin: boolean) {
+    const row = await this.prisma.uploadAudit.findUnique({
+      where: { id },
+      include: {
+        country: { select: { id: true, name: true, isoCode3: true } },
+        uploadedBy: { select: { id: true, name: true, email: true } },
+        document: { select: { id: true, type: true, title: true, originalFilename: true } },
+      },
+    });
+    if (!row) throw new NotFoundException('Upload not found');
+    if (!isAdmin && row.uploadedById !== userId) throw new NotFoundException('Upload not found');
+    return row;
   }
 
-  deleteUpload(id: string) {
-    if (!jobStore.has(id)) throw new NotFoundException('Upload not found');
-    jobStore.delete(id);
+  async deleteUpload(id: string) {
+    const row = await this.prisma.uploadAudit.findUnique({ where: { id } });
+    if (!row) throw new NotFoundException('Upload not found');
+    await this.prisma.uploadAudit.delete({ where: { id } });
     return { message: 'Upload record deleted' };
   }
 

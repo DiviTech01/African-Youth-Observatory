@@ -10,6 +10,7 @@ import { DataModule } from './modules/data/data.module';
 import { YouthIndexModule } from './modules/youth-index/youth-index.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PlatformModule } from './modules/platform/platform.module';
+import { NewsletterModule } from './modules/newsletter/newsletter.module';
 import { CompareModule } from './modules/compare/compare.module';
 import { DashboardsModule } from './modules/dashboards/dashboards.module';
 import { ExportModule } from './modules/export/export.module';
@@ -84,6 +85,7 @@ import { CacheService } from './common/cache.service';
 
     // Platform
     PlatformModule,
+    NewsletterModule,
   ],
   providers: [
     CacheService,

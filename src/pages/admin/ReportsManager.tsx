@@ -339,7 +339,7 @@ const ReportsManager: React.FC = () => {
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="One- or two-sentence summary that shows on the report card." className="text-sm bg-white/[0.04] border-gray-800" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Type</Label>
                 <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as ReportType })}>

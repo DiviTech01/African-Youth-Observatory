@@ -111,7 +111,7 @@ function UniversalUploadTab() {
       {/* Universal dropzone */}
       <Card className="bg-white/[0.03] border-gray-800 border-dashed rounded-2xl">
         <CardContent
-          className="p-8 text-center cursor-pointer"
+          className="p-6 sm:p-8 text-center cursor-pointer"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleFileDrop}
           onClick={() => document.getElementById('universal-file-input')?.click()}
@@ -825,7 +825,7 @@ function NeedsTab() {
   return (
     <div className="space-y-6">
       {needs?.summary && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <Card className="bg-red-500/5 border-red-500/20 rounded-2xl">
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-red-400">{needs.summary.byPriority.high}</p>
@@ -925,8 +925,19 @@ function TemplatesTab() {
 
 // ── History Tab (unchanged) ────────────────────────────────────────
 
+// Persistent history — pulls from /api/data-upload/history which now reads
+// from the UploadAudit table (DB-backed), so the list survives API restarts
+// and reflects every commit by every contributor.
+
+const KIND_LABELS: Record<string, { label: string; color: string }> = {
+  AYIMS_TEMPLATE:    { label: 'AYIMS template',    color: '#D4A017' },
+  POLICIES_DATABASE: { label: 'Policies database', color: '#A855F7' },
+  DOCUMENT:          { label: 'Document / PKPB',   color: '#3B82F6' },
+  GENERIC_DATA:      { label: 'Generic data',      color: '#22C55E' },
+};
+
 function HistoryTab() {
-  const { data: history, isLoading } = useQuery({
+  const { data: history, isLoading } = useQuery<any[]>({
     queryKey: ['upload-history'],
     queryFn: () => fetchAuth(`${DATA_API}/history`),
     refetchInterval: 30000,
@@ -948,29 +959,46 @@ function HistoryTab() {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-800">
-            <th className="text-left py-3 px-2">Date</th>
+            <th className="text-left py-3 px-2">When</th>
+            <th className="text-left py-3 px-2">Kind</th>
             <th className="text-left py-3 px-2">File</th>
+            <th className="text-left py-3 px-2">Country</th>
             <th className="text-left py-3 px-2">Source</th>
+            <th className="text-left py-3 px-2">By</th>
             <th className="text-center py-3 px-2">Status</th>
-            <th className="text-right py-3 px-2">Values</th>
-            <th className="text-right py-3 px-2">Countries</th>
+            <th className="text-right py-3 px-2">Rows</th>
           </tr>
         </thead>
         <tbody>
-          {history.map((h: any) => (
-            <tr key={h.id} className="border-b border-gray-800/50 hover:bg-white/[0.03]">
-              <td className="py-2 px-2 text-gray-400">{new Date(h.uploadedAt).toLocaleDateString()}</td>
-              <td className="py-2 px-2 font-medium">{h.fileName}</td>
-              <td className="py-2 px-2 text-gray-400">{h.source}</td>
-              <td className="py-2 px-2 text-center">
-                <Badge variant={h.status === 'committed' ? 'default' : h.status === 'preview' ? 'secondary' : 'destructive'} className="text-[10px]">
-                  {h.status}
-                </Badge>
-              </td>
-              <td className="py-2 px-2 text-right font-mono">{h.valuesInserted ?? h.valuesTotal ?? '—'}</td>
-              <td className="py-2 px-2 text-right">{h.countriesCount}</td>
-            </tr>
-          ))}
+          {history.map((h: any) => {
+            const k = KIND_LABELS[h.kind] ?? { label: h.kind, color: '#6B7280' };
+            const when = new Date(h.uploadedAt);
+            return (
+              <tr key={h.id} className="border-b border-gray-800/50 hover:bg-white/[0.03]">
+                <td className="py-2 px-2 text-gray-400 whitespace-nowrap">
+                  {when.toLocaleDateString()} <span className="text-gray-600">{when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </td>
+                <td className="py-2 px-2">
+                  <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider" style={{ background: `${k.color}20`, color: k.color }}>
+                    {k.label}
+                  </span>
+                </td>
+                <td className="py-2 px-2 font-medium max-w-[280px] truncate" title={h.fileName}>{h.fileName}</td>
+                <td className="py-2 px-2 text-gray-400">{h.country?.name ?? '—'}</td>
+                <td className="py-2 px-2 text-gray-400 max-w-[200px] truncate" title={h.source ?? ''}>{h.source ?? '—'}</td>
+                <td className="py-2 px-2 text-gray-500">{h.uploadedBy?.name || h.uploadedBy?.email?.split('@')[0] || '—'}</td>
+                <td className="py-2 px-2 text-center">
+                  <Badge
+                    variant={h.status === 'SUCCESS' ? 'default' : h.status === 'PARTIAL' ? 'secondary' : 'destructive'}
+                    className="text-[10px]"
+                  >
+                    {h.status?.toLowerCase()}
+                  </Badge>
+                </td>
+                <td className="py-2 px-2 text-right font-mono tabular-nums">{(h.rowsAffected ?? 0).toLocaleString()}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -997,16 +1025,16 @@ const DataUpload = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="relative py-8 md:py-12 overflow-hidden">
+      <div className="relative py-6 sm:py-8 md:py-12 overflow-hidden">
         <div className="absolute inset-0 opacity-30 w-full bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:6rem_5rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
         <div className="container px-4 md:px-6 relative z-10">
           <div className="flex items-center gap-2 mb-2">
-            <Upload className="h-8 w-8 text-[#D4A017]" />
-            <h1 className="text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">
+            <Upload className="h-7 w-7 sm:h-8 sm:w-8 text-[#D4A017]" />
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">
               Contributor Hub
             </h1>
           </div>
-          <p className="text-[#A89070]">
+          <p className="text-sm sm:text-base text-[#A89070]">
             Upload indicator data, country reports, and policy documents. The form auto-routes by file type and country.
           </p>
         </div>
@@ -1014,13 +1042,15 @@ const DataUpload = () => {
 
       <div className="container px-4 md:px-6 pb-12">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="bg-white/[0.05] border border-gray-800">
-            <TabsTrigger value="upload" className="gap-1.5"><Upload className="h-3.5 w-3.5" /> Upload</TabsTrigger>
-            <TabsTrigger value="reports" className="gap-1.5"><FileType2 className="h-3.5 w-3.5" /> Reports & Documents</TabsTrigger>
-            <TabsTrigger value="needed" className="gap-1.5"><AlertTriangle className="h-3.5 w-3.5" /> What's Needed</TabsTrigger>
-            <TabsTrigger value="templates" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Templates</TabsTrigger>
-            <TabsTrigger value="history" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> History</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+            <TabsList className="bg-white/[0.05] border border-gray-800 inline-flex w-max md:w-auto">
+              <TabsTrigger value="upload" className="gap-1.5 whitespace-nowrap"><Upload className="h-3.5 w-3.5" /> Upload</TabsTrigger>
+              <TabsTrigger value="reports" className="gap-1.5 whitespace-nowrap"><FileType2 className="h-3.5 w-3.5" /> Reports & Documents</TabsTrigger>
+              <TabsTrigger value="needed" className="gap-1.5 whitespace-nowrap"><AlertTriangle className="h-3.5 w-3.5" /> What's Needed</TabsTrigger>
+              <TabsTrigger value="templates" className="gap-1.5 whitespace-nowrap"><FileText className="h-3.5 w-3.5" /> Templates</TabsTrigger>
+              <TabsTrigger value="history" className="gap-1.5 whitespace-nowrap"><Clock className="h-3.5 w-3.5" /> History</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="upload"><UniversalUploadTab /></TabsContent>
           <TabsContent value="reports"><ReportsTab /></TabsContent>

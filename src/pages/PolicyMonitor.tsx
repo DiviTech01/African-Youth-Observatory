@@ -453,9 +453,9 @@ const PolicyMonitor = () => {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="h-8 w-8 text-primary" />
-                <h1 className="text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('policy.title')}</h1>
+                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('policy.title')}</h1>
               </div>
-              <p className="text-[#A89070]">
+              <p className="text-sm sm:text-base text-[#A89070]">
                 {t('policy.subtitle')}
               </p>
             </div>

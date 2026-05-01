@@ -138,7 +138,7 @@ const ContentManager: React.FC = () => {
   }, [rows]);
 
   if (authLoading) {
-    return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+    return <div className="p-4 sm:p-8 text-sm text-muted-foreground">Loading…</div>;
   }
   if (!user) {
     return <Navigate to="/auth/signin" replace />;
@@ -237,10 +237,10 @@ const ContentManager: React.FC = () => {
 
       {/* Main */}
       <main className="flex flex-1 flex-col overflow-hidden">
-        <header className="border-b px-6 py-4">
-          <div className="flex items-center justify-between gap-3">
+        <header className="border-b px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-xl font-semibold">Content Manager</h1>
+              <h1 className="text-lg sm:text-xl font-semibold">Content Manager</h1>
               <p className="text-xs text-muted-foreground">
                 Edit every piece of site content. Changes go through draft → publish.
               </p>
@@ -302,7 +302,7 @@ const ContentManager: React.FC = () => {
         </header>
 
         <ScrollArea className="flex-1">
-          <div className="p-6">
+          <div className="p-4 sm:p-6 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

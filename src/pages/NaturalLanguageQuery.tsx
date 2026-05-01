@@ -699,56 +699,26 @@ const NaturalLanguageQuery = () => {
     setAttachments([]);
     setIsLoading(true);
 
-    // Build conversation context for the API
-    const historyText = prevMessages.map((m) => `${m.role}: ${m.content}`).join('\n');
-    const context = `African youth data analysis platform. The user is asking about youth indicators, demographics, education, employment, health, and policy compliance across African countries.${
-      historyText ? `\n\nConversation history:\n${historyText}` : ''
-    }${files.length > 0 ? `\n\nThe user attached ${files.length} file(s): ${files.map((f) => f.name).join(', ')}.` : ''}`;
+    // ── AI stub ──────────────────────────────────────────────────────────
+    // The real AI / NLQ backend isn't wired yet; rather than calling endpoints
+    // that don't exist, we return a friendly "coming soon" placeholder after a
+    // short synthetic delay so the chat UI still feels responsive. When the
+    // backend is ready, swap this block back to the original fetch-based flow
+    // (kept in git history).
+    await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const apiBase = import.meta.env.VITE_API_URL || '/api';
-
-    let assistantContent = '';
-    let visualization: AiVisualization | null = null;
-    let citations: AiDataCitation[] = [];
-    let source: 'ai' | 'rule-based' = 'ai';
-    let confidence = 0.85;
-
-    // Try AI endpoint first, fall back to NLQ, then offline
-    try {
-      const res = await fetch(`${apiBase}/ai/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, context }),
-      });
-      if (!res.ok) throw new Error('ai chat non-ok');
-      const data = await res.json();
-      const rawAnswer: string = data.answer || 'No answer available.';
-      visualization = data.visualization || parseVisualizationFromText(rawAnswer);
-      assistantContent = visualization && !data.visualization ? stripVisualizationBlocks(rawAnswer) : rawAnswer;
-      citations = data.dataCitations || [];
-      source = data.source || 'ai';
-      confidence = data.confidence ?? 0.85;
-    } catch {
-      try {
-        const res = await fetch(`${apiBase}/nlq/query`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: text }),
-        });
-        if (!res.ok) throw new Error('nlq non-ok');
-        const data = await res.json();
-        assistantContent = data.answer || 'No answer available.';
-        visualization = data.visualization || null;
-        citations = data.dataCitations || [];
-        source = 'rule-based';
-        confidence = data.confidence ?? 0.5;
-      } catch {
-        assistantContent =
-          "I can't reach the AI backend right now. The chat will keep your message history, and you can retry once the service is back. In the meantime, you can browse data dashboards and country profiles directly.";
-        source = 'rule-based';
-        confidence = 0;
-      }
-    }
+    const assistantContent =
+      "🤖 **AI Assistant — coming soon!**\n\n" +
+      "Our AI is still being trained on the AYIMS dataset. " +
+      "When it goes live, you'll be able to ask questions like:\n\n" +
+      "• *Which 5 African countries have the highest Youth Index scores and why?*\n" +
+      "• *Compare Nigeria and Kenya across education, employment, and health indicators.*\n" +
+      "• *What are the biggest data gaps in Southern Africa?*\n\n" +
+      "In the meantime, explore the data directly via **Data Explorer**, **Compare Countries**, or the **Youth Index** dashboards — every chart and country profile is already live.";
+    const visualization: AiVisualization | null = null;
+    const citations: AiDataCitation[] = [];
+    const source: 'ai' | 'rule-based' = 'ai';
+    const confidence = 0;
 
     const assistantMsg: ChatMessage = {
       id: uid(), role: 'assistant', content: assistantContent, visualization,

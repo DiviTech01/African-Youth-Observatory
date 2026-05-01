@@ -26,6 +26,7 @@
     "seed:policies": "tsx scripts/seed-policies.ts",
     "seed:experts": "tsx scripts/seed-experts.ts",
     "seed:pkpb-nigeria": "tsx scripts/seed-pkpb-nigeria.ts",
+    "backfill:upload-audits": "tsx scripts/backfill-upload-audits.ts",
     "import:ayc-scorecard": "tsx scripts/import-ayc-scorecard.ts",
     "compute:youth-index": "tsx scripts/compute-youth-index.ts",
     "cms:sync": "tsx scripts/sync-cms-registry.ts",

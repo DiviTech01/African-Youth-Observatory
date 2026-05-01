@@ -321,9 +321,9 @@ const Experts = () => {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Users className="h-8 w-8 text-[#D4A017]" />
-                <h1 className="text-3xl md:text-4xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('experts.title')}</h1>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">{t('experts.title')}</h1>
               </div>
-              <p className="text-[#A89070]">
+              <p className="text-sm sm:text-base text-[#A89070]">
                 {t('experts.subtitle')}
               </p>
             </div>
@@ -342,7 +342,7 @@ const Experts = () => {
                   className="space-y-4 mt-2"
                   onSubmit={handleRegistrationSubmit}
                 >
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="reg-name">Full Name *</Label>
                       <Input
@@ -365,7 +365,7 @@ const Experts = () => {
                       {formErrors.email && <p className="text-xs text-red-400">{formErrors.email}</p>}
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="reg-title">Title / Role *</Label>
                       <Input

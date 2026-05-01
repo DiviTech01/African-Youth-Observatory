@@ -89,7 +89,6 @@ const MobileAppBanner = () => {
                   disabled
                   className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-gray-100 py-3 font-semibold text-gray-500"
                 >
-                  <Download size={18} />
                   Android app coming soon
                 </button>
               )
@@ -106,7 +105,6 @@ const MobileAppBanner = () => {
                 disabled
                 className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-gray-100 py-3 font-semibold text-gray-500"
               >
-                <Apple size={18} />
                 iOS app coming soon
               </button>
             )}

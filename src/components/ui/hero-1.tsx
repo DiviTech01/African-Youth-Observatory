@@ -20,7 +20,7 @@ export function Hero({
   return (
     <section
       id="hero"
-      className="relative mx-auto w-full pt-6 md:pt-10 px-6 text-center md:px-8 min-h-[calc(100vh-40px)] overflow-hidden bg-[linear-gradient(to_bottom,#fff,#ffffff_50%,#e8e8e8_88%)] dark:bg-[linear-gradient(to_bottom,#000,#0000_30%,#898e8e_78%,#ffffff_99%_50%)] rounded-b-xl"
+      className="relative mx-auto w-full pt-6 md:pt-10 px-4 sm:px-6 text-center md:px-8 min-h-[70vh] sm:min-h-[80vh] md:min-h-[calc(100vh-40px)] overflow-hidden bg-[linear-gradient(to_bottom,#fff,#ffffff_50%,#e8e8e8_88%)] dark:bg-[linear-gradient(to_bottom,#000,#0000_30%,#898e8e_78%,#ffffff_99%_50%)] rounded-b-xl"
     >
       {/* Grid BG */}
       <div
@@ -36,7 +36,7 @@ export function Hero({
       {eyebrow && (
         <a href="#" className="group">
           <span
-            className="text-sm text-gray-600 dark:text-gray-400 font-geist mx-auto px-5 py-2 bg-gradient-to-tr from-zinc-300/5 via-gray-400/5 to-transparent border-[2px] border-gray-300/20 dark:border-white/5 rounded-3xl w-fit tracking-tight uppercase flex items-center justify-center"
+            className="text-[11px] sm:text-sm text-gray-600 dark:text-gray-400 font-geist mx-auto px-3 sm:px-5 py-1.5 sm:py-2 bg-gradient-to-tr from-zinc-300/5 via-gray-400/5 to-transparent border-[2px] border-gray-300/20 dark:border-white/5 rounded-3xl w-fit tracking-tight uppercase flex items-center justify-center"
           >
             {eyebrow}
             <ChevronRight className="inline w-4 h-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
@@ -46,14 +46,14 @@ export function Hero({
 
       {/* Title */}
       <h1
-        className="animate-fade-in -translate-y-4 text-balance bg-gradient-to-br from-black from-30% to-black/40 bg-clip-text py-6 text-5xl font-semibold leading-none tracking-tighter text-transparent sm:text-6xl md:text-7xl lg:text-8xl dark:from-[#F5E6CC] dark:via-white dark:to-white/40"
+        className="animate-fade-in -translate-y-4 text-balance bg-gradient-to-br from-black from-30% to-black/40 bg-clip-text py-4 sm:py-6 text-3xl font-semibold leading-tight sm:leading-none tracking-tighter text-transparent sm:text-5xl md:text-6xl lg:text-7xl dark:from-[#F5E6CC] dark:via-white dark:to-white/40"
       >
         {title}
       </h1>
 
       {/* Subtitle */}
       <p
-        className="animate-fade-in mb-12 -translate-y-4 text-balance text-lg tracking-tight text-gray-600 dark:text-gray-400 md:text-xl"
+        className="animate-fade-in mb-8 sm:mb-12 -translate-y-4 text-balance text-sm sm:text-lg tracking-tight text-gray-600 dark:text-gray-400 md:text-xl px-2"
       >
         {subtitle}
       </p>
@@ -63,7 +63,7 @@ export function Hero({
         <div className="flex justify-center">
           <Button
             asChild
-            className="mt-[-20px] w-fit md:w-52 z-20 font-geist tracking-tighter text-center text-lg"
+            className="mt-[-20px] w-fit md:w-52 z-20 font-geist tracking-tighter text-center text-base sm:text-lg"
           >
             <Link to={ctaHref}>{ctaLabel}</Link>
           </Button>

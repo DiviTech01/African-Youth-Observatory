@@ -1,8 +1,10 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Content } from '@/components/cms';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 // Theme toggle removed - dark mode only
 import { motion } from 'framer-motion';
 import {
@@ -127,36 +129,64 @@ const FEATURES = [
   },
 ];
 
+// Pull headline numbers from the same /platform/stats endpoint QuickStats uses.
+// Falls through to sensible defaults if the API is offline.
+function useLandingStats() {
+  const { data } = useQuery<{
+    countries?: number;
+    indicators?: number;
+    indicatorValues?: number;
+    yearRange?: { min?: number; max?: number };
+  }>({
+    queryKey: ['landing-platform-stats'],
+    queryFn: () => fetch(`${import.meta.env.VITE_API_URL || '/api'}/platform/stats`)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null),
+    staleTime: 60_000,
+  });
+
+  const countries = data?.countries ?? 54;
+  const indicators = data?.indicators ?? 500;
+  const dataPoints = data?.indicatorValues ?? 0;
+  const minYear = data?.yearRange?.min;
+  const maxYear = data?.yearRange?.max;
+  const yearsCovered = minYear && maxYear ? Math.max(1, maxYear - minYear + 1) : 10;
+
+  return { countries, indicators, dataPoints, yearsCovered };
+}
+
 const Landing = () => {
+  const stats = useLandingStats();
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 -z-10">
+    <div className="min-h-screen bg-background">
+      {/* Animated Background — `blur-3xl animate-pulse` is GPU-heavy on phones, so the
+          pulse animation is disabled below lg; only the gradient + static blobs render. */}
+      <div className="fixed inset-0 -z-10 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-secondary/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-0 left-1/4 w-72 h-72 lg:w-96 lg:h-96 bg-primary/10 rounded-full blur-3xl lg:animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-72 h-72 lg:w-96 lg:h-96 bg-accent/10 rounded-full blur-3xl lg:animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-secondary/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-background/80 border-b border-border/50">
-        <div className="container px-4 md:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
+        <div className="container px-3 sm:px-4 md:px-6 h-16 flex items-center justify-between gap-2">
+          <Link to="/" className="flex items-center gap-2 min-w-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shrink-0">
               AYD
             </div>
-            <Content as="span" id="landing.brand.name" fallback="African Youth Observatory" className="font-display font-bold text-lg hidden sm:block" />
+            <Content as="span" id="landing.brand.name" fallback="African Youth Observatory" className="font-display font-bold text-lg hidden sm:block truncate" />
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link to="/auth/signin">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="px-2 sm:px-3">
                 <Content as="span" id="landing.header.signin" fallback="Sign In" />
               </Button>
             </Link>
             <Link to="/auth/signup">
-              <Button size="sm" className="gap-2">
+              <Button size="sm" className="gap-1 sm:gap-2 px-2 sm:px-3">
                 <Content as="span" id="landing.header.get_started" fallback="Get Started" />
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4 hidden sm:inline" />
               </Button>
             </Link>
           </div>
@@ -164,24 +194,24 @@ const Landing = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 md:pt-40 md:pb-32">
+      <section className="pt-24 pb-12 sm:pt-32 sm:pb-20 md:pt-40 md:pb-32">
         <div className="container px-4 md:px-6">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
+          <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
             {/* Badge */}
             <motion.div
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium"
+              className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 text-primary text-[11px] sm:text-sm font-medium"
               variants={fadeUp}
               initial="hidden"
               animate="visible"
               custom={0}
             >
-              <Sparkles className="h-4 w-4" />
+              <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <Content as="span" id="landing.hero.badge" fallback="Africa's Premier Youth Data Intelligence Platform" />
             </motion.div>
 
             {/* Main Title */}
             <motion.h1
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight leading-tight"
               variants={fadeUp}
               initial="hidden"
               animate="visible"
@@ -196,7 +226,7 @@ const Landing = () => {
               as="p"
               id="landing.hero.description"
               fallback="Access comprehensive youth statistics across all 54 African nations. Power your research, policy decisions, and investments with trusted, real-time data."
-              className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground"
+              className="max-w-2xl mx-auto text-sm sm:text-lg md:text-xl text-muted-foreground"
             />
 
             {/* CTA Buttons */}
@@ -207,15 +237,15 @@ const Landing = () => {
               animate="visible"
               custom={0.45}
             >
-              <Link to="/auth/signin">
+              <Link to="/dashboard">
                 <Button size="lg" className="w-full sm:w-auto text-base gap-2 px-8">
                   <Database className="h-5 w-5" />
                   <Content as="span" id="landing.hero.cta_primary" fallback="Start Exploring Data" />
                 </Button>
               </Link>
-              <Link to="/auth/signin">
+              <Link to="/youth-index">
                 <Button variant="outline" size="lg" className="w-full sm:w-auto text-base gap-2 px-8">
-                  <Content as="span" id="landing.hero.cta_secondary" fallback="Sign In to Dashboard" />
+                  <Content as="span" id="landing.hero.cta_secondary" fallback="View Youth Index" />
                 </Button>
               </Link>
             </motion.div>
@@ -224,37 +254,37 @@ const Landing = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 border-y border-border/50 bg-muted/30 backdrop-blur-sm">
+      <section className="py-12 sm:py-16 border-y border-border/50 bg-muted/30 backdrop-blur-sm">
         <div className="container px-4 md:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <AnimatedStat target={54} suffix="" labelKey="landing.stats.countries.label" fallbackLabel="African Countries" icon={MapPin} delay={0} />
-            <AnimatedStat target={500} suffix="+" labelKey="landing.stats.indicators.label" fallbackLabel="Data Indicators" icon={BarChart3} delay={0.1} />
-            <AnimatedStat target={226} suffix="M" labelKey="landing.stats.youth.label" fallbackLabel="Youth Covered" icon={Users} delay={0.2} />
-            <AnimatedStat target={10} suffix="+" labelKey="landing.stats.years.label" fallbackLabel="Years of Data" icon={TrendingUp} delay={0.3} />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
+            <AnimatedStat target={stats.countries} suffix="" labelKey="landing.stats.countries.label" fallbackLabel="African Countries" icon={MapPin} delay={0} />
+            <AnimatedStat target={stats.indicators} suffix="+" labelKey="landing.stats.indicators.label" fallbackLabel="Data Indicators" icon={BarChart3} delay={0.1} />
+            <AnimatedStat target={stats.dataPoints > 0 ? Math.round(stats.dataPoints / 1000) : 226} suffix={stats.dataPoints > 0 ? 'K' : 'M'} labelKey="landing.stats.youth.label" fallbackLabel={stats.dataPoints > 0 ? 'Data Points' : 'Youth Covered'} icon={Users} delay={0.2} />
+            <AnimatedStat target={stats.yearsCovered} suffix="+" labelKey="landing.stats.years.label" fallbackLabel="Years of Data" icon={TrendingUp} delay={0.3} />
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 md:py-32">
+      <section className="py-14 sm:py-20 md:py-32">
         <div className="container px-4 md:px-6">
-          <div className="text-center mb-16">
+          <div className="text-center mb-10 sm:mb-16">
             <Content
               as="h2"
               id="landing.features.title"
               fallback="Comprehensive Data Solutions"
-              className="text-3xl md:text-4xl font-display font-bold mb-4 animate-fade-in"
+              className="text-2xl sm:text-3xl md:text-4xl font-display font-bold mb-3 sm:mb-4 animate-fade-in"
             />
             <Content
               as="p"
               id="landing.features.subtitle"
               fallback="Everything you need to understand Africa's youth demographics and drive impactful decisions."
-              className="text-muted-foreground max-w-2xl mx-auto animate-fade-in"
+              className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto animate-fade-in"
               style={{ animationDelay: '0.1s' }}
             />
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {FEATURES.map((feature, index) => (
               <div
                 key={feature.slug}
@@ -283,20 +313,20 @@ const Landing = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 md:py-32 bg-primary/5">
+      <section className="py-14 sm:py-20 md:py-32 bg-primary/5">
         <div className="container px-4 md:px-6">
-          <div className="max-w-3xl mx-auto text-center space-y-8">
+          <div className="max-w-3xl mx-auto text-center space-y-6 sm:space-y-8">
             <Content
               as="h2"
               id="landing.bottom_cta.title"
               fallback="Ready to Unlock Africa's Youth Data?"
-              className="text-3xl md:text-4xl font-display font-bold"
+              className="text-2xl sm:text-3xl md:text-4xl font-display font-bold"
             />
             <Content
               as="p"
               id="landing.bottom_cta.description"
               fallback="Join researchers, policymakers, and organizations using AYD to drive meaningful change across the continent."
-              className="text-lg text-muted-foreground"
+              className="text-sm sm:text-lg text-muted-foreground"
             />
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/auth/signup">
@@ -315,10 +345,23 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Newsletter Section */}
+      <section className="py-12 sm:py-16 border-t border-border/50">
+        <div className="container px-4 md:px-6">
+          <div className="max-w-xl mx-auto">
+            <NewsletterSignup
+              source="landing-page"
+              heading="Get monthly youth-data briefings"
+              subtitle="Be the first to know when new countries publish AYIMS reports, when the Youth Index updates, and when policy monitor flags new reforms across the continent."
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="py-8 border-t border-border/50">
         <div className="container px-4 md:px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
                 AYD

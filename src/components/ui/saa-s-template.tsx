@@ -37,18 +37,18 @@ const SaaSHero = React.memo(() => {
           </p>
 
           {/* CTA */}
-          <div className="flex items-center justify-center gap-4">
-            <Link to="/auth/signin">
-              <Button size="lg" className="tracking-tight gap-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+            <Link to="/dashboard" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto tracking-tight gap-2">
                 Start Exploring
                 <ArrowRight size={16} />
               </Button>
             </Link>
-            <Link to="/auth/signin">
+            <Link to="/youth-index" className="w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="lg"
-                className="tracking-tight border-gray-700 text-gray-300 hover:text-white hover:border-gray-500"
+                className="w-full sm:w-auto tracking-tight border-gray-700 text-gray-300 hover:text-white hover:border-gray-500"
               >
                 View Youth Index
               </Button>

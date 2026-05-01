@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Linkedin, Facebook } from 'lucide-react';
+import { Linkedin, Facebook, CheckCircle2, Loader2 } from 'lucide-react';
 import { Content } from '@/components/cms';
 import { useContentText } from '@/contexts/ContentContext';
+
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const NAV_LINKS = [
   { slug: 'home', to: '/', label: 'Home' },
@@ -29,6 +31,30 @@ const PACSDA_URL = 'https://pacsda.org';
 const Footer = () => {
   const contactEmail = useContentText('footer.contact.email', 'afriyouthstats@pacsda.org');
   const newsletterPlaceholder = useContentText('footer.newsletter.placeholder', 'Your email');
+
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || status === 'loading') return;
+    setStatus('loading');
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`${API_BASE}/newsletter/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'footer' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setStatus('success');
+      setEmail('');
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg('Could not subscribe. Try again in a moment.');
+    }
+  };
 
   return (
     <footer className="bg-muted py-8 md:py-12 mt-12 md:mt-16">
@@ -110,19 +136,33 @@ const Footer = () => {
           </ul>
 
           <Content as="h3" id="footer.newsletter.heading" fallback="Newsletter" className="font-medium mt-4 md:mt-6 mb-3 md:mb-4 text-sm md:text-base" />
-          <form className="flex flex-col gap-2">
-            <input
-              type="email"
-              placeholder={newsletterPlaceholder}
-              className="px-3 py-2 bg-background border rounded-md text-xs sm:text-sm w-full"
-            />
-            <button
-              type="submit"
-              className="px-3 py-2 bg-pan-green-500 text-white rounded-md text-xs sm:text-sm font-medium hover:bg-pan-green-600 transition-colors"
-            >
-              <Content as="span" id="footer.newsletter.submit" fallback="Subscribe" />
-            </button>
-          </form>
+          {status === 'success' ? (
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              You're on the list. Welcome aboard!
+            </div>
+          ) : (
+            <form className="flex flex-col gap-2" onSubmit={handleSubscribe}>
+              <input
+                type="email"
+                placeholder={newsletterPlaceholder}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={status === 'loading'}
+                className="px-3 py-2 bg-background border rounded-md text-xs sm:text-sm w-full disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={status === 'loading'}
+                className="px-3 py-2 bg-pan-green-500 text-white rounded-md text-xs sm:text-sm font-medium hover:bg-pan-green-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {status === 'loading' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                <Content as="span" id="footer.newsletter.submit" fallback="Subscribe" />
+              </button>
+              {errorMsg && <p className="text-[11px] text-destructive">{errorMsg}</p>}
+            </form>
+          )}
         </div>
       </div>
 

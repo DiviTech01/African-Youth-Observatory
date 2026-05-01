@@ -19,9 +19,52 @@ import {
   Menu,
   ShieldCheck,
   Upload,
+  ArrowUp,
+  X,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
+
+/**
+ * One-time hint that points mobile users at the "Menu" button. Stored in
+ * localStorage so it disappears after the user opens the menu once or
+ * dismisses it explicitly. Hidden on lg+ where the sidebar is always visible.
+ */
+const NAV_HINT_KEY = 'ayo_dashboard_nav_hint_dismissed_v1';
+const NavHintBanner: React.FC<{ active: boolean }> = ({ active }) => {
+  const [show, setShow] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!localStorage.getItem(NAV_HINT_KEY)) setShow(true);
+  }, []);
+  // When the user opens the sidebar, treat that as "they found it" and stop showing.
+  React.useEffect(() => {
+    if (!active && show) {
+      localStorage.setItem(NAV_HINT_KEY, '1');
+      setShow(false);
+    }
+  }, [active, show]);
+  if (!show) return null;
+  const dismiss = () => {
+    localStorage.setItem(NAV_HINT_KEY, '1');
+    setShow(false);
+  };
+  return (
+    <div className="lg:hidden flex items-center justify-between gap-2 px-3 py-2 bg-primary/10 border-b border-primary/20 text-xs">
+      <div className="flex items-center gap-2 text-primary min-w-0">
+        <ArrowUp className="h-3.5 w-3.5 -rotate-45 shrink-0 animate-pulse" />
+        <span className="truncate">Tap <strong className="font-semibold">Menu</strong> at the top to navigate.</span>
+      </div>
+      <button
+        onClick={dismiss}
+        aria-label="Dismiss hint"
+        className="p-1 rounded hover:bg-primary/15 text-primary/70 hover:text-primary shrink-0"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+};
 
 const adminLinks = [
   { to: '/admin', label: 'Admin Panel', icon: ShieldCheck },
@@ -198,37 +241,59 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* User info + actions */}
       <div className="p-3 border-t border-border space-y-1">
-        {user && (
-          <div className="px-3 py-2 mb-1 flex items-center gap-2">
-            <div
-              className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                isAdmin ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'
-              }`}
+        {user ? (
+          <>
+            <div className="px-3 py-2 mb-1 flex items-center gap-2">
+              <div
+                className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                  isAdmin ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'
+                }`}
+              >
+                {(user.name || user.email).charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">
+                  {user.name || user.email}
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate">{user.role}</p>
+              </div>
+            </div>
+            <Link
+              to="/settings"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              {(user.name || user.email).charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-foreground truncate">
-                {user.name || user.email}
-              </p>
-              <p className="text-[10px] text-muted-foreground truncate">{user.role}</p>
-            </div>
-          </div>
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="px-3 pt-1 pb-2 text-[11px] text-muted-foreground leading-relaxed">
+              Browsing as guest. Sign in to upload data, export reports, or manage content.
+            </p>
+            <Link
+              to="/auth/signin"
+              onClick={() => setSidebarOpen(false)}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              Sign In
+            </Link>
+            <Link
+              to="/auth/signup"
+              onClick={() => setSidebarOpen(false)}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              Create account
+            </Link>
+          </>
         )}
-        <Link
-          to="/settings"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        >
-          <Settings className="h-4 w-4" />
-          Settings
-        </Link>
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </button>
       </div>
     </div>
   );
@@ -310,56 +375,86 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* User info + actions */}
       <div className="p-3 border-t border-border space-y-1">
-        {user && !collapsed && (
-          <div className="px-3 py-2 mb-1 flex items-center gap-2">
-            <div
-              className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                isAdmin ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'
+        {user ? (
+          <>
+            {!collapsed && (
+              <div className="px-3 py-2 mb-1 flex items-center gap-2">
+                <div
+                  className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                    isAdmin ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'
+                  }`}
+                >
+                  {(user.name || user.email).charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">
+                    {user.name || user.email}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground truncate">{user.role}</p>
+                </div>
+              </div>
+            )}
+
+            {collapsed && (
+              <div className="flex justify-center py-2" title={user.name || user.email}>
+                <div
+                  className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                    isAdmin ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'
+                  }`}
+                >
+                  {(user.name || user.email).charAt(0).toUpperCase()}
+                </div>
+              </div>
+            )}
+
+            <Link
+              to="/settings"
+              title={collapsed ? 'Settings' : undefined}
+              className={`flex items-center gap-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${
+                collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
               }`}
             >
-              {(user.name || user.email).charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-foreground truncate">
-                {user.name || user.email}
+              <Settings className="h-4 w-4 flex-shrink-0" />
+              {!collapsed && 'Settings'}
+            </Link>
+            <button
+              onClick={handleSignOut}
+              title={collapsed ? 'Sign Out' : undefined}
+              className={`w-full flex items-center gap-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${
+                collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
+              }`}
+            >
+              <LogOut className="h-4 w-4 flex-shrink-0" />
+              {!collapsed && 'Sign Out'}
+            </button>
+          </>
+        ) : (
+          <>
+            {!collapsed && (
+              <p className="px-3 pt-1 pb-2 text-[11px] text-muted-foreground leading-relaxed">
+                Browsing as guest. Sign in to upload data or export reports.
               </p>
-              <p className="text-[10px] text-muted-foreground truncate">{user.role}</p>
-            </div>
-          </div>
-        )}
-
-        {collapsed && user && (
-          <div className="flex justify-center py-2" title={user.name || user.email}>
-            <div
-              className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                isAdmin ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'
+            )}
+            <Link
+              to="/auth/signin"
+              title={collapsed ? 'Sign In' : undefined}
+              className={`flex items-center gap-2 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors ${
+                collapsed ? 'justify-center px-2 py-2.5' : 'justify-center px-3 py-2.5'
               }`}
             >
-              {(user.name || user.email).charAt(0).toUpperCase()}
-            </div>
-          </div>
+              <LogOut className="h-4 w-4 flex-shrink-0 rotate-180" />
+              {!collapsed && 'Sign In'}
+            </Link>
+            {!collapsed && (
+              <Link
+                to="/auth/signup"
+                className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                Create account
+              </Link>
+            )}
+          </>
         )}
-
-        <Link
-          to="/settings"
-          title={collapsed ? 'Settings' : undefined}
-          className={`flex items-center gap-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${
-            collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
-          }`}
-        >
-          <Settings className="h-4 w-4 flex-shrink-0" />
-          {!collapsed && 'Settings'}
-        </Link>
-        <button
-          onClick={handleSignOut}
-          title={collapsed ? 'Sign Out' : undefined}
-          className={`w-full flex items-center gap-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${
-            collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
-          }`}
-        >
-          <LogOut className="h-4 w-4 flex-shrink-0" />
-          {!collapsed && 'Sign Out'}
-        </button>
       </div>
     </div>
   );
@@ -391,7 +486,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const userInitial = user ? (user.name || user.email).charAt(0).toUpperCase() : '?';
 
   return (
-    <div className="min-h-screen flex overflow-x-hidden">
+    <div className="min-h-screen flex">
       {/* Desktop Sidebar — fixed, hover-to-expand. Main content shifts right to match. */}
       <aside
         onMouseEnter={() => setHovered(true)}
@@ -402,38 +497,49 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <DesktopSidebarContent />
       </aside>
 
-      {/* Main Content — left margin tracks the sidebar width so content shifts on hover. */}
+      {/* Main Content — left margin tracks the sidebar width so content shifts on hover.
+          We deliberately let the page (body) be the scroll container instead of nesting
+          an `overflow-y-auto` <main>. Nested scroll feels stiff on mobile (no native
+          momentum on iOS, double-scroll glitches), and sticky/fixed elements still work
+          because the sidebar is fixed and the topbar uses `sticky top-0`. */}
       <div
-        className="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden transition-[margin-left] duration-200 ease-in-out"
+        className="flex-1 flex flex-col min-w-0 transition-[margin-left] duration-200 ease-in-out"
         style={{ marginLeft: isDesktop ? (hovered ? 240 : 64) : 0 }}
       >
         <LiveDataTicker />
 
         {/* Top Bar */}
         <header
-          className={`sticky top-0 z-40 h-14 border-b border-border backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-4 ${
+          className={`sticky top-0 z-40 h-14 border-b border-border backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-3 sm:px-4 ${
             isAdmin && location.pathname === '/admin'
               ? 'bg-red-950/30'
               : 'bg-background/95'
           }`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8">
+                {/* Labeled trigger — first-time mobile users find the nav at a glance. */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="lg:hidden h-9 px-2 gap-1.5 text-foreground hover:bg-muted -ml-1"
+                  aria-label="Open navigation menu"
+                >
                   <Menu className="h-5 w-5" />
+                  <span className="text-xs font-medium">Menu</span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64 p-0">
                 <MobileSidebarContent />
               </SheetContent>
             </Sheet>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               {location.pathname === '/admin' && (
-                <ShieldCheck className="h-4 w-4 text-red-400" />
+                <ShieldCheck className="h-4 w-4 text-red-400 shrink-0" />
               )}
               <h1
-                className={`text-sm font-semibold ${
+                className={`text-sm font-semibold truncate ${
                   location.pathname === '/admin' ? 'text-red-400' : 'text-foreground'
                 }`}
               >
@@ -442,9 +548,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
           </div>
 
-          {/* Right side: avatar links straight to the profile tab in /settings */}
-          <div className="flex items-center gap-3">
-            {user && (
+          {/* Right side: avatar (signed in) or Sign in CTA (guest browsing). */}
+          <div className="flex items-center gap-2 shrink-0">
+            {user ? (
               <Link
                 to="/settings#profile"
                 title="Open profile"
@@ -460,12 +566,25 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   {userInitial}
                 </div>
               </Link>
+            ) : (
+              <>
+                <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-xs hidden sm:inline-flex">
+                  <Link to="/auth/signin">Sign in</Link>
+                </Button>
+                <Button asChild size="sm" className="h-8 px-3 text-xs">
+                  <Link to="/auth/signup">Sign up</Link>
+                </Button>
+              </>
             )}
           </div>
         </header>
 
+        {/* First-visit nav hint — subtle banner that helps mobile users discover the
+            menu trigger. Auto-dismisses after one menu open or via the X button. */}
+        <NavHintBanner active={!sidebarOpen} />
+
         {/* Page Content */}
-        <main className="flex-1 p-4 md:p-6 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 p-3 sm:p-4 md:p-6">
           {children}
         </main>
       </div>

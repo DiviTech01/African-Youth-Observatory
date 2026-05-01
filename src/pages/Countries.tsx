@@ -1,15 +1,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, ChevronRight, Globe, MapPin, Star, FileText, Clock } from 'lucide-react';
-import CountryReportCard from '@/pages/CountryReportCard';
+import { Search, ChevronRight, Globe, MapPin, Star, FileText } from 'lucide-react';
 import CountryFlag from '@/components/CountryFlag';
-import { hasStaticReport } from '@/data/countryReports';
 import { getCountryMeta } from '@/lib/country-flags';
 import { SparklineChart } from '@/components/SparklineChart';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
@@ -17,6 +15,12 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Content } from '@/components/cms';
+
+// Slugify a country name for the URL: "South Africa" → "south-africa". The
+// PKPB country resolver on the API accepts id, ISO3, ISO2, name, or slug,
+// so this is the friendliest form for the URL bar.
+const toCountrySlug = (name: string) =>
+  name.toLowerCase().replace(/['.]/g, '').replace(/\s+/g, '-');
 
 // Fallback data in case API is not available
 const regionsMapFallback: Record<string, string[]> = {
@@ -54,10 +58,9 @@ function getSparklineData(country: string): number[] {
 
 const Countries = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const { preferences, trackCountryView } = useUserPreferences();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const [comingSoonCountry, setComingSoonCountry] = useState<string | null>(null);
   const [activeRegion, setActiveRegion] = useState('All');
 
   // Fetch countries from API
@@ -174,12 +177,9 @@ const Countries = () => {
       </div>
 
       <div className="py-6 md:py-8">
-        {selectedCountry ? (
-          <CountryReportCard country={selectedCountry} onBack={() => setSelectedCountry(null)} />
-        ) : (
-          <div className="container px-4 md:px-6">
-            {isLoading ? (
-              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+        <div className="container px-4 md:px-6">
+          {isLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-3 md:gap-4">
                 {Array.from({ length: 15 }).map((_, i) => (
                   <Card key={i} className="rounded-2xl border border-gray-800 bg-white/[0.03]">
                     <CardContent className="p-4 space-y-3">
@@ -199,7 +199,7 @@ const Countries = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-3 md:gap-4">
                   {filteredCountries.map(({ country, region }: any) => {
                     const sparklineData = getSparklineData(country);
                     const isMyCountry = preferences.myCountry && country.toLowerCase() === preferences.myCountry.toLowerCase();
@@ -209,11 +209,14 @@ const Countries = () => {
                         className={`hover-lift cursor-pointer group rounded-2xl border border-gray-800 bg-white/[0.03] hover:border-gray-600 transition-colors ${isMyCountry ? 'ring-2 ring-[#D4A017] border-[#D4A017]/50' : ''}`}
                         onClick={() => {
                           trackCountryView(country);
-                          if (hasStaticReport(country)) {
-                            setSelectedCountry(country);
-                          } else {
-                            setComingSoonCountry(country);
-                          }
+                          // Single source of truth: route to the PKPB country
+                          // page. When a contributor has uploaded an HTML/PDF
+                          // report it renders that file in a sandboxed iframe
+                          // (preserving the original design + branding 1:1, with
+                          // a Download button that streams the original file);
+                          // when none is uploaded it falls back to the parametric
+                          // CountryReportCard with real DB data.
+                          navigate(`/dashboard/pkpb/${toCountrySlug(country)}`);
                         }}
                       >
                         <CardContent className="p-2.5 sm:p-4 flex flex-col gap-1.5 sm:gap-2.5">
@@ -270,42 +273,10 @@ const Countries = () => {
                   })}
                 </div>
               </>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Coming Soon dialog for countries without a full report yet */}
-      <Dialog open={!!comingSoonCountry} onOpenChange={(open) => !open && setComingSoonCountry(null)}>
-        <DialogContent className="sm:max-w-md bg-[#0a0e14] border-gray-800">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              {comingSoonCountry && <CountryFlag country={comingSoonCountry} size="lg" />}
-              <Clock className="h-5 w-5 text-[#D4A017]" />
-            </div>
-            <DialogTitle className="text-xl font-bold tracking-tight">
-              {comingSoonCountry} Report Card — Coming Soon
-            </DialogTitle>
-            <DialogDescription className="text-gray-400 leading-relaxed pt-2">
-              The Promise Kept · Promise Broken framework is currently fully populated for <span className="text-[#D4A017] font-medium">Nigeria</span>. PACSDA is rolling out the same forensic country audit for the remaining 53 African nations. Check back soon.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-2">
-            <Button variant="outline" onClick={() => setComingSoonCountry(null)} className="border-gray-700">
-              Close
-            </Button>
-            <Button
-              onClick={() => {
-                setComingSoonCountry(null);
-                setSelectedCountry('Nigeria');
-              }}
-              className="bg-[#D4A017] text-black hover:bg-[#D4A017]/90"
-            >
-              View Nigeria Report
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

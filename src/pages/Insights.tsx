@@ -254,7 +254,7 @@ const Insights: React.FC = () => {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                 <Sparkles className="h-5 w-5 text-primary" />
               </div>
-              <h1 className="text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">
                 {t('insights.title')}
               </h1>
             </div>

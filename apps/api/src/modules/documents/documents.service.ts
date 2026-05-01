@@ -82,6 +82,7 @@ export class DocumentsService {
 
     const { key } = await this.r2.uploadFile(file, this.prefixFor(dto.type, dto.countryId));
 
+    const startedAt = Date.now();
     const created = await this.prisma.document.create({
       data: {
         type: dto.type as any,
@@ -101,6 +102,27 @@ export class DocumentsService {
       },
       include: { country: { select: { id: true, name: true, isoCode3: true } } },
     });
+
+    // Persistent audit row so this upload shows in the History tab.
+    try {
+      await this.prisma.uploadAudit.create({
+        data: {
+          kind: 'DOCUMENT',
+          fileName: file.originalname,
+          fileSize: file.size,
+          status: 'SUCCESS',
+          rowsAffected: 1,
+          countryId: resolvedCountryId,
+          documentId: created.id,
+          source: dto.source ?? null,
+          notes: dto.description ?? null,
+          uploadedById: uploadedById && uploadedById !== 'anonymous' ? uploadedById : null,
+          durationMs: Date.now() - startedAt,
+        },
+      });
+    } catch (err) {
+      this.logger.warn(`[upload-audit] document audit row failed: ${(err as Error).message}`);
+    }
 
     return this.serialize(created);
   }

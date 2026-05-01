@@ -34,6 +34,7 @@ model Country {
   policies         CountryPolicy[]
   experts          Expert[]
   documents        Document[]
+  uploadAudits     UploadAudit[]
 
   @@index([region])
   @@index([isoCode3])
@@ -223,6 +224,7 @@ model User {
   contentPublished  ContentPublished[]
   contentRevisions  ContentRevision[]
   documentsUploaded Document[]
+  uploadAudits      UploadAudit[]
 }
 
 enum UserRole {
@@ -382,6 +384,7 @@ model Document {
 
   uploadedById     String?
   uploadedBy       User?          @relation(fields: [uploadedById], references: [id])
+  uploadAudits     UploadAudit[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -403,4 +406,84 @@ enum DocumentStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+// ============ UPLOAD AUDIT LOG ============
+// Every contributor upload (AYIMS template, Policies database, Document, or
+// generic CSV) writes one row here on success. This is the source of truth
+// for the History tab in the Contributor Hub and survives API restarts —
+// the prior in-memory jobStore lost its records every time Render redeployed.
+//
+// We don't try to be fancy here: one row per commit, with summary stats and
+// pointers to the artefacts (Document for PKPB uploads, country for AYIMS,
+// nothing for generic-data). Errors land here too with status=FAILED so
+// contributors see what went wrong.
+
+model UploadAudit {
+  id             String       @id @default(cuid())
+  kind           UploadKind
+  fileName       String
+  fileSize       Int
+  status         UploadStatus @default(SUCCESS)
+  rowsAffected   Int          @default(0)
+
+  // For uploads that target a single country (AYIMS template, PKPB doc).
+  countryId      String?
+  country        Country?     @relation(fields: [countryId], references: [id])
+
+  // Bibliographic metadata (carried over from the upload form).
+  source         String?
+  notes          String?
+
+  // Document link for PKPB / generic document uploads.
+  documentId     String?
+  document       Document?    @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  // Who uploaded.
+  uploadedById   String?
+  uploadedBy     User?        @relation(fields: [uploadedById], references: [id])
+
+  uploadedAt     DateTime     @default(now())
+  durationMs     Int?
+  errorMessage   String?
+
+  @@index([kind, uploadedAt])
+  @@index([countryId])
+  @@index([uploadedById])
+  @@index([uploadedAt])
+}
+
+enum UploadKind {
+  AYIMS_TEMPLATE
+  POLICIES_DATABASE
+  DOCUMENT
+  GENERIC_DATA
+}
+
+enum UploadStatus {
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+// Newsletter sign-ups from the public landing/footer forms. Email is unique,
+// so a re-subscribe is an upsert (no duplicates). `source` lets us tell where
+// the user signed up — useful for downstream analytics on which CTA performs.
+model NewsletterSubscription {
+  id           String                       @id @default(cuid())
+  email        String                       @unique
+  source       String?                      // e.g. "landing-hero", "footer", "country-page"
+  status       NewsletterSubscriptionStatus @default(SUBSCRIBED)
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
+  unsubscribedAt DateTime?
+  metadata     Json?                        // optional extras (locale, country interest, etc.)
+
+  @@index([status, createdAt])
+}
+
+enum NewsletterSubscriptionStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  BOUNCED
 }
