@@ -130,14 +130,18 @@ const FEATURES = [
 ];
 
 // Pull headline numbers from the same /platform/stats endpoint QuickStats uses.
-// Falls through to sensible defaults if the API is offline.
+// Response shape: { totalCountries, totalIndicators, totalDataPoints,
+// dataYearRange: { earliest, latest } }. Earlier code read shorter key names
+// that don't exist on the server, so the numbers always fell through to the
+// hardcoded defaults — that's why /landing kept showing the same values.
 function useLandingStats() {
   const { data } = useQuery<{
-    countries?: number;
-    indicators?: number;
-    indicatorValues?: number;
-    yearRange?: { min?: number; max?: number };
-  }>({
+    totalCountries?: number;
+    totalIndicators?: number;
+    totalDataPoints?: number;
+    countriesWithData?: number;
+    dataYearRange?: { earliest?: number; latest?: number };
+  } | null>({
     queryKey: ['landing-platform-stats'],
     queryFn: () => fetch(`${import.meta.env.VITE_API_URL || '/api'}/platform/stats`)
       .then((r) => (r.ok ? r.json() : null))
@@ -145,12 +149,12 @@ function useLandingStats() {
     staleTime: 60_000,
   });
 
-  const countries = data?.countries ?? 54;
-  const indicators = data?.indicators ?? 500;
-  const dataPoints = data?.indicatorValues ?? 0;
-  const minYear = data?.yearRange?.min;
-  const maxYear = data?.yearRange?.max;
-  const yearsCovered = minYear && maxYear ? Math.max(1, maxYear - minYear + 1) : 10;
+  const countries = data?.totalCountries ?? 54;
+  const indicators = data?.totalIndicators ?? 500;
+  const dataPoints = data?.totalDataPoints ?? 0;
+  const earliest = data?.dataYearRange?.earliest;
+  const latest = data?.dataYearRange?.latest;
+  const yearsCovered = earliest && latest ? Math.max(1, latest - earliest + 1) : 10;
 
   return { countries, indicators, dataPoints, yearsCovered };
 }

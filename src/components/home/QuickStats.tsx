@@ -58,22 +58,52 @@ const statsData = [
   }
 ];
 
+interface PlatformStats {
+  totalCountries?: number;
+  totalIndicators?: number;
+  totalDataPoints?: number;
+  totalThemes?: number;
+  countriesWithData?: number;
+  dataYearRange?: { earliest?: number; latest?: number };
+}
+
 const QuickStats = () => {
-  // Fetch real stats from API
-  const { data: platformStats } = useQuery({
+  // Fetch real stats from API. The endpoint returns totalCountries /
+  // totalIndicators / totalDataPoints / dataYearRange — older code used
+  // shorter key names that no longer exist server-side, which is why every
+  // value looked frozen.
+  const { data: platformStats } = useQuery<PlatformStats | null>({
     queryKey: ['platform-stats'],
     queryFn: () => fetch(`${import.meta.env.VITE_API_URL || '/api'}/platform/stats`).then(r => r.ok ? r.json() : null).catch(() => null),
-    staleTime: 60000,
+    staleTime: 60_000,
   });
 
-  // Override first stat with real data if available
+  // Build a fresh array per render from the API, falling back to the seeded
+  // defaults if the response is empty. We mutate a copy here, never the
+  // module-level `statsData` (mutating that caused stale display when the
+  // API was slow to respond).
+  const baseYear = platformStats?.dataYearRange?.earliest ?? new Date().getFullYear() - 5;
+  const liveStats = statsData.map((s) => ({ ...s }));
   if (platformStats) {
-    const countries = platformStats.countries || 54;
-    const indicators = platformStats.indicators || 59;
-    const dataPoints = platformStats.indicatorValues || 0;
-    statsData[0] = { ...statsData[0], value: `${countries}`, description: `Countries · ${indicators} indicators` };
+    const countries = platformStats.totalCountries ?? 54;
+    const indicators = platformStats.totalIndicators ?? 59;
+    const dataPoints = platformStats.totalDataPoints ?? 0;
+    const withData = platformStats.countriesWithData ?? countries;
+    liveStats[0] = {
+      ...liveStats[0],
+      title: 'Coverage',
+      value: `${withData}/${countries}`,
+      description: `Countries with live data · ${indicators} indicators tracked`,
+      trend: 'Live',
+    };
     if (dataPoints > 0) {
-      statsData[4] = { ...statsData[4], value: dataPoints > 1000 ? `${(dataPoints/1000).toFixed(0)}K` : String(dataPoints), description: 'Data points collected', title: 'Data Points' };
+      liveStats[4] = {
+        ...liveStats[4],
+        title: 'Data Points',
+        value: dataPoints >= 1000 ? `${(dataPoints / 1000).toFixed(dataPoints >= 10_000 ? 0 : 1)}K` : String(dataPoints),
+        description: 'Indicator values across the platform',
+        trend: 'Live',
+      };
     }
   }
 
@@ -106,59 +136,67 @@ const QuickStats = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-          {statsData.map((stat, index) => (
-            <Link key={stat.slug} to={stat.link} className="block group">
-              <GlowCard
-                glowColor={stat.glowColor}
-                customSize
-                className="w-full h-full !aspect-auto cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
-              >
-                <div className="relative z-10 flex flex-col justify-between h-full p-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Content
-                        as="p"
-                        id={`home.quick_stats.${stat.slug}.title`}
-                        fallback={stat.title}
-                        className="text-xs sm:text-sm font-medium text-gray-400 mb-1"
-                      />
-                      <h3 className="text-3xl sm:text-4xl font-bold text-white">{stat.value}</h3>
+          {liveStats.map((stat, index) => {
+            const isLive = stat.trend === 'Live';
+            const isPositive = stat.trend.startsWith('+');
+            const trendClass = isLive
+              ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
+              : isPositive
+              ? 'bg-green-500/20 text-green-400'
+              : 'bg-red-500/20 text-red-400';
+            const trendLabel = isLive
+              ? `Live · since ${baseYear}`
+              : `${stat.trend} since ${baseYear}`;
+            return (
+              <Link key={stat.slug} to={stat.link} className="block group">
+                <GlowCard
+                  glowColor={stat.glowColor}
+                  customSize
+                  className="w-full h-full !aspect-auto cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
+                >
+                  <div className="relative z-10 flex flex-col justify-between h-full p-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <Content
+                          as="p"
+                          id={`home.quick_stats.${stat.slug}.title`}
+                          fallback={stat.title}
+                          className="text-xs sm:text-sm font-medium text-gray-400 mb-1"
+                        />
+                        <h3 className="text-3xl sm:text-4xl font-bold text-white">{stat.value}</h3>
+                      </div>
+                      <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10">
+                        <stat.icon className="w-5 h-5 text-white/80" />
+                      </div>
                     </div>
-                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10">
-                      <stat.icon className="w-5 h-5 text-white/80" />
+
+                    <Content
+                      as="p"
+                      id={`home.quick_stats.${stat.slug}.description`}
+                      fallback={stat.description}
+                      className="text-xs text-gray-500 mt-3"
+                    />
+
+                    <div className="mt-4 flex items-center justify-between">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${trendClass}`}>
+                        {trendLabel}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 h-8 flex items-end gap-[2px]">
+                      {[...Array(12)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-t bg-white/20 group-hover:bg-white/30 transition-colors"
+                          style={{ height: `${20 + Math.sin(i * 0.8 + index) * 30 + 30}%` }}
+                        />
+                      ))}
                     </div>
                   </div>
-
-                  <Content
-                    as="p"
-                    id={`home.quick_stats.${stat.slug}.description`}
-                    fallback={stat.description}
-                    className="text-xs text-gray-500 mt-3"
-                  />
-
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                      stat.trend.startsWith('+')
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-red-500/20 text-red-400'
-                    }`}>
-                      {stat.trend} since 2020
-                    </span>
-                  </div>
-
-                  <div className="mt-3 h-8 flex items-end gap-[2px]">
-                    {[...Array(12)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 rounded-t bg-white/20 group-hover:bg-white/30 transition-colors"
-                        style={{ height: `${20 + Math.sin(i * 0.8 + index) * 30 + 30}%` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </GlowCard>
-            </Link>
-          ))}
+                </GlowCard>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

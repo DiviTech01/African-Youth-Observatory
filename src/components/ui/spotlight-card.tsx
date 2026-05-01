@@ -37,6 +37,14 @@ const GlowCard: React.FC<GlowCardProps> = ({
   const innerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Skip the pointer-tracking effect on touch-only devices. The spotlight is
+    // a hover affordance; on phones it just burns CPU/GPU on every scroll
+    // tick (pointermove fires constantly during touch scroll) without any
+    // visible benefit. `(hover: hover)` is true for mice/trackpads, false for
+    // touchscreens.
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(hover: hover)').matches) return;
+
     const syncPointer = (e: PointerEvent) => {
       const { clientX: x, clientY: y } = e;
 
@@ -81,10 +89,15 @@ const GlowCard: React.FC<GlowCardProps> = ({
       backgroundColor: 'var(--backdrop, transparent)',
       backgroundSize: 'calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)))',
       backgroundPosition: '50% 50%',
-      backgroundAttachment: 'fixed',
+      // `background-attachment: fixed` is a known scroll-jank trigger on iOS
+      // and Android — the browser has to repaint the gradient every frame as
+      // the user scrolls. `local` keeps the spotlight effect intact without
+      // killing scroll performance.
+      backgroundAttachment: 'local',
       border: 'var(--border-size) solid var(--backup-border)',
       position: 'relative',
-      touchAction: 'none',
+      // Removed `touchAction: 'none'` — it was preventing users from
+      // scrolling the page when their finger started inside a card.
     };
 
     if (width !== undefined) {
@@ -106,13 +119,21 @@ const GlowCard: React.FC<GlowCardProps> = ({
       inset: calc(var(--border-size) * -1);
       border: var(--border-size) solid transparent;
       border-radius: calc(var(--radius) * 1px);
-      background-attachment: fixed;
+      background-attachment: local;
       background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)));
       background-repeat: no-repeat;
       background-position: 50% 50%;
       mask: linear-gradient(transparent, transparent), linear-gradient(white, white);
       mask-clip: padding-box, border-box;
       mask-composite: intersect;
+    }
+    /* On phones the spotlight pseudo-elements are heavy paints that aren't
+       even animated (no hover). Hide them entirely below the lg breakpoint. */
+    @media (max-width: 1023px) {
+      [data-glow]::before,
+      [data-glow]::after {
+        display: none;
+      }
     }
 
     [data-glow]::before {
