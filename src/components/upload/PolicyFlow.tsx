@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Shield, Database, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { authHeader } from '@/lib/supabase-token';
+import { xhrUpload, formatBytes, formatEta, type UploadProgress } from '@/lib/xhrUpload';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const DATA_API = `${API_BASE}/data-upload`;
@@ -27,6 +28,8 @@ const PolicyFlow: React.FC<PolicyFlowProps> = ({ file, onDone }) => {
   const [source, setSource] = useState('African National Youth Policies Database (PACSDA)');
   const [notes, setNotes] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [parseProgress, setParseProgress] = useState<UploadProgress | null>(null);
+  const [serverProcessing, setServerProcessing] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [job, setJob] = useState<any>(null);
   const [commitResult, setCommitResult] = useState<any>(null);
@@ -37,25 +40,28 @@ const PolicyFlow: React.FC<PolicyFlowProps> = ({ file, onDone }) => {
     setJob(null);
     setError(null);
     setCommitResult(null);
+    setParseProgress({ loaded: 0, total: file.size, percent: 0, elapsedMs: 0, bytesPerSec: 0, etaMs: null });
+    setServerProcessing(false);
     try {
       const fd = new FormData();
       fd.append('file', file);
       if (source) fd.append('source', source);
       if (notes) fd.append('notes', notes);
-      const res = await fetch(`${DATA_API}/policies-database`, {
-        method: 'POST',
-        headers: authHeader(),
+      const res = await xhrUpload<any>({
+        url: `${DATA_API}/policies-database`,
         body: fd,
+        headers: authHeader(),
+        onProgress: (p) => {
+          setParseProgress(p);
+          if (p.percent >= 100) setServerProcessing(true);
+        },
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `HTTP ${res.status}`);
-      }
-      setJob(await res.json());
+      setJob(res);
     } catch (err: any) {
       setError(err.message || 'Parse failed');
     } finally {
       setUploading(false);
+      setServerProcessing(false);
     }
   };
 
@@ -130,9 +136,30 @@ const PolicyFlow: React.FC<PolicyFlowProps> = ({ file, onDone }) => {
               </p>
               <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. v3 — adds 6 new countries from SADC" />
             </div>
+            {uploading && parseProgress && (
+              <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-gray-400 tabular-nums">
+                  <span>
+                    {serverProcessing ? (
+                      <>Server scoring policies — extracting years, applying recency bands…</>
+                    ) : (
+                      <>Uploading <span className="text-white">{formatBytes(parseProgress.loaded)}</span> / {formatBytes(parseProgress.total)}</>
+                    )}
+                  </span>
+                  <span>{serverProcessing ? '—' : `${parseProgress.percent}% · ETA ${formatEta(parseProgress.etaMs)}`}</span>
+                </div>
+                <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${serverProcessing ? 'bg-emerald-400 animate-pulse' : 'bg-violet-400'}`}
+                    style={{ width: `${parseProgress.percent}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <Button onClick={handleParse} disabled={uploading || !source.trim()} className="gap-2">
               {uploading ? <Clock className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-              {uploading ? 'Scoring policies…' : 'Parse + score policies'}
+              {uploading ? (serverProcessing ? 'Scoring…' : 'Uploading…') : 'Parse + score policies'}
             </Button>
           </CardContent>
         </Card>

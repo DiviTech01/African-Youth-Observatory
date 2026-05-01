@@ -20,6 +20,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import AyimsFlow from '@/components/upload/AyimsFlow';
 import PolicyFlow from '@/components/upload/PolicyFlow';
 import PkpbGuidedForm, { type PkpbGuidedValue, emptyPkpbValue } from '@/components/upload/PkpbGuidedForm';
+import { xhrUpload, formatBytes, formatEta, type UploadProgress } from '@/lib/xhrUpload';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const DATA_API = `${API_BASE}/data-upload`;
@@ -493,6 +494,8 @@ function DocumentFlow({
   const [showSummaryEditor, setShowSummaryEditor] = useState(false);
 
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
+  const [serverProcessing, setServerProcessing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -503,6 +506,8 @@ function DocumentFlow({
     setUploading(true);
     setError(null);
     setResult(null);
+    setProgress({ loaded: 0, total: file.size, percent: 0, elapsedMs: 0, bytesPerSec: 0, etaMs: null });
+    setServerProcessing(false);
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -534,16 +539,23 @@ function DocumentFlow({
         if (Object.keys(summary).length > 0) fd.append('extractedSummary', JSON.stringify(summary));
       }
 
-      const res = await fetch(DOCS_API, { method: 'POST', headers: authHeaders(), body: fd });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `Upload failed (${res.status})`);
-      }
-      setResult(await res.json());
+      const res = await xhrUpload<any>({
+        url: DOCS_API,
+        body: fd,
+        headers: authHeaders(),
+        onProgress: (p) => {
+          setProgress(p);
+          // Once the bytes are out the door, the server is doing PDF/HTML text
+          // extraction + R2 upload + DB insert. Show that state until the response.
+          if (p.percent >= 100) setServerProcessing(true);
+        },
+      });
+      setResult(res);
     } catch (err: any) {
       setError(err.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setServerProcessing(false);
     }
   };
 
@@ -694,10 +706,35 @@ function DocumentFlow({
           <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">{error}</div>
         )}
 
+        {uploading && progress && (
+          <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] text-gray-400 tabular-nums">
+              <span>
+                {serverProcessing ? (
+                  <>Server processing — extracting text, storing to R2, writing record…</>
+                ) : (
+                  <>
+                    Uploading <span className="text-white">{formatBytes(progress.loaded)}</span> / {formatBytes(progress.total)}
+                  </>
+                )}
+              </span>
+              <span>
+                {serverProcessing ? '—' : `${progress.percent}% · ETA ${formatEta(progress.etaMs)}`}
+              </span>
+            </div>
+            <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${serverProcessing ? 'bg-emerald-400 animate-pulse' : 'bg-[#D4A017]'}`}
+                style={{ width: `${progress.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <Button onClick={handleSubmit} disabled={!canSubmit || uploading} className="gap-2">
             {uploading ? <Clock className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {uploading ? 'Uploading...' : 'Upload document'}
+            {uploading ? (serverProcessing ? 'Processing…' : 'Uploading…') : 'Upload document'}
           </Button>
           {requiresCountry && !countryId && (
             <span className="text-xs text-amber-400">PKPB reports need a country selection.</span>
