@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import React, { useState, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,12 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Upload, FileSpreadsheet, AlertTriangle, CheckCircle, Download,
-  Clock, Database, BarChart3, FileText, Trash2, Eye, X,
+  Clock, Database, BarChart3, FileText, X, Eye, FileType2, ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { authHeader } from '@/lib/supabase-token';
+import { useCountries } from '@/hooks/useData';
+import { Link, useSearchParams } from 'react-router-dom';
+import AyimsFlow from '@/components/upload/AyimsFlow';
+import PolicyFlow from '@/components/upload/PolicyFlow';
+import PkpbGuidedForm, { type PkpbGuidedValue, emptyPkpbValue } from '@/components/upload/PkpbGuidedForm';
 
-const API = `${import.meta.env.VITE_API_URL || '/api'}/data-upload`;
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const DATA_API = `${API_BASE}/data-upload`;
+const DOCS_API = `${API_BASE}/documents`;
+
 const authHeaders = (): Record<string, string> => authHeader();
 const fetchAuth = (url: string) =>
   fetch(url, { headers: authHeaders() }).then((r) => {
@@ -24,10 +32,164 @@ const fetchAuth = (url: string) =>
     return r.json();
   });
 
-// ── Upload Tab ───────────────────────────────────────────────────────────────
+// ── File-type detection — drives the auto-routing ───────────────────
+type UploadKind = 'data' | 'document' | 'ayims' | 'policies';
+type DocType = 'PKPB_REPORT' | 'COUNTRY_REPORT' | 'POLICY_DOCUMENT' | 'RESEARCH_PAPER' | 'OTHER';
 
-function UploadTab() {
+const DATA_EXT = ['csv', 'xlsx', 'xls'] as const;
+const DOC_EXT = ['pdf', 'docx', 'doc', 'pptx', 'ppt', 'txt'] as const;
+
+/**
+ * Decide which upload pipeline a file belongs to. Detection is filename-based —
+ * the contributor's filenames carry the convention ("Angola_AYIMS_Template_v1.xlsx",
+ * "African_National_Youth_Policies_Database_v3.csv"), so we don't need to peek
+ * inside the workbook on the client.
+ */
+function classify(file: File): UploadKind | 'unknown' {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const lowerName = file.name.toLowerCase();
+
+  if ((DOC_EXT as readonly string[]).includes(ext)) return 'document';
+  if (!(DATA_EXT as readonly string[]).includes(ext)) return 'unknown';
+
+  if (/ayims/.test(lowerName)) return 'ayims';
+  if (/_polic|policies_database|policy_database|youth.policies/.test(lowerName)) return 'policies';
+  return 'data';
+}
+
+function suggestDocType(file: File, countryName: string | null): DocType {
+  const name = file.name.toLowerCase();
+  if (/promise[\s_-]*kept|promise[\s_-]*broken|pkpb|pacsda/.test(name)) return 'PKPB_REPORT';
+  if (countryName && name.toLowerCase().includes(countryName.toLowerCase())) return 'COUNTRY_REPORT';
+  if (/policy|policies|charter/.test(name)) return 'POLICY_DOCUMENT';
+  if (/research|paper|study/.test(name)) return 'RESEARCH_PAPER';
+  return 'OTHER';
+}
+
+const DOC_TYPE_LABELS: Record<DocType, { label: string; hint: string }> = {
+  PKPB_REPORT:     { label: 'Promise Kept · Promise Broken Report', hint: 'Routes to /pkpb/<country> and feeds the country report card.' },
+  COUNTRY_REPORT:  { label: 'Country Report',                       hint: 'General country-level report. Shows on the country profile.' },
+  POLICY_DOCUMENT: { label: 'Policy Document',                      hint: 'National policies, charters, AYC instruments.' },
+  RESEARCH_PAPER:  { label: 'Research Paper',                       hint: 'Academic or analytical paper.' },
+  OTHER:           { label: 'Other Document',                       hint: 'Anything else.' },
+};
+
+// ── Universal upload tab — drops a file, the form follows ───────────
+
+function UniversalUploadTab() {
+  const [searchParams] = useSearchParams();
+  const presetCountryId = searchParams.get('country') ?? undefined;
+  const presetType = (searchParams.get('type') as DocType | null) ?? undefined;
+  const presetMode: 'document' | null = presetType ? 'document' : null;
+
   const [file, setFile] = useState<File | null>(null);
+  const kind = file ? classify(file) : null;
+
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const dropped = e.dataTransfer.files[0];
+    if (dropped) setFile(dropped);
+  }, []);
+
+  const reset = () => setFile(null);
+
+  return (
+    <div className="space-y-6">
+      {/* Pre-fill banner — set when navigating from PKPB index "Upload report" button */}
+      {presetMode === 'document' && !file && (
+        <div className="rounded-xl border border-[#D4A017]/30 bg-[#D4A017]/[0.06] p-4 text-sm">
+          <p className="font-medium text-[#D4A017]">
+            Ready to upload a {DOC_TYPE_LABELS[presetType!]?.label.toLowerCase()}.
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            The country and document type will be pre-filled. Drop the PDF below.
+          </p>
+        </div>
+      )}
+
+      {/* Universal dropzone */}
+      <Card className="bg-white/[0.03] border-gray-800 border-dashed rounded-2xl">
+        <CardContent
+          className="p-8 text-center cursor-pointer"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleFileDrop}
+          onClick={() => document.getElementById('universal-file-input')?.click()}
+        >
+          <input
+            id="universal-file-input"
+            type="file"
+            accept=".csv,.xlsx,.xls,.pdf,.docx,.doc,.pptx,.ppt,.txt"
+            className="hidden"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+          />
+          {file ? (
+            <div className="flex items-center justify-center gap-3">
+              {kind === 'data' || kind === 'ayims' || kind === 'policies'
+                ? <FileSpreadsheet className="h-8 w-8 text-[#D4A017]" />
+                : <FileType2 className="h-8 w-8 text-[#D4A017]" />}
+              <div className="text-left">
+                <p className="font-semibold">{file.name}</p>
+                <p className="text-sm text-gray-400">
+                  {(file.size / 1024).toFixed(1)} KB ·{' '}
+                  {kind === 'ayims' && <span className="text-[#D4A017]">AYIMS template → 54 indicators × years</span>}
+                  {kind === 'policies' && <span className="text-violet-400">Policies database → CountryPolicy scoring</span>}
+                  {kind === 'data' && <span className="text-emerald-400">Generic data file → manual mapping</span>}
+                  {kind === 'document' && <span className="text-blue-400">Document → routing by country &amp; type</span>}
+                  {kind === 'unknown' && <span className="text-amber-400">Unsupported file type</span>}
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); reset(); }}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Upload className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+              <p className="text-lg font-medium">Drop a file to upload</p>
+              <p className="text-sm text-gray-400 mt-1">
+                The form auto-routes by filename / type — you don't need to pick the destination yourself.
+              </p>
+              <div className="text-xs text-gray-500 mt-3 space-y-0.5 leading-relaxed">
+                <p>• <span className="text-[#D4A017]">AYIMS template</span> (filename has "AYIMS") → fills 54 indicators × 20 years for one country</p>
+                <p>• <span className="text-violet-400">Policies database</span> (filename has "Policies_Database") → scores 30 policy instruments per country</p>
+                <p>• <span className="text-emerald-400">Generic CSV/XLSX</span> → manual column mapping</p>
+                <p>• <span className="text-blue-400">PDF / DOCX / PPTX</span> → routed by country &amp; document type (PKPB report, country report, etc.)</p>
+              </div>
+              <p className="text-xs text-gray-600 mt-3">Max 25 MB for documents · 10 MB for data files · click to browse</p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Routes based on file type */}
+      {file && kind === 'ayims' && <AyimsFlow file={file} onDone={reset} />}
+      {file && kind === 'policies' && <PolicyFlow file={file} onDone={reset} />}
+      {file && kind === 'data' && <DataFlow file={file} onDone={reset} />}
+      {file && kind === 'document' && (
+        <DocumentFlow
+          file={file}
+          onDone={reset}
+          defaultCountryId={presetCountryId}
+          defaultType={presetType}
+        />
+      )}
+      {file && kind === 'unknown' && (
+        <Card className="bg-amber-500/5 border-amber-500/30 rounded-2xl">
+          <CardContent className="p-6">
+            <p className="text-sm">
+              <span className="font-semibold text-amber-400">Unsupported file type.</span>{' '}
+              Use CSV/XLSX for indicator data, or PDF/DOCX/PPTX/TXT for reports and documents.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── DATA FLOW — original CSV/XLSX import path ───────────────────────
+
+function DataFlow({ file, onDone }: { file: File; onDone: () => void }) {
   const [source, setSource] = useState('');
   const [notes, setNotes] = useState('');
   const [countryColumn, setCountryColumn] = useState('Country');
@@ -40,49 +202,21 @@ function UploadTab() {
   const [committing, setCommitting] = useState(false);
   const [commitResult, setCommitResult] = useState<any>(null);
 
-  // Fetch indicators for mapping
-  const { data: indicators } = useQuery({
-    queryKey: ['upload-indicators'],
-    queryFn: () => fetchAuth(`${API}/indicators`),
-  });
-
-  const handleFileDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const dropped = e.dataTransfer.files[0];
-    if (dropped) setFile(dropped);
-  }, []);
-
   const handleUpload = async () => {
-    if (!file || !source) return;
+    if (!source) return;
     setUploading(true);
     setPreview(null);
     setCommitResult(null);
-
     try {
-      const config = {
-        countryColumn,
-        countryFormat,
-        mappings: [], // Auto-mapping will be done server-side in a future iteration
-        source,
-        notes: notes || undefined,
-        year,
-      };
-
+      const config = { countryColumn, countryFormat, mappings: [], source, notes: notes || undefined, year };
       const formData = new FormData();
       formData.append('file', file);
       formData.append('config', JSON.stringify(config));
-
-      const res = await fetch(`${API}/file`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: formData,
-      });
-
+      const res = await fetch(`${DATA_API}/file`, { method: 'POST', headers: authHeaders(), body: formData });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.message || 'Upload failed');
       }
-
       const job = await res.json();
       setJobId(job.id);
       setPreview(job);
@@ -97,13 +231,12 @@ function UploadTab() {
     if (!jobId) return;
     setCommitting(true);
     try {
-      const res = await fetch(`${API}/commit/${jobId}`, {
+      const res = await fetch(`${DATA_API}/commit/${jobId}`, {
         method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       });
       if (!res.ok) throw new Error('Commit failed');
-      const result = await res.json();
-      setCommitResult(result);
+      setCommitResult(await res.json());
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -111,100 +244,104 @@ function UploadTab() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* File drop zone */}
-      <Card className="bg-white/[0.03] border-gray-800 border-dashed rounded-2xl">
-        <CardContent
-          className="p-8 text-center cursor-pointer"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={handleFileDrop}
-          onClick={() => document.getElementById('file-input')?.click()}
-        >
-          <input
-            id="file-input"
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-          {file ? (
-            <div className="flex items-center justify-center gap-3">
-              <FileSpreadsheet className="h-8 w-8 text-[#D4A017]" />
-              <div className="text-left">
-                <p className="font-semibold">{file.name}</p>
-                <p className="text-sm text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setFile(null); setPreview(null); setCommitResult(null); }}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <>
-              <Upload className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-              <p className="text-lg font-medium">Drop CSV or XLSX file here</p>
-              <p className="text-sm text-gray-400 mt-1">or click to browse (max 10MB)</p>
-            </>
-          )}
+  if (commitResult) {
+    return (
+      <Card className="bg-green-500/5 border-green-500/30 rounded-2xl">
+        <CardContent className="p-6 text-center">
+          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+          <p className="text-xl font-bold">Import Complete</p>
+          <p className="text-gray-400 mt-1">
+            {commitResult.inserted} values inserted, {commitResult.skipped} skipped, {commitResult.errors} errors
+          </p>
+          <p className="text-xs text-gray-500 mt-2">Duration: {commitResult.duration}ms</p>
+          <Button variant="outline" className="mt-4" onClick={onDone}>Upload Another File</Button>
         </CardContent>
       </Card>
+    );
+  }
 
-      {/* Config */}
-      {file && !commitResult && (
+  return (
+    <>
+      {!preview && (
         <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
-          <CardHeader><CardTitle className="text-base">Import Configuration</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">Generic indicator import</CardTitle>
+            <p className="text-xs text-gray-500 mt-1">
+              For long-format CSV/XLSX files (one row per country with indicator columns). For AYIMS templates,
+              drop the file again with "AYIMS" in the filename — the smart router will switch to the dedicated
+              flow.
+            </p>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label>Source Attribution *</Label>
-                <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="e.g., AYIMS/AU Commission" />
+              <div className="space-y-1.5">
+                <Label>Source attribution *</Label>
+                <p className="text-[11px] text-gray-500">
+                  Cited under every chart that uses these values. Use the data publisher (e.g. World Bank,
+                  UNESCO UIS, INE Angola).
+                </p>
+                <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="e.g. AYIMS / AU Commission" />
               </div>
-              <div className="space-y-2">
-                <Label>Country Column Name</Label>
+              <div className="space-y-1.5">
+                <Label>Country column name</Label>
+                <p className="text-[11px] text-gray-500">
+                  The header in your file that holds the country identifier. Case-insensitive.
+                </p>
                 <Input value={countryColumn} onChange={(e) => setCountryColumn(e.target.value)} />
               </div>
-              <div className="space-y-2">
-                <Label>Country Format</Label>
+              <div className="space-y-1.5">
+                <Label>Country format</Label>
+                <p className="text-[11px] text-gray-500">
+                  How country values are written in that column. ISO codes are most reliable.
+                </p>
                 <Select value={countryFormat} onValueChange={(v: any) => setCountryFormat(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="name">Country Name</SelectItem>
-                    <SelectItem value="iso2">ISO 2-Letter</SelectItem>
-                    <SelectItem value="iso3">ISO 3-Letter</SelectItem>
+                    <SelectItem value="name">Country name (e.g. "Nigeria")</SelectItem>
+                    <SelectItem value="iso2">ISO 2-letter (e.g. "NG")</SelectItem>
+                    <SelectItem value="iso3">ISO 3-letter (e.g. "NGA")</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Data Year</Label>
+              <div className="space-y-1.5">
+                <Label>Data year</Label>
+                <p className="text-[11px] text-gray-500">
+                  Year these values represent. Override on a per-column basis later if your file mixes years.
+                </p>
                 <Input type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value) || 2024)} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Age Group</Label>
+              <div className="space-y-1.5">
+                <Label>Age group</Label>
+                <p className="text-[11px] text-gray-500">
+                  Age band the indicator covers. UN uses 15–24; AU youth statistics use 15–35.
+                </p>
                 <Select value={ageGroup} onValueChange={setAgeGroup}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="15-24">15-24 (UN definition)</SelectItem>
-                    <SelectItem value="15-35">15-35 (AU definition)</SelectItem>
+                    <SelectItem value="15-24">15–24 (UN definition)</SelectItem>
+                    <SelectItem value="15-35">15–35 (AU definition)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label>Notes (optional)</Label>
-                <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional context..." />
+                <p className="text-[11px] text-gray-500">
+                  Internal note — appears in upload history. Useful for data lineage.
+                </p>
+                <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Q4 2025 refresh — World Bank WDI vintage Dec-2025" />
               </div>
             </div>
             <Button onClick={handleUpload} disabled={!source || uploading} className="gap-2">
               {uploading ? <Clock className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
-              {uploading ? 'Parsing...' : 'Preview Import'}
+              {uploading ? 'Parsing…' : 'Preview import'}
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Preview */}
-      {preview && !commitResult && (
+      {preview && (
         <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -213,7 +350,6 @@ function UploadTab() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 bg-white/[0.05] rounded-lg text-center">
                 <p className="text-2xl font-bold text-[#D4A017]">{preview.summary?.validRows || 0}</p>
@@ -233,7 +369,6 @@ function UploadTab() {
               </div>
             </div>
 
-            {/* Errors & Warnings */}
             {preview.errors?.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-amber-400 flex items-center gap-1">
@@ -249,44 +384,6 @@ function UploadTab() {
               </div>
             )}
 
-            {/* Unmatched countries */}
-            {preview.summary?.countriesUnmatched?.length > 0 && (
-              <div className="text-sm">
-                <p className="text-red-400 font-medium mb-1">Unmatched countries:</p>
-                <p className="text-gray-400">{preview.summary.countriesUnmatched.join(', ')}</p>
-              </div>
-            )}
-
-            {/* Mapped preview table */}
-            {preview.preview?.mappedPreview?.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-800">
-                      <th className="text-left py-2 px-2">Country</th>
-                      <th className="text-left py-2 px-2">Indicator</th>
-                      <th className="text-left py-2 px-2">Year</th>
-                      <th className="text-right py-2 px-2">Value</th>
-                      <th className="text-left py-2 px-2">Gender</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.preview.mappedPreview.slice(0, 10).map((row: any, i: number) => (
-                      <tr key={i} className="border-b border-gray-800/50">
-                        <td className="py-1.5 px-2">{row.country}</td>
-                        <td className="py-1.5 px-2 text-gray-400">{row.indicator}</td>
-                        <td className="py-1.5 px-2">{row.year}</td>
-                        <td className="py-1.5 px-2 text-right font-mono">{row.value}</td>
-                        <td className="py-1.5 px-2">
-                          <Badge variant="secondary" className="text-[10px]">{row.gender}</Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
             <Button onClick={handleCommit} disabled={committing || !preview.summary?.valuesTotal} className="gap-2">
               {committing ? <Clock className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
               {committing ? 'Importing...' : `Commit ${preview.summary?.valuesTotal || 0} Values to Database`}
@@ -294,40 +391,350 @@ function UploadTab() {
           </CardContent>
         </Card>
       )}
+    </>
+  );
+}
 
-      {/* Commit result */}
-      {commitResult && (
-        <Card className="bg-green-500/5 border-green-500/30 rounded-2xl">
-          <CardContent className="p-6 text-center">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
-            <p className="text-xl font-bold">Import Complete</p>
-            <p className="text-gray-400 mt-1">
-              {commitResult.inserted} values inserted, {commitResult.skipped} skipped, {commitResult.errors} errors
+// ── DOCUMENT FLOW — PKPB / report / policy / etc ────────────────────
+
+function DocumentFlow({
+  file,
+  onDone,
+  defaultCountryId,
+  defaultType,
+}: {
+  file: File;
+  onDone: () => void;
+  defaultCountryId?: string;
+  defaultType?: DocType;
+}) {
+  const { data: countriesData } = useCountries();
+  // useCountries returns either an array or a paginated wrapper depending on backend; normalize.
+  const countries: any[] = useMemo(() => {
+    if (!countriesData) return [];
+    if (Array.isArray(countriesData)) return countriesData;
+    if (Array.isArray((countriesData as any).data)) return (countriesData as any).data;
+    return [];
+  }, [countriesData]);
+
+  const [countryId, setCountryId] = useState<string>(defaultCountryId ?? '');
+  const selectedCountry = countries.find((c) => c.id === countryId);
+
+  const [type, setType] = useState<DocType>(
+    () => defaultType ?? suggestDocType(file, null),
+  );
+  // Once a country is picked, refine the suggestion (only when no explicit defaultType — don't override the user's intent).
+  const refineType = (cid: string) => {
+    if (defaultType) return;
+    const c = countries.find((x) => x.id === cid);
+    if (c) setType(suggestDocType(file, c.name));
+  };
+
+  const [title, setTitle] = useState(file.name.replace(/\.[^.]+$/, ''));
+  const [description, setDescription] = useState('');
+  const [source, setSource] = useState('');
+  const [edition, setEdition] = useState('');
+  const [year, setYear] = useState<number | ''>(new Date().getFullYear());
+
+  // PKPB structured summary — guided form when type=PKPB_REPORT
+  const [pkpbValue, setPkpbValue] = useState<PkpbGuidedValue>(emptyPkpbValue());
+  const [showSummaryEditor, setShowSummaryEditor] = useState(false);
+
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const requiresCountry = type === 'PKPB_REPORT';
+  const canSubmit = !!title && (!requiresCountry || !!countryId);
+
+  const handleSubmit = async () => {
+    setUploading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('type', type);
+      fd.append('title', title);
+      if (description) fd.append('description', description);
+      if (countryId) fd.append('countryId', countryId);
+      if (source) fd.append('source', source);
+      if (edition) fd.append('edition', edition);
+      if (year) fd.append('year', String(year));
+
+      // For PKPB uploads, serialize the guided form into the extractedSummary JSON
+      // the API expects. Skip empty arrays so the merge logic falls back to the
+      // parametric defaults for fields the contributor left blank.
+      if (type === 'PKPB_REPORT' && showSummaryEditor) {
+        const summary: any = {};
+        if (pkpbValue.edition) summary.edition = pkpbValue.edition;
+        if (pkpbValue.reviewedDate) summary.reviewedDate = pkpbValue.reviewedDate;
+        if (pkpbValue.nextReview) summary.nextReview = pkpbValue.nextReview;
+        if (typeof pkpbValue.ayemiScore === 'number') summary.ayemiScore = pkpbValue.ayemiScore;
+        if (pkpbValue.ayemiTier) summary.ayemiTier = pkpbValue.ayemiTier;
+        if (pkpbValue.executiveBrief) summary.executiveBrief = pkpbValue.executiveBrief;
+        if (pkpbValue.pullQuote) summary.pullQuote = pkpbValue.pullQuote;
+        if (pkpbValue.postQuote) summary.postQuote = pkpbValue.postQuote;
+        if (pkpbValue.promiseKept.length) summary.promiseKept = pkpbValue.promiseKept;
+        if (pkpbValue.promiseBroken.length) summary.promiseBroken = pkpbValue.promiseBroken;
+        if (pkpbValue.recommendations.length) summary.recommendations = pkpbValue.recommendations;
+        if (pkpbValue.legislation.length) summary.legislation = pkpbValue.legislation;
+        if (Object.keys(summary).length > 0) fd.append('extractedSummary', JSON.stringify(summary));
+      }
+
+      const res = await fetch(DOCS_API, { method: 'POST', headers: authHeaders(), body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Upload failed (${res.status})`);
+      }
+      setResult(await res.json());
+    } catch (err: any) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (result) {
+    const isPkpb = result.type === 'PKPB_REPORT';
+    const countrySlug = result.country?.name?.toLowerCase().replace(/\s+/g, '-');
+    return (
+      <Card className="bg-green-500/5 border-green-500/30 rounded-2xl">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <CheckCircle className="h-6 w-6 text-green-500" />
+            <p className="text-lg font-bold">Document uploaded</p>
+          </div>
+          <p className="text-sm text-gray-400">
+            "{result.title}" routed as <Badge variant="secondary" className="ml-1">{DOC_TYPE_LABELS[result.type as DocType]?.label || result.type}</Badge>
+            {result.country && <> &nbsp;→&nbsp; <span className="font-medium text-white">{result.country.name}</span></>}.
+          </p>
+          {result.extractedSummary && (
+            <p className="text-xs text-emerald-300 mt-2">Structured summary saved · feeds the country report card.</p>
+          )}
+          <div className="flex flex-wrap gap-2 mt-4">
+            <a href={`${DOCS_API}/${result.id}/download`} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="gap-1.5"><Download className="h-3.5 w-3.5" /> Download original</Button>
+            </a>
+            {isPkpb && countrySlug && (
+              <Link to={`/dashboard/pkpb/${countrySlug}`}>
+                <Button size="sm" className="gap-1.5"><ExternalLink className="h-3.5 w-3.5" /> View PKPB page</Button>
+              </Link>
+            )}
+            <Button variant="ghost" size="sm" onClick={onDone}>Upload another</Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-white/[0.03] border-gray-800 rounded-2xl">
+      <CardHeader>
+        <CardTitle className="text-base">Document details</CardTitle>
+        <p className="text-xs text-gray-400 mt-1">{DOC_TYPE_LABELS[type].hint}</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Document type *</Label>
+            <p className="text-[11px] text-gray-500">
+              Determines where this file shows up. PKPB reports drive the Promise Kept · Promise Broken
+              page; country reports show on the country profile; policy and research docs land in the
+              public Reports library.
             </p>
-            <p className="text-xs text-gray-500 mt-2">Duration: {commitResult.duration}ms</p>
-            <Button variant="outline" className="mt-4" onClick={() => { setFile(null); setPreview(null); setCommitResult(null); setJobId(null); }}>
-              Upload Another File
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+            <Select value={type} onValueChange={(v: DocType) => setType(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.keys(DOC_TYPE_LABELS) as DocType[]).map((t) => (
+                  <SelectItem key={t} value={t}>{DOC_TYPE_LABELS[t].label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Country {requiresCountry && '*'}</Label>
+            <p className="text-[11px] text-gray-500">
+              Routes this document to the country's profile/PKPB page. Required for PKPB reports; optional
+              for general research papers.
+            </p>
+            <Select
+              value={countryId}
+              onValueChange={(v) => { setCountryId(v); refineType(v); }}
+            >
+              <SelectTrigger><SelectValue placeholder="Select a country…" /></SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {countries.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.flagEmoji ? `${c.flagEmoji} ` : ''}{c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Title *</Label>
+            <p className="text-[11px] text-gray-500">
+              Public-facing title shown in lists and on the report page. Defaults to the filename without
+              extension.
+            </p>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Promise Kept · Promise Broken — Nigeria 2025" />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Description</Label>
+            <p className="text-[11px] text-gray-500">
+              One- or two-sentence summary used on the document card and search results.
+            </p>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Brief summary of the report's scope and findings." />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Source / publisher</Label>
+            <p className="text-[11px] text-gray-500">
+              The organisation that produced the document. Cited under the title.
+            </p>
+            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="PACSDA / AfriYouthStats" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Edition</Label>
+            <p className="text-[11px] text-gray-500">
+              Edition or version label. Shown as a small chip on the document.
+            </p>
+            <Input value={edition} onChange={(e) => setEdition(e.target.value)} placeholder="Dec 2025 · Vol 01" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Year</Label>
+            <p className="text-[11px] text-gray-500">
+              Publication year. Used for sorting "latest report" lookups.
+            </p>
+            <Input type="number" value={year} onChange={(e) => setYear(e.target.value ? parseInt(e.target.value, 10) : '')} />
+          </div>
+        </div>
+
+        {type === 'PKPB_REPORT' && (
+          <div className="rounded-md border border-white/[0.08] p-4 bg-white/[0.02]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <button
+                  type="button"
+                  className="text-sm font-medium text-gray-200 hover:text-white flex items-center gap-2"
+                  onClick={() => setShowSummaryEditor((s) => !s)}
+                >
+                  <FileText className="h-3.5 w-3.5 text-[#D4A017]" />
+                  {showSummaryEditor ? 'Hide guided report-card editor' : 'Fill out report-card content (recommended)'}
+                </button>
+                <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                  Without this, the country PKPB page falls back to placeholder narrative + indicators (or
+                  the parametric defaults from <code>countryReports.ts</code>). Filling these fields
+                  populates the cover gauge, Promise Kept / Broken split, legislation table, and
+                  recommendations — same layout as the Nigeria page. Each field has a hint underneath.
+                </p>
+              </div>
+            </div>
+            {showSummaryEditor && (
+              <div className="mt-4">
+                <PkpbGuidedForm value={pkpbValue} onChange={setPkpbValue} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">{error}</div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSubmit} disabled={!canSubmit || uploading} className="gap-2">
+            {uploading ? <Clock className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {uploading ? 'Uploading...' : 'Upload document'}
+          </Button>
+          {requiresCountry && !countryId && (
+            <span className="text-xs text-amber-400">PKPB reports need a country selection.</span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── REPORTS / DOCUMENTS LIST TAB ───────────────────────────────────
+
+function ReportsTab() {
+  const { data: docs, isLoading } = useQuery({
+    queryKey: ['documents-list'],
+    queryFn: () => fetchAuth(`${DOCS_API}?limit=100`),
+    refetchInterval: 30000,
+  });
+
+  if (isLoading) return <Skeleton className="h-60 w-full" />;
+  if (!docs?.length) {
+    return (
+      <div className="text-center py-16 text-gray-500">
+        <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />
+        <p className="text-lg font-medium">No documents uploaded yet</p>
+        <p className="text-sm mt-1">Drop a PDF or DOCX in the Upload tab — it'll route by country and type.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-800">
+            <th className="text-left py-3 px-2">Title</th>
+            <th className="text-left py-3 px-2">Type</th>
+            <th className="text-left py-3 px-2">Country</th>
+            <th className="text-left py-3 px-2">Source</th>
+            <th className="text-left py-3 px-2">Year</th>
+            <th className="text-right py-3 px-2">Size</th>
+            <th className="text-right py-3 px-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {docs.map((d: any) => {
+            const slug = d.country?.name?.toLowerCase().replace(/\s+/g, '-');
+            return (
+              <tr key={d.id} className="border-b border-gray-800/50 hover:bg-white/[0.03]">
+                <td className="py-2 px-2 font-medium">{d.title}</td>
+                <td className="py-2 px-2">
+                  <Badge variant="secondary" className="text-[10px]">{DOC_TYPE_LABELS[d.type as DocType]?.label || d.type}</Badge>
+                </td>
+                <td className="py-2 px-2 text-gray-400">{d.country?.name || '—'}</td>
+                <td className="py-2 px-2 text-gray-400">{d.source || '—'}</td>
+                <td className="py-2 px-2 text-gray-400">{d.year || '—'}</td>
+                <td className="py-2 px-2 text-right text-gray-500 font-mono text-xs">{(d.fileSize / 1024).toFixed(0)} KB</td>
+                <td className="py-2 px-2 text-right space-x-2">
+                  {d.type === 'PKPB_REPORT' && slug && (
+                    <Link to={`/dashboard/pkpb/${slug}`} className="text-xs text-[#D4A017] hover:underline">View page</Link>
+                  )}
+                  <a
+                    href={`${DOCS_API}/${d.id}/download`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-gray-300 hover:text-white inline-flex items-center gap-1"
+                  >
+                    <Download className="h-3 w-3" /> Download
+                  </a>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-// ── Needs Tab ────────────────────────────────────────────────────────────────
+// ── Needs Tab (unchanged) ─────────────────────────────────────────
 
 function NeedsTab() {
   const { data: needs, isLoading } = useQuery({
     queryKey: ['data-needs'],
-    queryFn: () => fetchAuth(`${API}/needed`),
+    queryFn: () => fetchAuth(`${DATA_API}/needed`),
   });
-
   if (isLoading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>;
-
   return (
     <div className="space-y-6">
-      {/* Summary */}
       {needs?.summary && (
         <div className="grid grid-cols-3 gap-4">
           <Card className="bg-red-500/5 border-red-500/20 rounded-2xl">
@@ -350,8 +757,6 @@ function NeedsTab() {
           </Card>
         </div>
       )}
-
-      {/* By theme */}
       {needs?.byTheme?.map((theme: any) => (
         <Card key={theme.slug} className="bg-white/[0.03] border-gray-800 rounded-2xl">
           <CardHeader className="pb-2">
@@ -377,9 +782,7 @@ function NeedsTab() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-gray-500">All indicators have good coverage</p>
-            )}
+            ) : <p className="text-sm text-gray-500">All indicators have good coverage</p>}
           </CardContent>
         </Card>
       ))}
@@ -387,19 +790,16 @@ function NeedsTab() {
   );
 }
 
-// ── Templates Tab ────────────────────────────────────────────────────────────
+// ── Templates Tab (unchanged shape) ───────────────────────────────
 
 function TemplatesTab() {
   const { data: templates, isLoading } = useQuery({
     queryKey: ['upload-templates'],
-    queryFn: () => fetchAuth(`${API}/templates`),
+    queryFn: () => fetchAuth(`${DATA_API}/templates`),
   });
 
-  const handleDownload = (slug: string, name: string) => {
-    const t = token();
-    const headers: Record<string, string> = {};
-    if (t) headers['Authorization'] = `Bearer ${t}`;
-    fetch(`${API}/templates/${slug}`, { headers })
+  const handleDownload = (slug: string) => {
+    fetch(`${DATA_API}/templates/${slug}`, { headers: authHeaders() })
       .then((r) => r.blob())
       .then((blob) => {
         const url = URL.createObjectURL(blob);
@@ -412,7 +812,6 @@ function TemplatesTab() {
   };
 
   if (isLoading) return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3].map(i => <Skeleton key={i} className="h-40" />)}</div>;
-
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {(templates || []).map((t: any) => (
@@ -425,7 +824,7 @@ function TemplatesTab() {
             <h3 className="font-semibold text-sm mb-1">{t.name}</h3>
             <p className="text-xs text-gray-400 mb-3 flex-grow">{t.description || `${t.indicatorCount} indicators`}</p>
             <p className="text-[10px] text-gray-500 mb-3">{t.columns?.slice(0, 5).join(', ')}{t.columns?.length > 5 ? '...' : ''}</p>
-            <Button variant="outline" size="sm" className="w-full gap-1" onClick={() => handleDownload(t.slug, t.name)}>
+            <Button variant="outline" size="sm" className="w-full gap-1" onClick={() => handleDownload(t.slug)}>
               <Download className="h-3 w-3" /> Download CSV
             </Button>
           </CardContent>
@@ -435,17 +834,16 @@ function TemplatesTab() {
   );
 }
 
-// ── History Tab ──────────────────────────────────────────────────────────────
+// ── History Tab (unchanged) ────────────────────────────────────────
 
 function HistoryTab() {
   const { data: history, isLoading } = useQuery({
     queryKey: ['upload-history'],
-    queryFn: () => fetchAuth(`${API}/history`),
+    queryFn: () => fetchAuth(`${DATA_API}/history`),
     refetchInterval: 30000,
   });
 
   if (isLoading) return <Skeleton className="h-60 w-full" />;
-
   if (!history?.length) {
     return (
       <div className="text-center py-16 text-gray-500">
@@ -490,10 +888,23 @@ function HistoryTab() {
   );
 }
 
-// ── Main Page ────────────────────────────────────────────────────────────────
+// ── Main Page ──────────────────────────────────────────────────────
+
+const VALID_TABS = ['upload', 'reports', 'needed', 'templates', 'history'] as const;
+type TabKey = (typeof VALID_TABS)[number];
 
 const DataUpload = () => {
-  const { user } = useAuth();
+  useAuth(); // gates the route via AuthRequired upstream
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab') as TabKey | null;
+  const activeTab: TabKey = tabParam && (VALID_TABS as readonly string[]).includes(tabParam) ? tabParam : 'upload';
+
+  const handleTabChange = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'upload') params.delete('tab');
+    else params.set('tab', next);
+    setSearchParams(params, { replace: true });
+  };
 
   return (
     <div className="min-h-screen">
@@ -503,25 +914,27 @@ const DataUpload = () => {
           <div className="flex items-center gap-2 mb-2">
             <Upload className="h-8 w-8 text-[#D4A017]" />
             <h1 className="text-3xl font-semibold tracking-tighter bg-gradient-to-br from-[#D4A017] from-10% via-white via-40% to-white/40 bg-clip-text text-transparent">
-              Data Upload
+              Contributor Hub
             </h1>
           </div>
           <p className="text-[#A89070]">
-            Upload CSV or Excel files to import youth data into the platform.
+            Upload indicator data, country reports, and policy documents. The form auto-routes by file type and country.
           </p>
         </div>
       </div>
 
       <div className="container px-4 md:px-6 pb-12">
-        <Tabs defaultValue="upload" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="bg-white/[0.05] border border-gray-800">
             <TabsTrigger value="upload" className="gap-1.5"><Upload className="h-3.5 w-3.5" /> Upload</TabsTrigger>
+            <TabsTrigger value="reports" className="gap-1.5"><FileType2 className="h-3.5 w-3.5" /> Reports & Documents</TabsTrigger>
             <TabsTrigger value="needed" className="gap-1.5"><AlertTriangle className="h-3.5 w-3.5" /> What's Needed</TabsTrigger>
             <TabsTrigger value="templates" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Templates</TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> History</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="upload"><UploadTab /></TabsContent>
+          <TabsContent value="upload"><UniversalUploadTab /></TabsContent>
+          <TabsContent value="reports"><ReportsTab /></TabsContent>
           <TabsContent value="needed"><NeedsTab /></TabsContent>
           <TabsContent value="templates"><TemplatesTab /></TabsContent>
           <TabsContent value="history"><HistoryTab /></TabsContent>

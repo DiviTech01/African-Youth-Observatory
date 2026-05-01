@@ -22,7 +22,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   handleRequest<TUser = any>(err: any, user: any, info: any, context: ExecutionContext, status?: any): TUser {
     if (err || !user) {
-      throw new UnauthorizedException({ message: 'Unauthorized', statusCode: 401 });
+      // Surface the underlying passport-jwt failure reason so we can tell apart
+      // expired-token, bad-signature, missing-token, etc. info.message comes from
+      // jsonwebtoken (e.g. "jwt expired", "invalid signature", "No auth token").
+      const reason = info?.message || err?.message || 'no token / no user';
+      const req = context.switchToHttp().getRequest();
+      console.warn(`[JwtAuthGuard] 401 on ${req.method} ${req.url} — ${reason}`);
+      throw new UnauthorizedException({ message: `Unauthorized: ${reason}`, statusCode: 401 });
     }
     return user;
   }

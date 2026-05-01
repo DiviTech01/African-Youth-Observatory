@@ -30,6 +30,7 @@
     "multer": "^2.1.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pdf-parse": "^1.1.1",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.12.2",
     "rxjs": "^7.8.1",
@@ -43,12 +44,13 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^22.5.5",
     "@types/passport-jwt": "^4.0.1",
+    "@types/pdf-parse": "^1.1.4",
     "prisma": "5.22.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.5.3"
   },
   "prisma": {
-    "schema": "prisma/schema.prisma"
+    "schema": "../../packages/database/prisma/schema.prisma"
   }
 }

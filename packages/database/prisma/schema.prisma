@@ -33,6 +33,7 @@ model Country {
   youthIndexScores YouthIndexScore[]
   policies         CountryPolicy[]
   experts          Expert[]
+  documents        Document[]
 
   @@index([region])
   @@index([isoCode3])
@@ -221,6 +222,7 @@ model User {
   contentDrafts     ContentDraft[]
   contentPublished  ContentPublished[]
   contentRevisions  ContentRevision[]
+  documentsUploaded Document[]
 }
 
 enum UserRole {
@@ -346,4 +348,59 @@ model DataSource {
   type        String
   lastSync    DateTime?
   createdAt   DateTime  @default(now())
+}
+
+// ============ DOCUMENTS / REPORTS ============
+// Contributors upload PDFs and other reference documents. The original blob
+// lives in R2 (storageKey); extracted text + a structured summary feed the
+// country PKPB page. Numeric data still belongs in IndicatorValue — this
+// model is for narrative artifacts.
+
+model Document {
+  id               String         @id @default(cuid())
+  type             DocumentType
+  title            String
+  description      String?
+  countryId        String?
+  country          Country?       @relation(fields: [countryId], references: [id])
+
+  // File metadata
+  originalFilename String
+  mimeType         String
+  fileSize         Int
+  storageKey       String         // R2 object key
+
+  // Parsed content
+  extractedText    String?        // raw text extracted from the PDF
+  extractedSummary Json?          // structured PKPB report fields (see DocumentsService)
+
+  // Bibliographic metadata
+  source           String?        // organisation that produced the report
+  edition          String?        // e.g. "Dec 2025 · Vol 01"
+  year             Int?
+  status           DocumentStatus @default(PUBLISHED)
+
+  uploadedById     String?
+  uploadedBy       User?          @relation(fields: [uploadedById], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([countryId, type])
+  @@index([type])
+  @@index([uploadedById])
+  @@index([countryId, type, status, createdAt])
+}
+
+enum DocumentType {
+  PKPB_REPORT
+  COUNTRY_REPORT
+  POLICY_DOCUMENT
+  RESEARCH_PAPER
+  OTHER
+}
+
+enum DocumentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }

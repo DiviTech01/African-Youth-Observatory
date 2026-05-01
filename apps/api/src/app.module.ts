@@ -23,6 +23,8 @@ import { SearchModule } from './modules/search/search.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { EmbedModule } from './modules/embed/embed.module';
 import { DataUploadModule } from './modules/data-upload/data-upload.module';
+import { DocumentsModule } from './modules/documents/documents.module';
+import { CountryReportsModule } from './modules/country-reports/country-reports.module';
 import { ContentModule } from './modules/content/content.module';
 import { MailModule } from './modules/mail/mail.module';
 import { CacheService } from './common/cache.service';
@@ -76,6 +78,8 @@ import { CacheService } from './common/cache.service';
     AuthModule,
     AdminModule,
     DataUploadModule,
+    DocumentsModule,
+    CountryReportsModule,
     ContentModule,
 
     // Platform

@@ -1,0 +1,76 @@
+{
+  "_meta": {
+    "version": 1,
+    "description": "Maps AYIMS Data Template column headers (row 3) to AYD indicator slugs.",
+    "schema": {
+      "slug": "AYD Indicator.slug. Required unless 'skip' is true.",
+      "gender": "MALE | FEMALE | TOTAL — defaults to TOTAL",
+      "ageGroup": "default 15-35",
+      "transform": "none | multiply_1000 | divide_100 | invert — applied to the raw cell value before insert",
+      "skip": "true to ignore this column (text/categorical/no destination)",
+      "skipReason": "human-readable note explaining why a skipped column has no destination"
+    }
+  },
+  "columns": {
+    "Total Population (M)":                          { "slug": "total-population",                    "ageGroup": "all",   "transform": "multiply_1000", "_note": "Stored in millions on the sheet; multiply to convert to thousands for indicator value (still a count). The Country.population field is updated separately." },
+    "Youth Pop 15–35 (M)":                           { "slug": "youth-population-15-35",              "ageGroup": "15-35", "transform": "multiply_1000", "_note": "Sheet is millions; convert to thousands for storage." },
+    "Youth % of Total Pop":                          { "slug": "youth-share-of-population",           "ageGroup": "15-35" },
+    "Youth in Rural Areas %":                        { "slug": "youth-rural-share",                   "ageGroup": "15-35" },
+    "Youth in Urban Areas %":                        { "slug": "youth-urban-share",                   "ageGroup": "15-35" },
+    "Youth Voter Reg. % (Male)":                     { "slug": "youth-voter-turnout",                 "ageGroup": "15-35", "gender": "MALE" },
+    "Youth Voter Reg. % (Female)":                   { "slug": "youth-voter-turnout",                 "ageGroup": "15-35", "gender": "FEMALE" },
+    "Youth With Disabilities %":                     { "slug": "youth-disability-share",              "ageGroup": "15-35" },
+
+    "Literacy Rate 15–35 % (Male)":                  { "slug": "youth-literacy-rate",                 "ageGroup": "15-35", "gender": "MALE" },
+    "Literacy Rate 15–35 % (Female)":                { "slug": "youth-literacy-rate",                 "ageGroup": "15-35", "gender": "FEMALE" },
+    "Education Budget % GDP":                        { "slug": "education-budget-share-gdp" },
+    "Primary Enrollment Rate %":                     { "slug": "primary-enrollment-rate" },
+    "Secondary Enrollment Rate % (Male)":            { "slug": "secondary-school-net-enrollment-rate", "gender": "MALE" },
+    "Secondary Enrollment Rate % (Female)":          { "slug": "secondary-school-net-enrollment-rate", "gender": "FEMALE" },
+    "Tertiary Enrollment Rate %":                    { "slug": "tertiary-education-gross-enrollment-rate" },
+    "School Dropout Rate %":                         { "slug": "school-dropout-rate" },
+    "Teacher–Student Ratio (1:X)":                   { "slug": "teacher-student-ratio" },
+
+    "Youth Unemployment Rate % (M)":                 { "slug": "youth-unemployment-rate",             "ageGroup": "15-35", "gender": "MALE" },
+    "Youth Unemployment Rate % (F)":                 { "slug": "youth-unemployment-rate",             "ageGroup": "15-35", "gender": "FEMALE" },
+    "Youth LFPR % (M)":                              { "slug": "youth-labor-force-participation-rate", "ageGroup": "15-35", "gender": "MALE" },
+    "Youth LFPR % (F)":                              { "slug": "youth-labor-force-participation-rate", "ageGroup": "15-35", "gender": "FEMALE" },
+    "Youth Employment-to-Pop Ratio % (M)":           { "slug": "youth-employment-to-population-ratio", "ageGroup": "15-35", "gender": "MALE" },
+    "Youth Employment-to-Pop Ratio % (F)":           { "slug": "youth-employment-to-population-ratio", "ageGroup": "15-35", "gender": "FEMALE" },
+    "Youth/Adult Unemployment Ratio":                { "slug": "youth-adult-unemployment-ratio",      "ageGroup": "15-35" },
+    "Agriculture % of Youth Employment":             { "slug": "youth-employment-in-agriculture",     "ageGroup": "15-35" },
+    "Industry % of Youth Employment":                { "slug": "youth-employment-in-industry",        "ageGroup": "15-35" },
+    "Services % of Youth Employment":                { "slug": "youth-employment-in-services",        "ageGroup": "15-35" },
+
+    "Health Budget % of National Budget":            { "slug": "health-budget-share" },
+    "Physician Density (per 10,000)":                { "slug": "physician-density" },
+    "Assisted Births by Skilled Staff %":            { "slug": "births-by-skilled-staff" },
+    "Contraceptive Prevalence 15–35 %":              { "slug": "contraceptive-prevalence-rate-youth", "ageGroup": "15-35" },
+    "HIV Prevalence 15–35 % (M)":                    { "slug": "hiv-prevalence-rate-youth",           "ageGroup": "15-35", "gender": "MALE" },
+    "HIV Prevalence 15–35 % (F)":                    { "slug": "hiv-prevalence-rate-youth",           "ageGroup": "15-35", "gender": "FEMALE" },
+    "YPLWHA Receiving Treatment %":                  { "slug": "yplwha-treatment-rate",               "ageGroup": "15-35" },
+
+    "Top Cause of Death 1 (Youth 15–35)":            { "skip": true, "skipReason": "Text/categorical — not modeled as a numeric indicator." },
+    "Top Cause of Death 2 (Youth 15–35)":            { "skip": true, "skipReason": "Text/categorical — not modeled as a numeric indicator." },
+    "Youth Suicide Rate (per 100,000)":              { "slug": "youth-suicide-rate",                  "ageGroup": "15-35" },
+    "AIDS-Related Deaths Aged 18–35":                { "slug": "youth-aids-deaths",                   "ageGroup": "18-35" },
+    "Deaths from Substance Abuse Aged 18–35":        { "slug": "youth-substance-abuse-deaths",        "ageGroup": "18-35" },
+    "Deaths from Accidents Aged 18–35":              { "slug": "youth-accident-deaths",               "ageGroup": "18-35" },
+    "Deaths from Violent Extremism Aged 18–35":      { "slug": "youth-extremism-deaths",              "ageGroup": "18-35" },
+
+    "Getting Credit Rank (WB)":                      { "slug": "getting-credit-rank" },
+    "Protecting Investors Rank (WB)":                { "slug": "protecting-investors-rank" },
+    "Internet Access % Households":                  { "slug": "internet-access-households" },
+    "Micro-credit Recipients (Youth, 000s)":         { "slug": "youth-microcredit-recipients",        "ageGroup": "15-35", "transform": "multiply_1000", "_note": "Sheet is in thousands of recipients; multiply to convert to a count." },
+    "Youth Startups Surviving 1st Year %":           { "slug": "youth-startup-survival-rate",         "ageGroup": "15-35" },
+    "Persons w/ Movable Collateral Assets (18–35)":  { "slug": "youth-movable-collateral-holders",    "ageGroup": "18-35" },
+    "Youth Financial Instruments (CG/Debt/Grant/Blend)": { "skip": true, "skipReason": "Categorical — not modeled as a numeric indicator." },
+    "Persons Who Registered IP (Aged 15–35)":        { "slug": "youth-ip-registrations",              "ageGroup": "15-35" },
+
+    "Human Trafficking Victims (Aged 18–30)":        { "slug": "youth-trafficking-victims",           "ageGroup": "18-30" },
+    "Internally Displaced Persons (IDPs) Aged 18–30": { "slug": "youth-idps",                         "ageGroup": "18-30" },
+    "Persons Awaiting Trial (Aged 18–35)":           { "slug": "youth-awaiting-trial",                "ageGroup": "18-35" },
+    "Persons Serving Prison Term (Aged 18–35)":      { "slug": "youth-imprisoned",                    "ageGroup": "18-35" },
+    "Persons in Juvenile Detention":                 { "slug": "juvenile-detentions" }
+  }
+}

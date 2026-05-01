@@ -9,9 +9,9 @@ export default defineConfig(() => ({
     port: 8080,
     proxy: {
       '/api': {
-        target: 'https://african-youth-observatory.onrender.com',
+        target: process.env.API_PROXY_TARGET || 'http://localhost:3001',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
     },
   },

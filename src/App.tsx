@@ -47,6 +47,9 @@ const Methodology = lazy(() => import("./pages/resources/Methodology"));
 const Toolkits = lazy(() => import("./pages/resources/Toolkits"));
 const CountryProfilePage = lazy(() => import("./pages/CountryProfilePage"));
 const CountryDataProfile = lazy(() => import("./pages/CountryDataProfile"));
+const PromiseKeptBrokenCountry = lazy(() => import("./pages/PromiseKeptBrokenCountry"));
+const PromiseKeptBrokenIndex = lazy(() => import("./pages/PromiseKeptBrokenIndex"));
+const ContributorReports = lazy(() => import("./pages/ContributorReports"));
 const DataUpload = lazy(() => import("./pages/DataUpload"));
 const ContentManager = lazy(() => import("./pages/admin/ContentManager"));
 const ReportsManager = lazy(() => import("./pages/admin/ReportsManager"));
@@ -96,6 +99,8 @@ const App = () => (
                 <Route path="/themes" element={<DashboardLayout><PageTransition><Themes /></PageTransition></DashboardLayout>} />
                 <Route path="/countries" element={<DashboardLayout><PageTransition><Countries /></PageTransition></DashboardLayout>} />
                 <Route path="/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
+                <Route path="/pkpb" element={<DashboardLayout><PageTransition><PromiseKeptBrokenIndex /></PageTransition></DashboardLayout>} />
+                <Route path="/pkpb/:countryRef" element={<DashboardLayout><PageTransition><PromiseKeptBrokenCountry /></PageTransition></DashboardLayout>} />
                 <Route path="/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
                 <Route path="/youth-index" element={<DashboardLayout><PageTransition><YouthIndex /></PageTransition></DashboardLayout>} />
                 <Route path="/dashboard/profile/:slug" element={<DashboardLayout><PageTransition><CountryDataProfile /></PageTransition></DashboardLayout>} />
@@ -116,6 +121,9 @@ const App = () => (
                 <Route path="/dashboard/explore" element={<DashboardLayout><PageTransition><Explore /></PageTransition></DashboardLayout>} />
                 <Route path="/dashboard/countries" element={<DashboardLayout><PageTransition><Countries /></PageTransition></DashboardLayout>} />
                 <Route path="/dashboard/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/pkpb" element={<DashboardLayout><PageTransition><PromiseKeptBrokenIndex /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/pkpb/:countryRef" element={<DashboardLayout><PageTransition><PromiseKeptBrokenCountry /></PageTransition></DashboardLayout>} />
+                <Route path="/dashboard/contributor/reports" element={<DashboardLayout><PageTransition><ContributorReports /></PageTransition></DashboardLayout>} />
                 <Route path="/dashboard/themes" element={<DashboardLayout><PageTransition><Themes /></PageTransition></DashboardLayout>} />
                 <Route path="/dashboard/youth-index" element={<DashboardLayout><PageTransition><YouthIndex /></PageTransition></DashboardLayout>} />
                 <Route path="/dashboard/compare" element={<DashboardLayout><PageTransition><Compare /></PageTransition></DashboardLayout>} />

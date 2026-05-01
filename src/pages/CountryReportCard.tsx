@@ -76,6 +76,12 @@ function parseDisplay(val: string): { prefix: string; num: number; decimals: num
 interface Props {
   country: string;
   onBack?: () => void;
+  /** If provided, render this report directly instead of looking it up. Used by the PKPB page to inject uploaded data. */
+  reportOverride?: CountryReport;
+  /** If provided, the Download button hits this URL (e.g. an uploaded PDF in R2) instead of the static HTML report. */
+  downloadHref?: string;
+  /** Filename to suggest for downloads (only relevant with downloadHref). */
+  downloadFilename?: string;
 }
 
 // Visual tokens borrowed from the PACSDA report design.
@@ -155,12 +161,15 @@ const SectionHdr = ({ num, title, tag }: { num: string; title: string; tag?: str
   </div>
 );
 
-const CountryReportCard: React.FC<Props> = ({ country, onBack }) => {
+const CountryReportCard: React.FC<Props> = ({ country, onBack, reportOverride, downloadHref, downloadFilename }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [shareCopied, setShareCopied] = useState(false);
 
-  const report: CountryReport | null = useMemo(() => getCountryReport(country), [country]);
+  const report: CountryReport | null = useMemo(
+    () => reportOverride ?? getCountryReport(country),
+    [country, reportOverride],
+  );
 
   if (!report) {
     return (
@@ -174,22 +183,34 @@ const CountryReportCard: React.FC<Props> = ({ country, onBack }) => {
   }
 
   const handleDownload = () => {
+    // 1. Uploaded PKPB PDF (preferred — comes from a contributor upload via R2).
+    if (downloadHref) {
+      const a = document.createElement('a');
+      a.href = downloadHref;
+      if (downloadFilename) a.download = downloadFilename;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
+    // 2. High-fidelity HTML reference (Nigeria's PACSDA print template).
     if (hasStaticReport(report.country)) {
-      // Open the high-fidelity HTML in a new tab; user prints / Save as PDF.
       const win = window.open(`/reports/${report.country}.html`, '_blank');
       if (win) {
-        // Auto-trigger print on load so the Save as PDF dialog opens immediately.
         const onLoad = () => { try { win.print(); } catch { /* ignore */ } };
         win.addEventListener('load', onLoad, { once: true });
       } else {
         toast({ title: 'Pop-up blocked', description: 'Allow pop-ups to download the report card.' });
       }
-    } else {
-      toast({
-        title: `${report.country} report card — coming soon`,
-        description: 'High-fidelity PDF generation for this country is in progress. Use Share to circulate the live page.',
-      });
+      return;
     }
+    // 3. Nothing uploaded yet for this country.
+    toast({
+      title: `${report.country} report card — coming soon`,
+      description: 'No PKPB report has been uploaded for this country yet. Contributors can upload one from the Contributor Hub.',
+    });
   };
 
   const handleShare = async () => {

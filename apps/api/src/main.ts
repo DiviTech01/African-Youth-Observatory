@@ -1,3 +1,27 @@
+// Load env from the repo root .env first thing — NestJS doesn't do this on its own
+// and process.env needs SUPABASE_JWT_SECRET, DATABASE_URL, etc. before any module loads.
+// Tiny inline parser so we don't need a dotenv dependency.
+import * as fs from 'fs';
+import * as path from 'path';
+function loadEnvFile(file: string) {
+  if (!fs.existsSync(file)) return;
+  const content = fs.readFileSync(file, 'utf8');
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq < 0) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+}
+loadEnvFile(path.resolve(__dirname, '..', '..', '..', '.env')); // repo root
+loadEnvFile(path.resolve(__dirname, '..', '.env'));              // apps/api/.env (prod)
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -95,6 +119,7 @@ World Bank, ILO, UNESCO, national statistics bureaus`,
     .addTag('embed', 'Embeddable charts and widgets')
     .addTag('search', 'Global search across all entities')
     .addTag('data-upload', 'Data contributor upload and management')
+    .addTag('documents', 'Reports & document uploads (PKPB, policy, research)')
     .addTag('live-feed', 'Real-time data feed')
     .addTag('auth', 'Authentication and user management')
     .addTag('admin', 'Platform administration')

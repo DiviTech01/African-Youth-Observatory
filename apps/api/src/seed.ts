@@ -87,6 +87,15 @@ async function main() {
     });
   }
 
+  // 4 & 5: Mock value generation — gated behind SEED_MOCK_VALUES because
+  // (a) the platform is moving to real uploads (AYIMS template + Policies DB),
+  // (b) the loop saturates the Supabase pooler with 36k+ sequential upserts.
+  if (process.env.SEED_MOCK_VALUES !== 'true') {
+    console.log('  ⏭️  Skipping sample indicator values + Youth Index scores (set SEED_MOCK_VALUES=true to generate them).');
+    console.log('🌱 Done. Catalog seeded — upload real data via the Contributor Hub.');
+    return;
+  }
+
   // 4. Generate sample indicator values
   console.log('  📈 Generating sample indicator values...');
   const allCountries = await prisma.country.findMany();

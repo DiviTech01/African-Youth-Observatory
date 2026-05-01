@@ -70,5 +70,29 @@
     "icon": "Leaf",
     "color": "#009688",
     "sortOrder": 9
+  },
+  {
+    "name": "Peace & Security",
+    "slug": "peace-security",
+    "description": "Youth exposure to violent extremism, conflict-related deaths, internal displacement, and peacebuilding participation.",
+    "icon": "Shield",
+    "color": "#607D8B",
+    "sortOrder": 10
+  },
+  {
+    "name": "Access to Justice",
+    "slug": "access-to-justice",
+    "description": "Youth involvement with the justice system: pre-trial detention, incarceration, juvenile detention, and trafficking-related vulnerabilities.",
+    "icon": "Scale",
+    "color": "#795548",
+    "sortOrder": 11
+  },
+  {
+    "name": "Demographics",
+    "slug": "demographics",
+    "description": "Youth population structure: total counts, urban/rural distribution, age cohorts, and demographic characteristics including disability status.",
+    "icon": "Users2",
+    "color": "#3F51B5",
+    "sortOrder": 0
   }
 ]

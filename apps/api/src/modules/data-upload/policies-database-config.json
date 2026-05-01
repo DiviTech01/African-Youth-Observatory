@@ -1,0 +1,72 @@
+{
+  "_meta": {
+    "version": 1,
+    "description": "Configuration for the African National Youth Policies Database CSV/XLSX importer.",
+    "scoringRules": {
+      "missing": 0,
+      "draft": 0.5,
+      "inPlace": 1.0,
+      "legalMarkerBonus": 0.1,
+      "cap": 1.0
+    },
+    "recencyBands": {
+      "2022_plus": 1.0,
+      "2018_2021": 0.8,
+      "2014_2017": 0.6,
+      "2010_2013": 0.4,
+      "pre_2010": 0.2,
+      "no_year": 0.5
+    }
+  },
+  "draftMarkers": [
+    "in development", "in dev",
+    "pending", "not yet enacted", "under review",
+    "draft", "to be adopted", "in discussion", "under discussion",
+    "en cours d'élaboration", "en élaboration",
+    "en discussion"
+  ],
+  "legalMarkers": [
+    "Act", "Law", "Loi", "Code", "Constitution",
+    "Proclamation", "Décret", "Decree", "Ordonnance", "Ordinance",
+    "Statute", "Charter"
+  ],
+  "policyColumns": [
+    { "key": "National Youth Policy",                                "dimension": "Governance_Participation", "policyType": "National Youth Policy" },
+    { "key": "Youth Employment Plan",                                "dimension": "Economic_Inclusion",       "policyType": "Youth Employment Plan" },
+    { "key": "Entrepreneurship Programme",                           "dimension": "Economic_Inclusion",       "policyType": "Entrepreneurship Programme" },
+    { "key": "Adolescent Health Policy",                             "dimension": "Human_Capital_Rights",     "policyType": "Adolescent Health Policy" },
+    { "key": "Youth Volunteer Programme",                            "dimension": "Governance_Participation", "policyType": "Youth Volunteer Programme" },
+    { "key": "Youth Peace & Security Plan",                          "dimension": "Governance_Participation", "policyType": "Youth Peace & Security Plan" },
+    { "key": "National Education Policy / SDG-4 Plan",               "dimension": "Human_Capital_Rights",     "policyType": "National Education Policy" },
+    { "key": "Technical & Vocational Education Policy (TVET)",       "dimension": "Human_Capital_Rights",     "policyType": "TVET Policy" },
+    { "key": "Digital / ICT Skills in Education",                    "dimension": "Digital_Innovation",       "policyType": "Digital Skills in Education" },
+    { "key": "National Gender Policy",                               "dimension": "Human_Capital_Rights",     "policyType": "National Gender Policy" },
+    { "key": "Girl-Child / Women Empowerment Programme",             "dimension": "Human_Capital_Rights",     "policyType": "Women Empowerment Programme" },
+    { "key": "GBV Prevention & Response Framework",                  "dimension": "Human_Capital_Rights",     "policyType": "GBV Prevention Framework" },
+    { "key": "National Digital / ICT Policy",                        "dimension": "Digital_Innovation",       "policyType": "National Digital Policy" },
+    { "key": "National Digital Economy Strategy",                    "dimension": "Digital_Innovation",       "policyType": "Digital Economy Strategy" },
+    { "key": "National Cybersecurity Policy",                        "dimension": "Digital_Innovation",       "policyType": "National Cybersecurity Policy" },
+    { "key": "Nationally Determined Contribution (NDC)",             "dimension": "Green_Transition",         "policyType": "Nationally Determined Contribution" },
+    { "key": "National Adaptation Plan (NAP)",                       "dimension": "Green_Transition",         "policyType": "National Adaptation Plan" },
+    { "key": "Green Jobs / Climate-Youth Programme",                 "dimension": "Green_Transition",         "policyType": "Green Jobs Programme" },
+    { "key": "SME Development Policy / Act",                         "dimension": "Economic_Inclusion",       "policyType": "SME Development Policy" },
+    { "key": "Startup Act / Innovation Law",                         "dimension": "Digital_Innovation",       "policyType": "Startup Act" },
+    { "key": "Special Economic Zone (SEZ) Framework",                "dimension": "Trade_Investment_Enablers", "policyType": "Special Economic Zone Framework" },
+    { "key": "Investment Promotion Law / Act",                       "dimension": "Trade_Investment_Enablers", "policyType": "Investment Promotion Law" },
+    { "key": "Investment Promotion Agency (IPA)",                    "dimension": "Trade_Investment_Enablers", "policyType": "Investment Promotion Agency" },
+    { "key": "Public-Private Partnership (PPP) Framework",           "dimension": "Trade_Investment_Enablers", "policyType": "Public-Private Partnership Framework" },
+    { "key": "Tax Reform Legislation",                               "dimension": "Trade_Investment_Enablers", "policyType": "Tax Reform Legislation" },
+    { "key": "Tax Incentives for Youth / SMEs",                      "dimension": "Economic_Inclusion",       "policyType": "Tax Incentives for Youth/SMEs" },
+    { "key": "Revenue Authority / Reform Programme",                 "dimension": "Trade_Investment_Enablers", "policyType": "Revenue Authority Reform" },
+    { "key": "Secured Moveable Transactions / Moveable Assets Act",  "dimension": "Economic_Inclusion",       "policyType": "Moveable Assets Act" },
+    { "key": "National Collateral Registry",                         "dimension": "Economic_Inclusion",       "policyType": "National Collateral Registry" }
+  ],
+  "dimensionWeights": {
+    "Governance_Participation": 0.20,
+    "Economic_Inclusion": 0.20,
+    "Human_Capital_Rights": 0.20,
+    "Digital_Innovation": 0.15,
+    "Green_Transition": 0.10,
+    "Trade_Investment_Enablers": 0.15
+  }
+}

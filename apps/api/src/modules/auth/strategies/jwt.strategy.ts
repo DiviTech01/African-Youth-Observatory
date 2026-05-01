@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { createPublicKey } from 'crypto';
+import * as https from 'https';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuthService } from '../auth.service';
 
@@ -10,16 +12,129 @@ interface JwtPayload {
   user_metadata?: { name?: string };
 }
 
+// ── Tiny JWKS cache so we don't hit Supabase on every request ──────────────
+// Supabase issues access tokens signed with ES256 keys served at
+// {SUPABASE_URL}/auth/v1/.well-known/jwks.json. We fetch once and cache PEM
+// public keys by kid. A 10-minute TTL is plenty (Supabase rotates rarely).
+type PemMap = Map<string, string>;
+const KID_CACHE: { keys: PemMap; expiresAt: number } = { keys: new Map(), expiresAt: 0 };
+
+function fetchJwks(jwksUrl: string): Promise<PemMap> {
+  return new Promise((resolve, reject) => {
+    https
+      .get(jwksUrl, (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => {
+          try {
+            const body = Buffer.concat(chunks).toString('utf8');
+            const json = JSON.parse(body) as { keys: any[] };
+            const map: PemMap = new Map();
+            for (const jwk of json.keys ?? []) {
+              try {
+                const pem = createPublicKey({ key: jwk, format: 'jwk' }).export({
+                  type: 'spki',
+                  format: 'pem',
+                }) as string;
+                if (jwk.kid) map.set(jwk.kid, pem);
+              } catch (e) {
+                console.warn('[JwtStrategy] could not import JWK:', (e as Error).message);
+              }
+            }
+            resolve(map);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      })
+      .on('error', reject);
+  });
+}
+
+async function getKeyForKid(jwksUrl: string, kid: string): Promise<string | null> {
+  const now = Date.now();
+  if (KID_CACHE.keys.has(kid) && KID_CACHE.expiresAt > now) {
+    return KID_CACHE.keys.get(kid)!;
+  }
+  // Refresh — either expired or we don't have this kid yet (key rotation case).
+  try {
+    const fresh = await fetchJwks(jwksUrl);
+    KID_CACHE.keys = fresh;
+    KID_CACHE.expiresAt = now + 10 * 60 * 1000; // 10 min
+    return fresh.get(kid) ?? null;
+  } catch (err) {
+    console.warn('[JwtStrategy] JWKS fetch failed:', (err as Error).message);
+    return null;
+  }
+}
+
+function decodeHeaderUnsafe(token: string): { alg?: string; kid?: string } | null {
+  try {
+    const [headerB64] = token.split('.');
+    if (!headerB64) return null;
+    return JSON.parse(Buffer.from(headerB64, 'base64url').toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  private readonly logger = new Logger('JwtStrategy');
+
   constructor(
     private prisma: PrismaService,
     private authService: AuthService,
   ) {
+    const hsSecret = process.env.SUPABASE_JWT_SECRET;
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const jwksUrl = supabaseUrl
+      ? `${supabaseUrl.replace(/\/$/, '')}/auth/v1/.well-known/jwks.json`
+      : null;
+
+    if (!hsSecret) {
+      console.error('[JwtStrategy] SUPABASE_JWT_SECRET is not set — HS256 tokens (legacy) cannot validate');
+    } else {
+      console.log(
+        `[JwtStrategy] HS256 secret loaded · length=${hsSecret.length} · prefix=${hsSecret.slice(0, 8)}…`,
+      );
+    }
+    if (!jwksUrl) {
+      console.error('[JwtStrategy] SUPABASE_URL is not set — ES256/RS256 tokens cannot validate (no JWKS endpoint)');
+    } else {
+      console.log(`[JwtStrategy] JWKS endpoint: ${jwksUrl}`);
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.SUPABASE_JWT_SECRET,
+      algorithms: ['HS256', 'ES256', 'RS256'],
+      secretOrKeyProvider: async (
+        _request: unknown,
+        rawJwtToken: string,
+        done: (err: Error | null, key?: string | Buffer) => void,
+      ) => {
+        try {
+          const header = decodeHeaderUnsafe(rawJwtToken);
+          if (!header?.alg) return done(new Error('cannot decode token header'));
+
+          if (header.alg === 'HS256') {
+            if (!hsSecret) return done(new Error('HS256 secret not configured'));
+            return done(null, hsSecret);
+          }
+          if (header.alg === 'ES256' || header.alg === 'RS256') {
+            if (!jwksUrl) return done(new Error('JWKS URL not configured'));
+            if (!header.kid) return done(new Error('asymmetric token has no kid'));
+            const pem = await getKeyForKid(jwksUrl, header.kid);
+            if (!pem) return done(new Error(`no JWKS key for kid=${header.kid}`));
+            return done(null, pem);
+          }
+          return done(new Error(`unsupported alg: ${header.alg}`));
+        } catch (err) {
+          return done(err as Error);
+        }
+      },
+      passReqToCallback: false,
     });
   }
 

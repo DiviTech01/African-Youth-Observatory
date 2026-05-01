@@ -1,16 +1,27 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import CountryReportCard from '@/pages/CountryReportCard';
-import { getCountryReport } from '@/data/countryReports';
+import { useCountryReportData } from '@/hooks/useCountryReportData';
 
 /**
  * Wrapper page for /countries/:id route.
- * `id` is a country slug (e.g. "nigeria", "south-africa"). Resolves to the
- * matching CountryReport and renders the Promise Kept · Promise Broken card.
+ *
+ * `id` is a country slug (e.g. "nigeria", "south-africa"). The useCountryReportData
+ * hook overlays real IndicatorValue data on top of the parametric defaults — any
+ * field with a real number wins, the rest stay parametric. The PKPB page handles
+ * its own additional layer for uploaded document summaries.
  */
 const CountryProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const report = id ? getCountryReport(id) : null;
+  const { report, isLoading } = useCountryReportData(id);
+
+  if (isLoading && !report) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!report) {
     return (
@@ -20,7 +31,7 @@ const CountryProfilePage: React.FC = () => {
     );
   }
 
-  return <CountryReportCard country={report.country} />;
+  return <CountryReportCard country={report.country} reportOverride={report} />;
 };
 
 export default CountryProfilePage;

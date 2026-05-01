@@ -45,7 +45,9 @@ const dataLinks = [
 ];
 
 const contributorLinks = [
-  { to: '/dashboard/data-upload', label: 'Upload Data', icon: Upload },
+  { to: '/dashboard/data-upload', label: 'Contributor Hub', icon: Upload },
+  { to: '/dashboard/contributor/reports', label: 'Reports & Files', icon: FileText },
+  { to: '/dashboard/pkpb', label: 'Promise Kept · Promise Broken', icon: ShieldCheck },
 ];
 
 interface DashboardLayoutProps {
@@ -81,7 +83,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   const isActive = (path: string) => {
     if (path === '/dashboard') return location.pathname === '/dashboard';
-    return location.pathname.startsWith(path);
+    const [linkPath, linkQuery] = path.split('?');
+    if (!location.pathname.startsWith(linkPath)) return false;
+    // For deep-linked tab variants, also require all query params on the link to match the URL.
+    if (linkQuery) {
+      const currentParams = new URLSearchParams(location.search);
+      const linkParams = new URLSearchParams(linkQuery);
+      for (const [k, v] of linkParams) {
+        if (currentParams.get(k) !== v) return false;
+      }
+    }
+    return true;
   };
 
   /* ── NavLink used in both mobile sheet and desktop sidebar ── */
@@ -157,7 +169,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
         )}
 
-        {isContributor && (
+        {(isContributor || isAdmin) && (
           <div>
             <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-blue-400/60">
               Contributor
@@ -267,7 +279,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
         )}
 
-        {isContributor && (
+        {(isContributor || isAdmin) && (
           <div>
             {!collapsed && (
               <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-blue-400/60">
@@ -368,8 +380,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     if (p.includes('ask')) return 'Ask AI';
     if (p.includes('policy-monitor')) return 'Policy Monitor';
     if (p.includes('experts')) return 'Experts';
+    if (p.includes('contributor/reports')) return 'Reports & Files';
+    if (p.includes('/pkpb')) return 'Promise Kept · Promise Broken';
     if (p.includes('reports')) return 'Reports';
-    if (p.includes('data-upload')) return 'Upload Data';
+    if (p.includes('data-upload')) return 'Contributor Hub';
     if (p.includes('settings')) return 'Settings';
     return 'Dashboard';
   })();

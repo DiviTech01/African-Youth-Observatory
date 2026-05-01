@@ -12,6 +12,6 @@ import { R2Service } from './r2.service';
   ],
   controllers: [ContentController],
   providers: [ContentService, R2Service],
-  exports: [ContentService],
+  exports: [ContentService, R2Service],
 })
 export class ContentModule {}

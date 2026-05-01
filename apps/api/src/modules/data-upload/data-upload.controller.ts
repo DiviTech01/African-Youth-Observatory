@@ -36,6 +36,29 @@ export class DataUploadController {
     return rest;
   }
 
+  @Post('ayims-template')
+  @Roles('CONTRIBUTOR', 'ADMIN')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      'Upload an AYIMS Data Entry Template (e.g. Angola_AYIMS_Template_v1.xlsx). Country is auto-detected from the filename or sheet metadata. Generates a preview job that can be committed via /commit/:jobId, same as the generic uploader.',
+  })
+  async uploadAyims(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: any,
+    @Req() req: Request,
+  ) {
+    const userId = (req as any).user?.id || 'anonymous';
+    const job = await this.uploadService.uploadAyimsTemplate(file, userId, {
+      countryId: body?.countryId,
+      source: body?.source,
+      notes: body?.notes,
+    });
+    const { parsedValues, ...rest } = job as any;
+    return rest;
+  }
+
   @Get('preview/:jobId')
   @Roles('CONTRIBUTOR', 'ADMIN')
   @ApiOperation({ summary: 'Preview parsed data before committing' })
@@ -46,10 +69,55 @@ export class DataUploadController {
 
   @Post('commit/:jobId')
   @Roles('CONTRIBUTOR', 'ADMIN')
-  @ApiOperation({ summary: 'Commit previewed data to the database' })
+  @ApiOperation({ summary: 'Commit previewed data to the database. Dispatches to indicator or policy commit based on jobId prefix.' })
   async commitJob(@Param('jobId') jobId: string, @Req() req: Request) {
     const userId = (req as any).user?.id || '';
+    if (jobId.startsWith('pol_')) return this.uploadService.commitPoliciesJob(jobId, userId);
     return this.uploadService.commitJob(jobId, userId);
+  }
+
+  @Get('commit-status/:jobId')
+  @Roles('CONTRIBUTOR', 'ADMIN')
+  @ApiOperation({
+    summary: 'Live progress for an in-flight commit (current/total/percent/etaMs). Poll while waiting on /commit/:jobId.',
+  })
+  getCommitStatus(@Param('jobId') jobId: string, @Req() req: Request) {
+    const userId = (req as any).user?.id || '';
+    return this.uploadService.getCommitStatus(jobId, userId);
+  }
+
+  @Post('policies-database')
+  @Roles('CONTRIBUTOR', 'ADMIN')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      'Upload the African National Youth Policies Database (CSV/XLSX). Each country row is scored across 30 policy instruments using the AYC Composite Policy Index scoring rules (status × recency, with legal-marker bonus). Commit via /commit/:jobId.',
+  })
+  async uploadPolicies(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: any,
+    @Req() req: Request,
+  ) {
+    const userId = (req as any).user?.id || 'anonymous';
+    const job = await this.uploadService.uploadPoliciesDatabase(file, userId, {
+      source: body?.source,
+      notes: body?.notes,
+    });
+    // Limit records returned to keep payload manageable.
+    return {
+      ...job,
+      records: job.records.slice(0, 50),
+      recordCount: job.records.length,
+    };
+  }
+
+  @Get('preview-policies/:jobId')
+  @Roles('CONTRIBUTOR', 'ADMIN')
+  @ApiOperation({ summary: 'Full preview of a previewed policies job (all parsed records).' })
+  getPolicyPreview(@Param('jobId') jobId: string, @Req() req: Request) {
+    const userId = (req as any).user?.id || '';
+    return this.uploadService.getPolicyPreview(jobId, userId);
   }
 
   @Get('history')

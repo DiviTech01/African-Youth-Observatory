@@ -1,7 +1,8 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
-import { S3Client, PutObjectCommand, HeadBucketCommand } from '@aws-sdk/client-s3';
+import { Injectable, Logger, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { S3Client, PutObjectCommand, HeadBucketCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
+import { Readable } from 'stream';
 
 export interface R2HealthReport {
   configured: boolean;
@@ -106,5 +107,63 @@ export class R2Service {
     );
 
     return { url: `${this.publicBase}/${key}`, key };
+  }
+
+  async uploadFile(
+    file: Express.Multer.File,
+    prefix = 'documents',
+    options: { cacheControl?: string; cacheable?: boolean } = {},
+  ): Promise<{ key: string; url: string | null }> {
+    if (!this.client) {
+      throw new InternalServerErrorException('R2 is not configured on this server');
+    }
+    if (!file || !file.buffer) {
+      throw new InternalServerErrorException('No file buffer received');
+    }
+
+    const ext = extname(file.originalname || '').toLowerCase() || '.bin';
+    const key = `${prefix}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${ext}`;
+    const cacheControl =
+      options.cacheControl ?? (options.cacheable ? 'public, max-age=31536000, immutable' : 'private, no-cache');
+
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype || 'application/octet-stream',
+        CacheControl: cacheControl,
+      }),
+    );
+
+    return { key, url: this.publicBase ? `${this.publicBase}/${key}` : null };
+  }
+
+  async getObject(key: string): Promise<{ body: Readable; contentType: string; contentLength: number | null }> {
+    if (!this.client) {
+      throw new InternalServerErrorException('R2 is not configured on this server');
+    }
+    try {
+      const out = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      const body = out.Body as Readable | undefined;
+      if (!body) throw new NotFoundException('Empty object body');
+      return {
+        body,
+        contentType: out.ContentType || 'application/octet-stream',
+        contentLength: typeof out.ContentLength === 'number' ? out.ContentLength : null,
+      };
+    } catch (err: any) {
+      if (err?.name === 'NoSuchKey' || err?.$metadata?.httpStatusCode === 404) {
+        throw new NotFoundException(`Object not found: ${key}`);
+      }
+      throw err;
+    }
+  }
+
+  async deleteObject(key: string): Promise<void> {
+    if (!this.client) {
+      throw new InternalServerErrorException('R2 is not configured on this server');
+    }
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 }
