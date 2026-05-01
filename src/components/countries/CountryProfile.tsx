@@ -1,9 +1,35 @@
 
 import React, { useMemo, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const REPORTS_API = `${API_BASE}/country-reports`;
+
+interface RealCountryReport {
+  country: string;
+  iso3: string;
+  lastDataYear: number | null;
+  hasRealData: boolean;
+  real: {
+    literacyPct?: number;
+    tertiaryGerPct?: number;
+    secondaryCompletionPct?: number;
+    internetAccessPct?: number;
+    informalEmploymentPct?: number;
+    bankedPct?: number;
+    youthBulgePct?: number;
+    urbanPopPct?: number;
+    totalPopMillions?: number;
+    totalYouthMillions?: number;
+    hivYouthSharePct?: number;
+    ayemiScore?: number;
+    ayemiTier?: string;
+  };
+}
 import {
   Download,
   ExternalLink,
@@ -57,48 +83,79 @@ function seededRandom(seed: number, index: number): number {
   return x - Math.floor(x);
 }
 
-function generateData(country: string) {
+/**
+ * Build the chart-ready time-series for the country profile page. When
+ * `overrides` carries real values (from /api/country-reports/:slug), they
+ * win for the latest year — older years stay parametric until proper
+ * time-series ingestion lands. Fields with no real value remain parametric.
+ */
+function generateData(country: string, overrides?: RealCountryReport['real']) {
   const seed = hashCode(country);
+  const pickReal = <T extends number | undefined>(real: T, fallback: number): number =>
+    real != null ? Number(real) : fallback;
 
   const populationData = Array.from({ length: 10 }, (_, i) => {
-    const base = 8.5 + seededRandom(seed, i) * 4;
+    const isLatest = i === 9;
+    const parametricBase = 8.5 + seededRandom(seed, i) * 4 + i * 0.42;
+    const total = isLatest && overrides?.totalPopMillions != null
+      ? overrides.totalPopMillions
+      : +parametricBase.toFixed(1);
     return {
       year: `${2014 + i}`,
-      population: +(base + i * 0.42).toFixed(1),
-      male: +((base + i * 0.42) * (0.49 + seededRandom(seed, i + 100) * 0.04)).toFixed(1),
-      female: +((base + i * 0.42) * (0.47 + seededRandom(seed, i + 200) * 0.04)).toFixed(1),
+      population: total,
+      male: +(total * (0.49 + seededRandom(seed, i + 100) * 0.04)).toFixed(1),
+      female: +(total * (0.47 + seededRandom(seed, i + 200) * 0.04)).toFixed(1),
     };
   });
 
-  const educationData = Array.from({ length: 10 }, (_, i) => ({
-    year: `${2014 + i}`,
-    literacy: +(68 + i * 1.6 + seededRandom(seed, i + 300) * 3).toFixed(1),
-    secondaryEnrollment: +(55 + i * 1.8 + seededRandom(seed, i + 400) * 4).toFixed(1),
-    tertiaryEnrollment: +(10 + i * 1.0 + seededRandom(seed, i + 500) * 2).toFixed(1),
-  }));
+  const educationData = Array.from({ length: 10 }, (_, i) => {
+    const isLatest = i === 9;
+    return {
+      year: `${2014 + i}`,
+      literacy: isLatest
+        ? pickReal(overrides?.literacyPct, +(68 + i * 1.6 + seededRandom(seed, i + 300) * 3).toFixed(1))
+        : +(68 + i * 1.6 + seededRandom(seed, i + 300) * 3).toFixed(1),
+      secondaryEnrollment: isLatest
+        ? pickReal(overrides?.secondaryCompletionPct, +(55 + i * 1.8 + seededRandom(seed, i + 400) * 4).toFixed(1))
+        : +(55 + i * 1.8 + seededRandom(seed, i + 400) * 4).toFixed(1),
+      tertiaryEnrollment: isLatest
+        ? pickReal(overrides?.tertiaryGerPct, +(10 + i * 1.0 + seededRandom(seed, i + 500) * 2).toFixed(1))
+        : +(10 + i * 1.0 + seededRandom(seed, i + 500) * 2).toFixed(1),
+    };
+  });
 
   const healthData = [
     { indicator: 'Healthcare Access', value: +(60 + seededRandom(seed, 600) * 20).toFixed(1), benchmark: 75 },
-    { indicator: 'HIV Prev. (15-24)', value: +(1 + seededRandom(seed, 601) * 4).toFixed(1), benchmark: 2.5 },
+    { indicator: 'HIV Prev. (15-24)',
+      value: pickReal(overrides?.hivYouthSharePct, +(1 + seededRandom(seed, 601) * 4).toFixed(1)),
+      benchmark: 2.5 },
     { indicator: 'Mental Health Cov.', value: +(20 + seededRandom(seed, 602) * 25).toFixed(1), benchmark: 45 },
     { indicator: 'Health Insurance', value: +(30 + seededRandom(seed, 603) * 30).toFixed(1), benchmark: 55 },
     { indicator: 'Vaccination Rate', value: +(65 + seededRandom(seed, 604) * 25).toFixed(1), benchmark: 85 },
     { indicator: 'Nutrition Index', value: +(45 + seededRandom(seed, 605) * 35).toFixed(1), benchmark: 70 },
   ];
 
-  const employmentData = Array.from({ length: 10 }, (_, i) => ({
-    year: `${2014 + i}`,
-    employmentRate: +(32 + i * 1.2 + seededRandom(seed, i + 700) * 5).toFixed(1),
-    formalSector: +(18 + i * 0.8 + seededRandom(seed, i + 800) * 3).toFixed(1),
-    informalSector: +(14 + i * 0.4 + seededRandom(seed, i + 900) * 2).toFixed(1),
-  }));
+  const employmentData = Array.from({ length: 10 }, (_, i) => {
+    const isLatest = i === 9;
+    const informalReal = overrides?.informalEmploymentPct;
+    return {
+      year: `${2014 + i}`,
+      employmentRate: +(32 + i * 1.2 + seededRandom(seed, i + 700) * 5).toFixed(1),
+      formalSector: +(18 + i * 0.8 + seededRandom(seed, i + 800) * 3).toFixed(1),
+      informalSector: isLatest && informalReal != null
+        ? +informalReal.toFixed(1)
+        : +(14 + i * 0.4 + seededRandom(seed, i + 900) * 2).toFixed(1),
+    };
+  });
 
   const entrepreneurshipData = [
     { metric: 'Business Ownership', value: +(8 + seededRandom(seed, 1000) * 10).toFixed(1) },
     { metric: 'Startup Formation', value: +(2 + seededRandom(seed, 1001) * 5).toFixed(1) },
-    { metric: 'Capital Access', value: +(15 + seededRandom(seed, 1002) * 15).toFixed(1) },
+    { metric: 'Capital Access',
+      value: pickReal(overrides?.bankedPct, +(15 + seededRandom(seed, 1002) * 15).toFixed(1)) },
     { metric: '5-yr Survival', value: +(25 + seededRandom(seed, 1003) * 20).toFixed(1) },
-    { metric: 'Digital Business', value: +(5 + seededRandom(seed, 1004) * 12).toFixed(1) },
+    { metric: 'Digital Business',
+      value: pickReal(overrides?.internetAccessPct, +(5 + seededRandom(seed, 1004) * 12).toFixed(1)) },
     { metric: 'Export Readiness', value: +(3 + seededRandom(seed, 1005) * 8).toFixed(1) },
   ];
 
@@ -140,13 +197,34 @@ const chartColors = {
 };
 
 const CountryProfile = ({ country }: CountryProfileProps) => {
-  const data = useMemo(() => generateData(country), [country]);
+  // Fetch real data from /api/country-reports/:slug. The latest year of every
+  // chart series and the stat cards below override parametric placeholders
+  // with real values when the API returns them. Older years stay parametric
+  // until full time-series ingestion is wired.
+  const slug = country.toLowerCase().replace(/\s+/g, '-');
+  const { data: realReport } = useQuery<RealCountryReport | null>({
+    queryKey: ['country-profile-real', slug],
+    queryFn: async () => {
+      const res = await fetch(`${REPORTS_API}/${encodeURIComponent(slug)}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!slug,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const overrides = realReport?.real;
+  const data = useMemo(() => generateData(country, overrides), [country, overrides]);
   const seed = useMemo(() => hashCode(country), [country]);
 
-  /* Derive a few display values from seeded data */
+  /* Display values — prefer real, fall back to seeded parametric */
   const latestPop = data.populationData[data.populationData.length - 1].population;
-  const youthPct = (19 + seededRandom(seed, 50) * 5).toFixed(1);
-  const urbanPct = (50 + seededRandom(seed, 51) * 18).toFixed(1);
+  const youthPct = overrides?.youthBulgePct != null
+    ? overrides.youthBulgePct.toFixed(1)
+    : (19 + seededRandom(seed, 50) * 5).toFixed(1);
+  const urbanPct = overrides?.urbanPopPct != null
+    ? overrides.urbanPopPct.toFixed(1)
+    : (50 + seededRandom(seed, 51) * 18).toFixed(1);
   const genderRatio = (99 + Math.round(seededRandom(seed, 52) * 6)).toString();
 
   return (
