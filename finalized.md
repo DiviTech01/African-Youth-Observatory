@@ -701,7 +701,7 @@ count-up:     600ms ease-out (opacity 0→1, translateY 5px→0)
 ### Vite Config (`vite.config.ts`)
 ```typescript
 {
-  plugins: [react() /* SWC compiler */, componentTagger()],
+  plugins: [react() /* SWC compiler */],
   server: { port: 8080, host: '::' },
   resolve: {
     alias: { '@': './src' }

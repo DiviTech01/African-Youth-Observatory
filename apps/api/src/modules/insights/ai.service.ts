@@ -44,7 +44,12 @@ export class AiService {
   }
 
   getModel(): string {
-    return process.env.AI_MODEL || 'claude-sonnet-4-20250514';
+    // Default to a current Sonnet ID. The previous default
+    // (`claude-sonnet-4-20250514`) returned a 404 from Anthropic's API after
+    // the model registry rotated; downstream callers fell back to the rule-
+    // based engine even with a valid key. Override with AI_MODEL env if
+    // your account has a different model whitelisted.
+    return process.env.AI_MODEL || 'claude-sonnet-4-5';
   }
 
   /**

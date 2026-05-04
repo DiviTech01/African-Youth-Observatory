@@ -20,16 +20,22 @@ export const DriftBanner: React.FC<DriftBannerProps> = ({ onSynced }) => {
   const [drift, setDrift] = useState<DriftState>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  // Track the actual error so we can render an *informative* banner when the
+  // drift check fails — previously we silently rendered nothing on error,
+  // which left admins staring at the bare "No content entries" message with
+  // no way to act.
+  const [error, setError] = useState<string | null>(null);
 
   const check = async () => {
     setLoading(true);
+    setError(null);
     try {
       const keys = cmsRegistry.map((e) => e.key);
       const result = await contentApi.checkDrift(keys);
       setDrift(result);
-    } catch (err) {
-      // Swallow — the banner just won't render.
+    } catch (err: unknown) {
       setDrift(null);
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -57,7 +63,43 @@ export const DriftBanner: React.FC<DriftBannerProps> = ({ onSynced }) => {
     }
   };
 
-  if (loading || !drift) return null;
+  if (loading) return null;
+
+  // Drift check failed (most often the admin token is rejected). Render an
+  // actionable banner with both Retry and a Sync attempt — sometimes the
+  // token works for sync even when /drift fails, and either way the admin
+  // sees the actual error message instead of an empty page.
+  if (error) {
+    return (
+      <div className="flex items-start justify-between gap-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs">
+        <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <div className="font-semibold">CMS registry check failed</div>
+            <div className="mt-0.5 text-red-700/80 dark:text-red-300/80">
+              The backend rejected the drift-check request. If you're signed in as
+              an ADMIN, this usually means your session token expired or your
+              account isn't promoted to ADMIN yet.
+            </div>
+            <div className="mt-1 font-mono text-[10px] text-red-800 dark:text-red-200 break-all">
+              {error}
+            </div>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <Button size="sm" variant="outline" onClick={check} className="h-7">
+            <RefreshCw className="mr-1 h-3 w-3" /> Retry
+          </Button>
+          <Button size="sm" onClick={sync} disabled={syncing} className="h-7">
+            <RefreshCw className={`mr-1 h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing…' : 'Try sync'}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!drift) return null;
 
   const { missing, orphaned } = drift;
   const inSync = missing.length === 0 && orphaned.length === 0;

@@ -1,17 +1,36 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { Type } from 'class-transformer';
+import { IsArray, IsIn, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { AiChatService } from './ai-chat.service';
 import { Public } from '../auth/decorators/public.decorator';
 
+// The global ValidationPipe runs with `whitelist + forbidNonWhitelisted`, which
+// silently drops any DTO field that isn't decorated with a class-validator
+// rule and then rejects the request as "property … should not exist". So
+// every accepted field needs a decorator below — without them, the AI chat
+// endpoint returned 400 even on well-formed payloads.
 class ChatHistoryItem {
+  @IsIn(['user', 'assistant'])
   role: 'user' | 'assistant';
+
+  @IsString()
   content: string;
 }
 
 class AiChatDto {
+  @IsString()
   message: string;
+
+  @IsOptional()
+  @IsString()
   context?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ChatHistoryItem)
   history?: ChatHistoryItem[];
 }
 

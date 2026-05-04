@@ -76,7 +76,7 @@ const adminLinks = [
 const dataLinks = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { to: '/dashboard/explore', label: 'Data Explorer', icon: Search },
-  { to: '/dashboard/countries', label: 'Countries', icon: Globe },
+  { to: '/dashboard/countries', label: 'Report Cards', icon: Globe },
   { to: '/dashboard/themes', label: 'Themes', icon: Layers },
   { to: '/dashboard/youth-index', label: 'Youth Index', icon: BarChart3 },
   { to: '/dashboard/compare', label: 'Compare', icon: ArrowLeftRight },
@@ -467,7 +467,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     if (p === '/admin') return 'Admin Panel';
     if (p === '/dashboard') return 'Overview';
     if (p.includes('explore')) return 'Data Explorer';
-    if (p.includes('countries')) return 'Countries';
+    if (p.includes('countries')) return 'Report Cards';
     if (p.includes('themes')) return 'Themes';
     if (p.includes('youth-index')) return 'Youth Index';
     if (p.includes('compare')) return 'Compare';

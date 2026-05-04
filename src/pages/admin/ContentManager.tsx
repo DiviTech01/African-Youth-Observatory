@@ -9,6 +9,9 @@ import {
   Eye,
   ChevronRight,
   Layers,
+  RefreshCw,
+  AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -40,6 +43,8 @@ import {
 import EntryEditor from '@/components/admin/cms/EntryEditor';
 import DriftBanner from '@/components/admin/cms/DriftBanner';
 import StorageStatusBanner from '@/components/admin/cms/StorageStatusBanner';
+import { cmsRegistry } from '@/cms/registry';
+import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 type StatusFilter = 'all' | 'published' | 'draft' | 'new';
@@ -77,6 +82,13 @@ const ContentManager: React.FC = () => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
+  // Error state from the load calls — exposed to the UI so the empty
+  // state can distinguish "nothing seeded yet" from "we couldn't reach
+  // the API / your token was rejected". Without this the page silently
+  // showed the same "No content entries" state for both cases.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
   const isAdmin = user?.role === 'ADMIN';
 
   const loadTree = async () => {
@@ -84,8 +96,9 @@ const ContentManager: React.FC = () => {
     try {
       const data = await contentApi.listPages();
       setTree(data);
-    } catch {
+    } catch (err) {
       setTree([]);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load page tree');
     } finally {
       setTreeLoading(false);
     }
@@ -93,6 +106,7 @@ const ContentManager: React.FC = () => {
 
   const loadEntries = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await contentApi.listEntries({
         search: search || undefined,
@@ -103,10 +117,35 @@ const ContentManager: React.FC = () => {
         pageSize: 500,
       });
       setRows(res.data);
-    } catch {
+    } catch (err) {
       setRows([]);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load entries');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // One-click registry sync — pushes every <Content id="…"/> key declared in
+  // src/cms/pages/*.ts to the backend. Idempotent: existing entries keep
+  // their drafts and published versions; only metadata updates. After a
+  // successful sync, both tree and entry list refetch so the table fills
+  // with the just-created rows. This replaces the docs' instruction to run
+  // `npm run cms:sync` from a separate terminal — admins are already
+  // authenticated on this page, so we use their session.
+  const syncNow = async () => {
+    setSyncing(true);
+    try {
+      const result = await contentApi.syncRegistry(cmsRegistry);
+      toast({
+        title: 'Registry synced',
+        description: `Created ${result.created} · updated ${result.updated} · total ${result.total}`,
+      });
+      await Promise.all([loadTree(), loadEntries()]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sync failed';
+      toast({ title: 'Sync failed', description: message, variant: 'destructive' });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -323,23 +362,58 @@ const ContentManager: React.FC = () => {
                 ) : rows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="py-10">
-                      <div className="text-center space-y-3 max-w-md mx-auto">
-                        <FileText className="h-10 w-10 text-muted-foreground/50 mx-auto" />
-                        <div>
-                          <p className="text-sm font-medium text-foreground">No content entries to edit yet</p>
-                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                            The CMS lists every <span className="font-mono text-foreground/80">&lt;Content id=&quot;…&quot;/&gt;</span> key found in the codebase
-                            (page titles, button labels, footer copy, etc). Two reasons this list could be empty:
+                      {loadError ? (
+                        // Auth / network failure — show the diagnostic so the
+                        // admin doesn't waste time wondering if it's data or
+                        // permissions. The Sync button is still offered (it'll
+                        // hit the same auth path; if it succeeds, great).
+                        <div className="text-center space-y-3 max-w-md mx-auto">
+                          <AlertTriangle className="h-10 w-10 text-amber-500/70 mx-auto" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Couldn't load content entries</p>
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                              The backend rejected the request. This is almost always an
+                              admin-token problem — sign out, sign back in as an ADMIN, then
+                              return here.
+                            </p>
+                            <p className="font-mono text-[10px] text-amber-600 dark:text-amber-400 mt-2 break-all">
+                              {loadError}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                            <Button size="sm" variant="outline" onClick={() => { loadTree(); loadEntries(); }}>
+                              <RefreshCw className="mr-1 h-3.5 w-3.5" /> Retry
+                            </Button>
+                            <Button size="sm" onClick={syncNow} disabled={syncing}>
+                              <Sparkles className={`mr-1 h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                              {syncing ? 'Syncing…' : `Sync ${cmsRegistry.length} keys anyway`}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        // Happy path — the API responded, just nothing's there.
+                        // Offer one-click registry seeding right here so the
+                        // admin doesn't need to drop into a terminal.
+                        <div className="text-center space-y-3 max-w-md mx-auto">
+                          <Sparkles className="h-10 w-10 text-[#D4A017]/70 mx-auto" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Your CMS hasn't been seeded yet</p>
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                              The codebase declares <span className="font-semibold text-foreground">{cmsRegistry.length} editable keys</span>
+                              {' '}across pages — hero titles, CTA labels, footer copy, etc. Click the
+                              button below to register them with the backend so they appear here for
+                              editing.
+                            </p>
+                          </div>
+                          <Button onClick={syncNow} disabled={syncing} className="gap-1.5">
+                            <Sparkles className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                            {syncing ? 'Syncing…' : `Sync ${cmsRegistry.length} entries now`}
+                          </Button>
+                          <p className="text-[10px] text-muted-foreground italic pt-1">
+                            Sync is idempotent — running it again never overwrites your edits.
                           </p>
                         </div>
-                        <ul className="text-left text-xs text-muted-foreground space-y-1.5 pl-4 list-disc">
-                          <li><span className="text-foreground">Backend connection</span> — the API token may be rejected. Check the storage banner above and the server console.</li>
-                          <li><span className="text-foreground">Keys not synced</span> — run <span className="font-mono bg-muted px-1.5 py-0.5 rounded">npm run cms:sync</span> from the project root to register all keys from the codebase to the backend.</li>
-                        </ul>
-                        <p className="text-[11px] text-muted-foreground italic pt-2">
-                          Once entries appear, click any row to edit text, rich text, or images and publish changes live.
-                        </p>
-                      </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (
