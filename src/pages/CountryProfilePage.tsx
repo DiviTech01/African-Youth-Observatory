@@ -1,37 +1,18 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
-import CountryReportCard from '@/pages/CountryReportCard';
-import { useCountryReportData } from '@/hooks/useCountryReportData';
+import { Navigate, useParams } from 'react-router-dom';
 
 /**
- * Wrapper page for /countries/:id route.
+ * Wrapper page for /dashboard/countries/:id and /countries/:id.
  *
- * `id` is a country slug (e.g. "nigeria", "south-africa"). The useCountryReportData
- * hook overlays real IndicatorValue data on top of the parametric defaults — any
- * field with a real number wins, the rest stay parametric. The PKPB page handles
- * its own additional layer for uploaded document summaries.
+ * The "country report card" is now exclusively the PKPB document (or its
+ * "Coming soon" placeholder when no upload exists yet) — there's no
+ * parametric, generic Nigeria-template fallback. Forward to the canonical
+ * PKPB country route so the same logic owns rendering for every entry point.
  */
 const CountryProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { report, isLoading } = useCountryReportData(id);
-
-  if (isLoading && !report) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!report) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">No report card available for "{id}".</p>
-      </div>
-    );
-  }
-
-  return <CountryReportCard country={report.country} reportOverride={report} />;
+  if (!id) return <Navigate to="/dashboard/pkpb" replace />;
+  return <Navigate to={`/dashboard/pkpb/${id}`} replace />;
 };
 
 export default CountryProfilePage;

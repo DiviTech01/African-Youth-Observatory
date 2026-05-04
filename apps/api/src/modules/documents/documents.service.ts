@@ -151,20 +151,43 @@ export class DocumentsService {
   }
 
   /**
-   * Latest published PKPB report for a country. Used by the PKPB country page.
-   * Country lookup accepts either Prisma id, ISO3 code, or country name.
+   * Latest published PKPB report(s) for a country. The page renders the HTML
+   * version inline (with animations) and routes the Download button to the PDF
+   * when one is on file. We return both formats so the frontend can decide:
+   *
+   *   - HTML only           → render inline + offer the HTML for download
+   *   - PDF only            → show "HTML coming soon" placeholder + offer PDF
+   *   - HTML + PDF on file  → render HTML inline, Download button serves the PDF
+   *   - Neither             → "Coming soon" placeholder (no upload yet)
+   *
+   * `document` stays for backward compatibility — it's the freshest of any
+   * format and matches the previous shape of this endpoint.
    */
   async getLatestPkpbForCountry(countryRef: string) {
     const country = await this.resolveCountry(countryRef);
     if (!country) throw new NotFoundException(`Country not found: ${countryRef}`);
 
-    const doc = await this.prisma.document.findFirst({
+    const docs = await this.prisma.document.findMany({
       where: { countryId: country.id, type: 'PKPB_REPORT', status: 'PUBLISHED' },
       orderBy: [{ year: 'desc' }, { createdAt: 'desc' }],
       include: { country: { select: { id: true, name: true, isoCode3: true } } },
     });
 
-    return { country, document: doc ? this.serialize(doc) : null };
+    const isHtml = (d: { mimeType: string | null; originalFilename: string }) =>
+      /text\/html|xhtml/i.test(d.mimeType ?? '') || /\.(html?|xhtml)$/i.test(d.originalFilename);
+    const isPdf = (d: { mimeType: string | null; originalFilename: string }) =>
+      /application\/pdf/i.test(d.mimeType ?? '') || /\.pdf$/i.test(d.originalFilename);
+
+    const html = docs.find(isHtml) ?? null;
+    const pdf = docs.find(isPdf) ?? null;
+    const latest = docs[0] ?? null;
+
+    return {
+      country,
+      document: latest ? this.serialize(latest) : null,
+      htmlDocument: html ? this.serialize(html) : null,
+      pdfDocument: pdf ? this.serialize(pdf) : null,
+    };
   }
 
   async getDownloadStream(id: string) {

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -409,6 +409,7 @@ function DocumentFlow({
   defaultCountryId?: string;
   defaultType?: DocType;
 }) {
+  const queryClient = useQueryClient();
   const { data: countriesData } = useCountries();
   // useCountries returns either an array or a paginated wrapper depending on backend; normalize.
   const countries: any[] = useMemo(() => {
@@ -551,6 +552,20 @@ function DocumentFlow({
         },
       });
       setResult(res);
+
+      // Drop every cache that depends on the documents collection so the PKPB
+      // index, contributor reports list, country list, and per-country PKPB
+      // page all refetch the moment the contributor visits them. Without this
+      // the user sees stale "Awaiting upload" badges right after a successful
+      // upload.
+      queryClient.invalidateQueries({ queryKey: ['pkpb-index'] });
+      queryClient.invalidateQueries({ queryKey: ['contributor-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['pkpb-by-country'] });
+      if (res?.country?.name) {
+        const slug = res.country.name.toLowerCase().replace(/\s+/g, '-');
+        queryClient.invalidateQueries({ queryKey: ['pkpb', slug] });
+        queryClient.invalidateQueries({ queryKey: ['pkpb', res.country.id] });
+      }
     } catch (err: any) {
       setError(err.message || 'Upload failed');
     } finally {

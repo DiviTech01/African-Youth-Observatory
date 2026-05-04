@@ -15,6 +15,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { authHeader } from '@/lib/supabase-token';
+import { usePkpbUploads } from '@/hooks/usePkpbUploads';
+import { useCountries } from '@/hooks/useData';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const DOCS_API = `${API_BASE}/documents`;
@@ -72,6 +74,9 @@ const ContributorReports: React.FC = () => {
   const [confirmDelete, setConfirmDelete] = useState<DocumentRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Always pull fresh data when this route is visited — the previous default
+  // behavior could surface a cached "0 uploads" state if the API had been
+  // unreachable on the first mount.
   const { data: docs, isLoading } = useQuery<DocumentRecord[]>({
     queryKey: ['contributor-documents'],
     queryFn: async () => {
@@ -80,6 +85,10 @@ const ContributorReports: React.FC = () => {
       return res.json();
     },
     refetchInterval: 30000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    retry: 2,
   });
 
   const all = docs ?? [];
@@ -101,8 +110,27 @@ const ContributorReports: React.FC = () => {
   }, [all, search, filterType]);
 
   const totalSize = useMemo(() => all.reduce((s, d) => s + d.fileSize, 0), [all]);
-  const pkpbCount = all.filter((d) => d.type === 'PKPB_REPORT').length;
   const myCount = user ? all.filter((d) => d.uploadedById === user.id).length : 0;
+
+  // PKPB country coverage — shared with the PKPB index page via the
+  // `usePkpbUploads` hook so the two pages always agree on the counts. The
+  // upload form invalidates the same query key on success, so a fresh
+  // upload bumps the right cell up and "Awaiting" down here too. We track
+  // HTML and PDF separately so contributors can see the actual format-level
+  // progress across the 54 × 2 potential uploads.
+  const pkpbUploads = usePkpbUploads();
+  const { data: countriesData } = useCountries();
+  const totalCountries = useMemo(() => {
+    if (!countriesData) return 0;
+    if (Array.isArray(countriesData)) return countriesData.length;
+    if (Array.isArray((countriesData as any).data)) return (countriesData as any).data.length;
+    return 0;
+  }, [countriesData]);
+  const coveredCountries = pkpbUploads.count;
+  const awaitingCountries = Math.max(0, totalCountries - coveredCountries);
+  const htmlCountries = pkpbUploads.htmlCount;
+  const pdfCountries = pkpbUploads.pdfCount;
+  const completeCountries = pkpbUploads.completeCount;
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
@@ -145,17 +173,46 @@ const ContributorReports: React.FC = () => {
         </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Stats — country counts come from the shared `usePkpbUploads` hook so
+          they stay in lockstep with the PKPB index page and refresh the moment
+          a new PKPB upload completes (DataUpload invalidates the same key).
+          HTML and PDF are tracked independently because the rendered country
+          page needs HTML for the animated render and PDF for download —
+          contributors need to see exactly which format is missing per
+          country, not a single rolled-up "uploaded" count. */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Total documents', value: all.length.toString(), accent: '#D4A017' },
-          { label: 'PKPB reports', value: pkpbCount.toString(), accent: '#22C55E' },
-          { label: 'My uploads', value: myCount.toString(), accent: '#3B82F6' },
-          { label: 'Storage used', value: fmtBytes(totalSize), accent: '#A855F7' },
+          { label: 'Total documents', value: all.length.toString(), accent: '#D4A017', sub: 'every uploaded file' },
+          {
+            label: 'HTML on file',
+            value: `${htmlCountries}${totalCountries ? ` / ${totalCountries}` : ''}`,
+            accent: '#22C55E',
+            sub: 'animated render',
+          },
+          {
+            label: 'PDF on file',
+            value: `${pdfCountries}${totalCountries ? ` / ${totalCountries}` : ''}`,
+            accent: '#0EA5E9',
+            sub: 'downloadable archive',
+          },
+          {
+            label: 'Complete',
+            value: `${completeCountries}${totalCountries ? ` / ${totalCountries}` : ''}`,
+            accent: '#A855F7',
+            sub: 'HTML + PDF both',
+          },
+          {
+            label: 'Awaiting',
+            value: awaitingCountries.toString(),
+            accent: '#F59E0B',
+            sub: 'no upload yet',
+          },
+          { label: 'My uploads', value: myCount.toString(), accent: '#3B82F6', sub: 'this account' },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl p-4 bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-gray-800/80">
             <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: s.accent }}>{s.value}</p>
             <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mt-1">{s.label}</p>
+            <p className="text-[10px] text-gray-600 mt-0.5">{s.sub}</p>
           </div>
         ))}
       </div>
