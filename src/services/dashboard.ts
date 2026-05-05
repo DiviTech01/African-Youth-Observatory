@@ -1,10 +1,13 @@
 // ============================================
 // AFRICAN YOUTH OBSERVATORY - DASHBOARD SERVICE
-// Customizable dashboard configuration and management
 // ============================================
-
-import { generateYouthIndexData } from '@/types/mockData';
-import { AFRICAN_COUNTRIES, THEMES, INDICATORS } from '@/types';
+// Customizable dashboard configuration + widget rendering.
+//
+// All widget data comes from the live API via `DashboardRealData`. The
+// legacy `generateYouthIndexData` mock generator and the hardcoded
+// `AFRICAN_COUNTRIES` / `THEMES` / `INDICATORS` constants are no longer
+// imported here — per admin directive the dashboard surfaces only data
+// that contributors have actually uploaded, with "—" where missing.
 
 // ============================================
 // TYPES
@@ -603,12 +606,70 @@ export interface WidgetData {
   };
 }
 
-// Generate data for a widget based on its type and config
-export function getWidgetData(widget: DashboardWidget): WidgetData {
+/**
+ * Real data injected by `DashboardBuilder` after fetching from the API.
+ * When provided, `getWidgetData` reads from these arrays instead of the
+ * synthetic mock generator — so dashboard widgets reflect what's actually
+ * in the database (uploaded AYIMS values + computed youth-index rankings).
+ *
+ * Shape mirrors the mock so existing widget cases keep working unchanged.
+ */
+export interface DashboardRealData {
+  /** Flat list of YouthIndex rows across every fetched year. Each row
+   *  carries `year`, `countryId`, `indexScore`, plus per-dimension scores. */
+  youthIndex: Array<{
+    countryId: string;
+    year: number;
+    indexScore: number;
+    educationScore: number;
+    healthScore: number;
+    employmentScore: number;
+    civicScore: number;
+    innovationScore: number;
+  }>;
+  /** Real countries from `/api/countries` (cuid id, region, flagEmoji…). */
+  countries: Array<{
+    id: string;
+    name: string;
+    region?: string;
+    flagEmoji?: string;
+  }>;
+  /** Real themes from `/api/themes`. */
+  themes: Array<{ id: string; name: string; slug?: string; color?: string }>;
+  /** Real indicators from `/api/indicators`. */
+  indicators: Array<{ id: string; name: string; themeId: string }>;
+}
+
+// Generate data for a widget based on its type and config.
+//
+// Per admin directive: NO MOCK DATA. If `real` is not provided (i.e. the
+// data fetch hasn't resolved yet or errored), every widget returns an
+// empty data array and `dataPoints: 0` — the renderer surfaces that as
+// "—" / loading state instead of fabricating numbers. The dashboard
+// never displays synthesised values.
+export function getWidgetData(
+  widget: DashboardWidget,
+  real?: DashboardRealData,
+): WidgetData {
   const year = widget.config.year || 2024;
-  const youthIndexData = generateYouthIndexData();
-  const indicators = INDICATORS;
-  
+
+  // No real data yet → empty payload. Widget renderers handle this by
+  // showing the dash-fallback skeleton state.
+  if (!real) {
+    return {
+      type: widget.type,
+      data: null,
+      meta: { year, updatedAt: new Date().toISOString(), dataPoints: 0 },
+    };
+  }
+
+  const youthIndexData = real.youthIndex;
+  const countriesList = real.countries;
+  const themesList = real.themes;
+  const indicatorsList = real.indicators;
+  // Legacy alias kept so theme-breakdown's per-theme indicator counts work.
+  const indicators = indicatorsList;
+
   const yearData = youthIndexData.filter(d => d.year === year);
   const sortedByScore = [...yearData].sort((a, b) => b.indexScore - a.indexScore);
   
@@ -620,7 +681,7 @@ export function getWidgetData(widget: DashboardWidget): WidgetData {
       data = sortedByScore.slice(0, widget.config.limit || 10).map((d, i) => ({
         rank: i + 1,
         countryId: d.countryId,
-        countryName: AFRICAN_COUNTRIES.find(c => c.id === d.countryId)?.name || d.countryId,
+        countryName: countriesList.find(c => c.id === d.countryId)?.name || d.countryId,
         score: d.indexScore,
         educationScore: d.educationScore,
         healthScore: d.healthScore,
@@ -633,9 +694,9 @@ export function getWidgetData(widget: DashboardWidget): WidgetData {
       data = sortedByScore.slice(0, widget.config.limit || 5).map((d, i) => ({
         rank: i + 1,
         countryId: d.countryId,
-        countryName: AFRICAN_COUNTRIES.find(c => c.id === d.countryId)?.name || d.countryId,
+        countryName: countriesList.find(c => c.id === d.countryId)?.name || d.countryId,
         score: d.indexScore,
-        flag: AFRICAN_COUNTRIES.find(c => c.id === d.countryId)?.flagEmoji,
+        flag: countriesList.find(c => c.id === d.countryId)?.flagEmoji,
       }));
       dataPoints = data.length;
       break;
@@ -644,9 +705,9 @@ export function getWidgetData(widget: DashboardWidget): WidgetData {
       data = sortedByScore.slice(-widget.config.limit || -5).reverse().map((d, i) => ({
         rank: sortedByScore.length - (widget.config.limit || 5) + i + 1,
         countryId: d.countryId,
-        countryName: AFRICAN_COUNTRIES.find(c => c.id === d.countryId)?.name || d.countryId,
+        countryName: countriesList.find(c => c.id === d.countryId)?.name || d.countryId,
         score: d.indexScore,
-        flag: AFRICAN_COUNTRIES.find(c => c.id === d.countryId)?.flagEmoji,
+        flag: countriesList.find(c => c.id === d.countryId)?.flagEmoji,
       }));
       dataPoints = data.length;
       break;
@@ -654,7 +715,7 @@ export function getWidgetData(widget: DashboardWidget): WidgetData {
     case 'regional-comparison':
       const regions = ['North Africa', 'West Africa', 'East Africa', 'Central Africa', 'Southern Africa'];
       data = regions.map(region => {
-        const regionCountries = AFRICAN_COUNTRIES.filter(c => c.region === region);
+        const regionCountries = countriesList.filter(c => c.region === region);
         const regionData = yearData.filter(d => regionCountries.some(c => c.id === d.countryId));
         const avgScore = regionData.length > 0 
           ? regionData.reduce((sum, d) => sum + d.indexScore, 0) / regionData.length 
@@ -676,20 +737,20 @@ export function getWidgetData(widget: DashboardWidget): WidgetData {
       const avgEmployment = yearData.reduce((sum, d) => sum + d.employmentScore, 0) / yearData.length;
       
       data = {
-        totalCountries: AFRICAN_COUNTRIES.length,
+        totalCountries: countriesList.length,
         averageScore: Math.round(avgScore * 10) / 10,
         averageEducation: Math.round(avgEducation * 10) / 10,
         averageHealth: Math.round(avgHealth * 10) / 10,
         averageEmployment: Math.round(avgEmployment * 10) / 10,
         totalIndicators: indicators.length,
-        totalThemes: THEMES.length,
+        totalThemes: themesList.length,
         dataYear: year,
       };
       dataPoints = 8;
       break;
       
     case 'theme-breakdown':
-      data = THEMES.map(theme => {
+      data = themesList.map(theme => {
         const themeIndicators = indicators.filter(i => i.themeId === theme.id);
         return {
           themeId: theme.id,
@@ -717,7 +778,7 @@ export function getWidgetData(widget: DashboardWidget): WidgetData {
       
     case 'country-spotlight':
       const countryId = widget.config.countryId || 'NG';
-      const country = AFRICAN_COUNTRIES.find(c => c.id === countryId);
+      const country = countriesList.find(c => c.id === countryId);
       const countryData = yearData.find(d => d.countryId === countryId);
       const rank = sortedByScore.findIndex(d => d.countryId === countryId) + 1;
       
@@ -746,7 +807,7 @@ export function getWidgetData(widget: DashboardWidget): WidgetData {
       
     case 'data-table':
       data = sortedByScore.slice(0, widget.config.limit || 20).map((d, i) => {
-        const country = AFRICAN_COUNTRIES.find(c => c.id === d.countryId);
+        const country = countriesList.find(c => c.id === d.countryId);
         return {
           rank: i + 1,
           countryId: d.countryId,
@@ -765,7 +826,7 @@ export function getWidgetData(widget: DashboardWidget): WidgetData {
       
     case 'map-overview':
       data = yearData.map(d => {
-        const country = AFRICAN_COUNTRIES.find(c => c.id === d.countryId);
+        const country = countriesList.find(c => c.id === d.countryId);
         return {
           countryId: d.countryId,
           countryName: country?.name,

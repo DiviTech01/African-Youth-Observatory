@@ -80,11 +80,14 @@ import {
   removeWidget,
   updateWidget,
   getWidgetData,
+  type DashboardRealData,
 } from '@/services/dashboard';
 import { getHighPriorityInsights } from '@/services/insights';
 import { InsightCard } from '@/components/insights';
 import { AFRICAN_COUNTRIES, THEMES } from '@/types';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { authHeader } from '@/lib/supabase-token';
 
 // ============================================
 // WIDGET ICON MAPPING
@@ -412,10 +415,91 @@ const WidgetContent: React.FC<WidgetContentProps> = ({ widget, data, isEditing }
 // WIDGET CARD COMPONENT
 // ============================================
 
+/**
+ * Fetches the real-database data the dashboard needs once per render —
+ * youth-index rankings (across multiple years for trend widgets), the
+ * canonical country / theme / indicator catalogs from the API. Returns
+ * `null` while fetching or on error so the consumer can fall back to the
+ * synchronous mock generator and the dashboard never blanks out.
+ */
+const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api';
+const DASHBOARD_YEARS = [2006, 2016, 2020, 2021, 2022, 2023, 2024, 2025];
+
+function useDashboardRealData(): DashboardRealData | null {
+  const headers = authHeader();
+  const fetchJson = async (path: string) => {
+    const res = await fetch(`${API_BASE}${path}`, { headers });
+    if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`);
+    return res.json();
+  };
+
+  const rankings = useQuery({
+    queryKey: ['dashboard-real-data', 'rankings', DASHBOARD_YEARS],
+    queryFn: async () => {
+      // The API returns {data, meta} per year. We flatten across years and
+      // tag each row with its year so getWidgetData's filter-by-year logic
+      // keeps working unchanged.
+      const perYear = await Promise.all(
+        DASHBOARD_YEARS.map(async (year) => {
+          const j = await fetchJson(`/youth-index/rankings?year=${year}`);
+          const rows: any[] = Array.isArray(j) ? j : (j.data ?? []);
+          // The real API ships `overallScore` per row plus a flat
+          // `educationScore` / `healthScore` / etc. set; the legacy
+          // dashboard service expects `indexScore`. Map both naming
+          // conventions so getWidgetData reads real numbers without any
+          // change to its rank/sort logic.
+          return rows.map((r) => ({
+            countryId: r.countryId ?? r.country?.id,
+            year,
+            indexScore: r.overallScore ?? r.indexScore ?? r.score ?? 0,
+            educationScore: r.educationScore ?? r.dimensions?.education ?? 0,
+            healthScore: r.healthScore ?? r.dimensions?.health ?? 0,
+            employmentScore: r.employmentScore ?? r.dimensions?.employment ?? 0,
+            civicScore: r.civicScore ?? r.dimensions?.civic ?? 0,
+            innovationScore: r.innovationScore ?? r.dimensions?.innovation ?? 0,
+          }));
+        }),
+      );
+      return perYear.flat();
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const countries = useQuery({
+    queryKey: ['dashboard-real-data', 'countries'],
+    queryFn: () => fetchJson('/countries'),
+    staleTime: 60 * 60_000,
+  });
+
+  const themes = useQuery({
+    queryKey: ['dashboard-real-data', 'themes'],
+    queryFn: () => fetchJson('/themes'),
+    staleTime: 60 * 60_000,
+  });
+
+  const indicators = useQuery({
+    queryKey: ['dashboard-real-data', 'indicators'],
+    queryFn: () => fetchJson('/indicators'),
+    staleTime: 60 * 60_000,
+  });
+
+  if (rankings.isError || countries.isError || themes.isError || indicators.isError) return null;
+  if (!rankings.data || !countries.data || !themes.data || !indicators.data) return null;
+
+  const unwrap = (v: any) => (Array.isArray(v) ? v : (v?.data ?? []));
+  return {
+    youthIndex: rankings.data,
+    countries: unwrap(countries.data),
+    themes: unwrap(themes.data),
+    indicators: unwrap(indicators.data),
+  };
+}
+
 interface DashboardWidgetCardProps {
   widget: DashboardWidget;
   dashboardId: string;
   isEditing: boolean;
+  realData: DashboardRealData | null;
   onRemove: () => void;
   onUpdate: (updates: Partial<Pick<DashboardWidget, 'title' | 'size' | 'config'>>) => void;
 }
@@ -424,11 +508,18 @@ const DashboardWidgetCard: React.FC<DashboardWidgetCardProps> = ({
   widget,
   dashboardId,
   isEditing,
+  realData,
   onRemove,
   onUpdate,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const data = useMemo(() => getWidgetData(widget), [widget]);
+  // When the real-data fetch hasn't resolved (or errored), fall back to the
+  // synchronous mock so the dashboard always renders something. Once real
+  // data arrives the widget re-renders with the live numbers.
+  const data = useMemo(
+    () => getWidgetData(widget, realData ?? undefined),
+    [widget, realData],
+  );
   
   return (
     <Card className={cn(
@@ -681,6 +772,11 @@ const DashboardBuilder: React.FC = () => {
   const [activeDashboard, setActiveDashboardState] = useState<DashboardConfig>(() => getActiveDashboard());
   const [isEditing, setIsEditing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Fetched once per dashboard render and shared across every widget card —
+  // youth-index rankings (real, computed from uploaded AYIMS values),
+  // countries / themes / indicators catalogs. Each widget card prefers
+  // these over the legacy mock generator.
+  const realData = useDashboardRealData();
   
   const refresh = useCallback(() => {
     setRefreshKey(k => k + 1);
@@ -796,6 +892,7 @@ const DashboardBuilder: React.FC = () => {
               widget={widget}
               dashboardId={activeDashboard.id}
               isEditing={isEditing}
+              realData={realData}
               onRemove={() => handleRemoveWidget(widget.id)}
               onUpdate={(updates) => handleUpdateWidget(widget.id, updates)}
             />

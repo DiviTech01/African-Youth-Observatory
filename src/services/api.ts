@@ -1,8 +1,19 @@
 // ============================================
-// AFRICAN YOUTH OBSERVATORY - API SERVICE
-// Centralized data fetching & state management
+// AFRICAN YOUTH OBSERVATORY — REAL API SERVICE
 // ============================================
+//
+// Every method here makes a live HTTP call to the NestJS backend at
+// /api/... and returns the response with no synthesised values, no
+// fallbacks, and no mock data. If a record doesn't exist for a country,
+// indicator, or year, the API returns null/empty and consumers render a
+// "—" placeholder. This is by admin command: the platform must surface
+// only data that contributors have actually uploaded.
+//
+// Method signatures preserve the legacy mock layer's shape (`getAll`,
+// `getById`, etc.) so every consumer in `src/hooks/useData.ts` and the
+// pages it powers picks up real data automatically with no edits.
 
+import { authHeader } from '@/lib/supabase-token';
 import type {
   Country,
   Theme,
@@ -19,378 +30,271 @@ import type {
   TimeSeriesDataPoint,
   MapDataPoint,
   RegionType,
-  GenderType,
 } from '@/types';
 
-import {
-  AFRICAN_COUNTRIES,
-  THEMES,
-  INDICATORS,
-  REGIONS,
-  getCountryById,
-  getCountryByIsoCode,
-  getCountriesByRegion,
-  getThemeById,
-  getIndicatorById,
-  getIndicatorsByTheme,
-} from '@/types';
+// ─── Base URL resolution ─────────────────────────────────────────────────
+// In dev the Vite proxy forwards /api → http://localhost:3001. On Cloudflare
+// Pages there's no proxy, so we resolve to the Render-hosted production API
+// when the build is served from anywhere other than localhost.
+const RENDER_API_URL = 'https://african-youth-observatory.onrender.com/api';
 
-import {
-  getIndicatorValues,
-  generateYouthIndexData,
-  getIndicatorValuesByCountry,
-  getIndicatorValuesByIndicator,
-  getTimeSeriesData,
-  getComparisonData,
-  getMapData,
-  getCountryStats,
-  getThemeStats,
-  getPlatformStats,
-  compareCountries,
-  formatTimeSeriesForChart,
-  formatBarChartData,
-  formatRegionalData,
-} from '@/types';
+function resolveApiBase(): string {
+  const viteUrl = (import.meta as any).env?.VITE_API_URL as string | undefined;
+  if (viteUrl && /^https?:\/\//i.test(viteUrl)) return viteUrl;
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
+    if (!isLocal) return RENDER_API_URL;
+  }
+  return '/api';
+}
 
-// ============================================
-// SIMULATED API DELAY
-// ============================================
+const API_BASE = resolveApiBase();
 
-const simulateDelay = (ms: number = 300): Promise<void> => 
-  new Promise(resolve => setTimeout(resolve, ms));
+// ─── Tiny fetch helper ───────────────────────────────────────────────────
+// Returns parsed JSON on 2xx, the typed `fallback` on 404 (so consumers can
+// render a "—" without try/catch boilerplate), and throws on every other
+// failure so React Query surfaces the error state.
+async function http<T>(path: string, opts: RequestInit = {}, fallback?: T): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: {
+      ...(opts.body && !(opts.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+      ...authHeader(),
+      ...(opts.headers ?? {}),
+    },
+  });
+  if (res.status === 404 && fallback !== undefined) return fallback;
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`API ${path} → ${res.status}${body ? ` · ${body.slice(0, 120)}` : ''}`);
+  }
+  if (res.status === 204) return undefined as unknown as T;
+  return (await res.json()) as T;
+}
 
-// ============================================
-// COUNTRY API
-// ============================================
+// Many list endpoints respond as either `T[]` directly or `{ data: T[] }`
+// depending on whether they're paginated. Normalise to a flat array.
+function unwrapList<T>(payload: any): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  if (Array.isArray(payload?.data)) return payload.data as T[];
+  return [];
+}
+
+function toQuery(params?: Record<string, unknown>): string {
+  if (!params) return '';
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  if (!entries.length) return '';
+  const qs = new URLSearchParams();
+  for (const [k, v] of entries) {
+    if (Array.isArray(v)) qs.set(k, v.join(','));
+    else qs.set(k, String(v));
+  }
+  return `?${qs.toString()}`;
+}
+
+// ─── Country API ─────────────────────────────────────────────────────────
 
 export const countryApi = {
-  /**
-   * Get all African countries
-   */
   async getAll(): Promise<Country[]> {
-    await simulateDelay(100);
-    return AFRICAN_COUNTRIES;
+    return unwrapList<Country>(await http(`/countries`));
   },
 
-  /**
-   * Get country by ID
-   */
   async getById(id: string): Promise<Country | null> {
-    await simulateDelay(50);
-    return getCountryById(id) ?? null;
+    return http<Country | null>(`/countries/${encodeURIComponent(id)}`, {}, null);
   },
 
-  /**
-   * Get country by ISO code (2 or 3 letter)
-   */
+  /** Resolved server-side via the same alias map (DRC, Cameroun, etc.). */
   async getByIsoCode(isoCode: string): Promise<Country | null> {
-    await simulateDelay(50);
-    return getCountryByIsoCode(isoCode) ?? null;
+    return http<Country | null>(`/countries/${encodeURIComponent(isoCode)}`, {}, null);
   },
 
-  /**
-   * Get countries by region
-   */
   async getByRegion(region: RegionType): Promise<Country[]> {
-    await simulateDelay(100);
-    return getCountriesByRegion(region);
+    return unwrapList<Country>(await http(`/countries${toQuery({ region })}`));
   },
 
-  /**
-   * Search countries by name
-   */
-  async search(query: string): Promise<Country[]> {
-    await simulateDelay(100);
-    const lowerQuery = query.toLowerCase();
-    return AFRICAN_COUNTRIES.filter(c => 
-      c.name.toLowerCase().includes(lowerQuery) ||
-      c.isoCode.toLowerCase().includes(lowerQuery)
-    );
-  },
-
-  /**
-   * Get country statistics
-   */
   async getStats(countryId: string, year?: number): Promise<CountryStats> {
-    await simulateDelay(200);
-    return getCountryStats(countryId, year);
+    return http<CountryStats>(`/countries/${encodeURIComponent(countryId)}/stats${toQuery({ year })}`);
   },
 
-  /**
-   * Get all regions
-   */
-  async getRegions(): Promise<typeof REGIONS> {
-    await simulateDelay(50);
-    return REGIONS;
+  async getRegions(): Promise<{ name: string; countryCount: number }[]> {
+    return unwrapList(await http(`/countries/regions`));
+  },
+
+  async search(query: string): Promise<Country[]> {
+    return unwrapList<Country>(await http(`/countries${toQuery({ search: query })}`));
   },
 };
 
-// ============================================
-// THEME API
-// ============================================
+// ─── Theme API ───────────────────────────────────────────────────────────
 
 export const themeApi = {
-  /**
-   * Get all themes
-   */
   async getAll(): Promise<Theme[]> {
-    await simulateDelay(100);
-    return THEMES;
+    return unwrapList<Theme>(await http(`/themes`));
   },
 
-  /**
-   * Get theme by ID
-   */
   async getById(id: string): Promise<Theme | null> {
-    await simulateDelay(50);
-    return getThemeById(id) ?? null;
+    return http<Theme | null>(`/themes/${encodeURIComponent(id)}`, {}, null);
   },
 
-  /**
-   * Get theme statistics
-   */
   async getStats(themeId: string, year?: number): Promise<ThemeStats> {
-    await simulateDelay(200);
-    return getThemeStats(themeId, year);
+    return http<ThemeStats>(`/themes/${encodeURIComponent(themeId)}/stats${toQuery({ year })}`);
   },
 };
 
-// ============================================
-// INDICATOR API
-// ============================================
+// ─── Indicator API ───────────────────────────────────────────────────────
 
 export const indicatorApi = {
-  /**
-   * Get all indicators
-   */
   async getAll(): Promise<Indicator[]> {
-    await simulateDelay(100);
-    return INDICATORS;
+    return unwrapList<Indicator>(await http(`/indicators`));
   },
 
-  /**
-   * Get indicator by ID
-   */
   async getById(id: string): Promise<Indicator | null> {
-    await simulateDelay(50);
-    return getIndicatorById(id) ?? null;
+    return http<Indicator | null>(`/indicators/${encodeURIComponent(id)}`, {}, null);
   },
 
-  /**
-   * Get indicators by theme
-   */
   async getByTheme(themeId: string): Promise<Indicator[]> {
-    await simulateDelay(100);
-    return getIndicatorsByTheme(themeId);
+    return unwrapList<Indicator>(await http(`/indicators${toQuery({ themeId })}`));
   },
 
-  /**
-   * Search indicators
-   */
   async search(query: string): Promise<Indicator[]> {
-    await simulateDelay(100);
-    const lowerQuery = query.toLowerCase();
-    return INDICATORS.filter(i => 
-      i.name.toLowerCase().includes(lowerQuery) ||
-      i.shortName.toLowerCase().includes(lowerQuery) ||
-      i.code.toLowerCase().includes(lowerQuery) ||
-      i.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
-    );
+    return unwrapList<Indicator>(await http(`/indicators${toQuery({ search: query })}`));
   },
 };
 
-// ============================================
-// DATA API
-// ============================================
+// ─── Data API ────────────────────────────────────────────────────────────
 
 export const dataApi = {
-  /**
-   * Get indicator values with filters
-   */
   async getIndicatorValues(filters: DataFilters): Promise<IndicatorValue[]> {
-    await simulateDelay(300);
-    let values = getIndicatorValues();
-
-    if (filters.countryIds?.length) {
-      values = values.filter(v => filters.countryIds!.includes(v.countryId));
-    }
-    if (filters.indicatorIds?.length) {
-      values = values.filter(v => filters.indicatorIds!.includes(v.indicatorId));
-    }
-    if (filters.yearRange) {
-      values = values.filter(v => 
-        v.year >= filters.yearRange![0] && v.year <= filters.yearRange![1]
-      );
-    }
-    if (filters.gender) {
-      values = values.filter(v => v.gender === filters.gender);
-    }
-
-    return values;
+    return unwrapList<IndicatorValue>(await http(`/data/values${toQuery(filters as Record<string, unknown>)}`));
   },
 
-  /**
-   * Get time series for a country and indicator
-   */
   async getTimeSeries(
-    countryId: string, 
+    countryId: string,
     indicatorId: string,
-    yearRange?: [number, number]
+    yearRange?: [number, number],
   ): Promise<IndicatorTimeSeries> {
-    await simulateDelay(200);
-    return getTimeSeriesData(countryId, indicatorId, yearRange);
+    const params: Record<string, unknown> = { countryId, indicatorId };
+    if (yearRange) {
+      params.yearStart = yearRange[0];
+      params.yearEnd = yearRange[1];
+    }
+    return http<IndicatorTimeSeries>(`/data/timeseries${toQuery(params)}`);
   },
 
-  /**
-   * Get comparison chart data for multiple countries
-   */
   async getComparisonData(
     countryIds: string[],
     indicatorId: string,
-    year?: number
+    year?: number,
   ): Promise<ChartDataPoint[]> {
-    await simulateDelay(200);
-    return getComparisonData(countryIds, indicatorId, year);
+    return unwrapList<ChartDataPoint>(
+      await http(`/data/comparison${toQuery({ countryIds, indicatorId, year })}`),
+    );
   },
 
-  /**
-   * Get map visualization data
-   */
   async getMapData(indicatorId: string, year?: number): Promise<MapDataPoint[]> {
-    await simulateDelay(300);
-    return getMapData(indicatorId, year);
+    return unwrapList<MapDataPoint>(await http(`/data/map${toQuery({ indicatorId, year })}`));
   },
 
-  /**
-   * Get formatted time series for charts
-   */
   async getChartTimeSeries(
     countryIds: string[],
     indicatorId: string,
-    yearRange?: [number, number]
+    yearRange?: [number, number],
   ): Promise<TimeSeriesDataPoint[]> {
-    await simulateDelay(200);
-    return formatTimeSeriesForChart(countryIds, indicatorId, yearRange);
+    const params: Record<string, unknown> = { countryIds, indicatorId };
+    if (yearRange) {
+      params.yearStart = yearRange[0];
+      params.yearEnd = yearRange[1];
+    }
+    return unwrapList<TimeSeriesDataPoint>(await http(`/data/chart-timeseries${toQuery(params)}`));
   },
 
-  /**
-   * Get bar chart data (top/bottom countries)
-   */
   async getBarChartData(
     indicatorId: string,
     year?: number,
     limit?: number,
-    sortOrder?: 'asc' | 'desc'
+    sortOrder?: 'asc' | 'desc',
   ): Promise<ChartDataPoint[]> {
-    await simulateDelay(200);
-    return formatBarChartData(indicatorId, year, limit, sortOrder);
+    return unwrapList<ChartDataPoint>(
+      await http(`/data/bar-chart${toQuery({ indicatorId, year, limit, sortOrder })}`),
+    );
   },
 
-  /**
-   * Get regional average data
-   */
   async getRegionalData(indicatorId: string, year?: number): Promise<ChartDataPoint[]> {
-    await simulateDelay(200);
-    return formatRegionalData(indicatorId, year);
+    return unwrapList<ChartDataPoint>(
+      await http(`/data/regional-averages${toQuery({ indicatorId, year })}`),
+    );
   },
 };
 
-// ============================================
-// YOUTH INDEX API
-// ============================================
+// ─── Youth Index API ─────────────────────────────────────────────────────
+// All scores come from the `YouthIndexScore` table — populated by the
+// `compute:youth-index` script which runs the canonical min-max normalisation
+// over real `IndicatorValue` rows. No synthesis, no estimates.
 
 export const youthIndexApi = {
-  /**
-   * Get youth index rankings for a year
-   */
-  async getRankings(year: number = 2024): Promise<YouthIndex[]> {
-    await simulateDelay(300);
-    return generateYouthIndexData(year);
+  async getRankings(year?: number): Promise<YouthIndex[]> {
+    const payload = await http<any>(`/youth-index/rankings${toQuery({ year })}`);
+    return unwrapList<YouthIndex>(payload);
   },
 
-  /**
-   * Get youth index for a specific country
-   */
   async getByCountry(countryId: string, year?: number): Promise<YouthIndex | null> {
-    await simulateDelay(200);
-    const rankings = generateYouthIndexData(year);
-    return rankings.find(r => r.countryId === countryId) ?? null;
-  },
-
-  /**
-   * Get youth index history for a country
-   */
-  async getHistory(countryId: string): Promise<YouthIndex[]> {
-    await simulateDelay(400);
-    const history: YouthIndex[] = [];
-    
-    for (let year = 2015; year <= 2024; year++) {
-      const rankings = generateYouthIndexData(year);
-      const countryRanking = rankings.find(r => r.countryId === countryId);
-      if (countryRanking) {
-        history.push(countryRanking);
-      }
+    const payload = await http<any>(
+      `/youth-index/${encodeURIComponent(countryId)}${toQuery({ year })}`,
+      {},
+      null,
+    );
+    if (!payload) return null;
+    // The endpoint returns { country, scores: [...] } — pick the requested year
+    // (or the latest if year wasn't given).
+    if (Array.isArray(payload?.scores)) {
+      const target = year
+        ? payload.scores.find((s: any) => s.year === year)
+        : payload.scores[0];
+      return target ?? null;
     }
-    
-    return history;
+    return payload;
   },
 
-  /**
-   * Get top performers
-   */
+  async getHistory(countryId: string): Promise<YouthIndex[]> {
+    const payload = await http<any>(`/youth-index/${encodeURIComponent(countryId)}`);
+    return unwrapList<YouthIndex>(payload?.scores ?? payload);
+  },
+
   async getTopPerformers(limit: number = 10, year?: number): Promise<YouthIndex[]> {
-    await simulateDelay(200);
-    const rankings = generateYouthIndexData(year);
-    return rankings.slice(0, limit);
+    return unwrapList<YouthIndex>(await http(`/youth-index/top/${limit}${toQuery({ year })}`));
   },
 
-  /**
-   * Get most improved countries
-   */
   async getMostImproved(limit: number = 10, year?: number): Promise<YouthIndex[]> {
-    await simulateDelay(200);
-    const rankings = generateYouthIndexData(year);
-    return [...rankings]
-      .sort((a, b) => b.rankChange - a.rankChange)
-      .slice(0, limit);
+    return unwrapList<YouthIndex>(
+      await http(`/youth-index/most-improved/${limit}${toQuery({ year })}`),
+    );
   },
 };
 
-// ============================================
-// COMPARISON API
-// ============================================
+// ─── Comparison API ──────────────────────────────────────────────────────
 
 export const comparisonApi = {
-  /**
-   * Compare multiple countries across indicators
-   */
   async compareCountries(
     countryIds: string[],
     indicatorIds: string[],
-    year?: number
+    year?: number,
   ): Promise<CountryComparison> {
-    await simulateDelay(300);
-    return compareCountries(countryIds, indicatorIds, year);
+    return http<CountryComparison>(
+      `/data/comparison${toQuery({ countryIds, indicatorIds, year })}`,
+    );
   },
 };
 
-// ============================================
-// PLATFORM API
-// ============================================
+// ─── Platform API ────────────────────────────────────────────────────────
 
 export const platformApi = {
-  /**
-   * Get platform-wide statistics
-   */
   async getStats(): Promise<PlatformStats> {
-    await simulateDelay(100);
-    return getPlatformStats();
+    return http<PlatformStats>(`/platform/stats`);
   },
 };
 
-// ============================================
-// UNIFIED API EXPORT
-// ============================================
+// ─── Unified API export ──────────────────────────────────────────────────
 
 export const api = {
   countries: countryApi,

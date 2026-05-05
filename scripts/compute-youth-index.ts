@@ -89,7 +89,10 @@ const DIMENSIONS: Record<string, DimensionDef> = {
   },
 };
 
-const YEARS = [2006, 2016, 2025];
+// Years to compute. We cover the recent 6-year window (2020-2025) so the
+// dashboard's trend widgets render continuous data, plus 2006/2016 as
+// historical anchors. Extend this list as more historical data lands.
+const YEARS = [2006, 2016, 2020, 2021, 2022, 2023, 2024, 2025];
 
 // ============================================================
 // HELPERS

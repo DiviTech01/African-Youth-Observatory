@@ -8,8 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Upload as UploadIcon, FileText, ChevronRight, CheckCircle2, AlertCircle, Eye, WifiOff, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCountries } from '@/hooks/useData';
-import { getCountryReport } from '@/data/countryReports';
+import { useCountries, useYouthIndexRankings } from '@/hooks/useData';
 import CountryFlag from '@/components/CountryFlag';
 import ScrollReveal from '@/components/ScrollReveal';
 import { usePkpbUploads } from '@/hooks/usePkpbUploads';
@@ -64,6 +63,37 @@ const PromiseKeptBrokenIndex: React.FC = () => {
   const refetchDocs = pkpbUploads.refetch;
   // `pkpbByCountry` is a name-slug → doc lookup. Callers pass `slugify(c.name)`.
   const pkpbByCountry = pkpbUploads.bySlug;
+
+  // Real youth-index rankings (latest year). Replaces the parametric
+  // AYEMI score that this page used to fabricate from a hardcoded meta
+  // table. We index by country-name slug for the same reason the PKPB
+  // lookup does — `useCountries` returns iso2-keyed ids while the API
+  // returns Prisma cuids, so name-slug is the only stable join.
+  const { data: rankingsData } = useYouthIndexRankings(2025);
+  const rankingsByName = useMemo(() => {
+    const m = new Map<string, { score: number; tier: string }>();
+    const rows = Array.isArray(rankingsData) ? rankingsData : [];
+    for (const r of rows as any[]) {
+      const name = r.countryName ?? r.country?.name;
+      const score = r.overallScore ?? r.indexScore ?? r.score;
+      if (name && typeof score === 'number') {
+        m.set(slugify(name), { score, tier: r.tier ?? '' });
+      }
+    }
+    return m;
+  }, [rankingsData]);
+
+  // Score → tier-color helper. Three bands map to the existing PKPB palette.
+  const scoreColor = (score: number): string => {
+    if (score >= 67) return '#006B3F'; // Fulfilling
+    if (score >= 34) return '#C9942A'; // Developing
+    return '#C0392B';                  // Critical
+  };
+  const scoreTier = (score: number): string => {
+    if (score >= 67) return 'Fulfilling';
+    if (score >= 34) return 'Developing';
+    return 'Critical';
+  };
 
   const visible = useMemo(() => {
     let arr = countries;
@@ -275,9 +305,13 @@ const PromiseKeptBrokenIndex: React.FC = () => {
             const doc = status?.doc;
             const hasHtml = !!status?.hasHtml;
             const hasPdf = !!status?.hasPdf;
-            // Local fallback data so we can show AYEMI score even when no upload exists.
-            const localReport = getCountryReport(c.name);
-            const tierColor = localReport ? TIER_COLOR[localReport.ayemiTier] : '#6B7280';
+            // Real AYEMI score for this country from the YouthIndexScore table
+            // (computed off uploaded indicator values). When the country has
+            // no computed score yet — because no admin has uploaded the
+            // indicators that feed the index — we render a "—" instead of a
+            // synthesised number.
+            const ranking = rankingsByName.get(slug);
+            const tierColor = ranking ? scoreColor(ranking.score) : '#6B7280';
 
             // Format-specific status badge — emerald when on file, amber when
             // pending. Two side by side so a contributor can tell at a glance
@@ -313,14 +347,14 @@ const PromiseKeptBrokenIndex: React.FC = () => {
                       {c.isoCode3} · {c.region?.replace(/_/g, ' ').toLowerCase()}
                     </p>
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                      {localReport && (
-                        <span
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold tabular-nums"
-                          style={{ background: tierColor + '20', color: tierColor }}
-                        >
-                          AYEMI {localReport.ayemiScore}% · {localReport.ayemiTier}
-                        </span>
-                      )}
+                      <span
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold tabular-nums"
+                        style={{ background: tierColor + '20', color: tierColor }}
+                      >
+                        {ranking
+                          ? `AYEMI ${ranking.score.toFixed(1)} · ${scoreTier(ranking.score)}`
+                          : 'AYEMI —'}
+                      </span>
                       {formatBadge('HTML', hasHtml)}
                       {formatBadge('PDF', hasPdf)}
                       {hasHtml && hasPdf && (

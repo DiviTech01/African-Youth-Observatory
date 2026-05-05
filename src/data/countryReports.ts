@@ -525,14 +525,17 @@ function generateReport(country: string): CountryReport {
 // ───────────────────────────────────────────────────────────────────
 // Public API
 // ───────────────────────────────────────────────────────────────────
-export function getCountryReport(slugOrName: string): CountryReport | null {
-  const target = slugify(slugOrName);
-  if (target === 'nigeria') return NIGERIA;
-
-  // Find matching country in meta map
-  const match = Object.keys(COUNTRY_META).find((c) => slugify(c) === target);
-  if (!match) return null;
-  return generateReport(match);
+//
+// Per admin directive: NO MOCK / PARAMETRIC DATA. The legacy synthesised
+// "Promise Kept · Promise Broken" report (NIGERIA constant + generateReport
+// jittering) is gone. Country pages now render only what contributors have
+// uploaded as PKPB documents. When a country has no upload, the page shows
+// the "Coming soon" placeholder; numeric fields elsewhere show "—".
+//
+// `getCountryReport` is preserved as a typed entry point but always returns
+// null — the same interface kept so any lingering caller still type-checks.
+export function getCountryReport(_slugOrName: string): CountryReport | null {
+  return null;
 }
 
 export function listCountries(): { country: string; slug: string; iso3: string; region: string }[] {

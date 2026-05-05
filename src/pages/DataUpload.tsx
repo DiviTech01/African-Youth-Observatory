@@ -422,28 +422,77 @@ function DocumentFlow({
   // Auto-detect country from the filename: any African country whose name
   // appears as a token wins. We prefer the first whole-word match. Returns
   // the country.id (or undefined). The contributor can always override.
+  // Real contributor filenames don't always use the official country name.
+  // This alias map maps each common shorthand / French spelling / diacritic-
+  // free variant → the ISO3 of the canonical country in our DB. Add new
+  // entries as you encounter them. Keys must be lowercase and ASCII-only
+  // (we ASCII-fold the filename before matching).
+  const COUNTRY_ALIASES: Record<string, string> = {
+    // Democratic Republic of the Congo
+    'drc': 'COD', 'rdc': 'COD', 'dr congo': 'COD', 'drcongo': 'COD',
+    'congo kinshasa': 'COD', 'congo drc': 'COD',
+    // Republic of the Congo (Brazzaville) — distinct from DRC
+    'congo brazzaville': 'COG',
+    // Central African Republic
+    'car': 'CAF', 'rca': 'CAF',
+    // Cameroon — French spelling on the file is the most common case
+    'cameroun': 'CMR',
+    // São Tomé and Príncipe — diacritic-free variants
+    'sao tome': 'STP', 'sao tome and principe': 'STP', 'stp': 'STP',
+    // Eswatini (formerly Swaziland) — older docs still use the old name
+    'swaziland': 'SWZ',
+    // Côte d'Ivoire — English/diacritic-free variants
+    'ivory coast': 'CIV', 'cote d ivoire': 'CIV', 'cote divoire': 'CIV',
+    // Cape Verde alt spelling
+    'cape verde': 'CPV',
+    // Tanzania alt formal name
+    'united republic of tanzania': 'TZA',
+  };
+
+  const stripDiacritics = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const normalize = (s: string) =>
+    stripDiacritics(s).toLowerCase().replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim();
+
   const detectCountryFromFilename = (
     fname: string,
     list: any[],
   ): string | undefined => {
     if (!list?.length) return undefined;
-    const base = fname.replace(/\.[^.]+$/, '').toLowerCase();
-    // Strip likely-noise tokens that contain country-ish substrings.
-    const noise = base.replace(/[_-]+/g, ' ');
-    // Try longest names first so "South Africa" beats "Africa" / "South".
+    const base = normalize(fname.replace(/\.[^.]+$/, ''));
+    const padded = ` ${base} `;
+
+    // 1. Alias match — try the longest aliases first so "sao tome and
+    //    principe" wins over "sao tome", and a token must be surrounded by
+    //    word boundaries (spaces) so "car" doesn't match "scarred".
+    const aliasKeys = Object.keys(COUNTRY_ALIASES).sort((a, b) => b.length - a.length);
+    for (const alias of aliasKeys) {
+      if (padded.includes(` ${alias} `)) {
+        const iso3 = COUNTRY_ALIASES[alias];
+        // The hardcoded countries list uses `isoCode` for the 3-letter code;
+        // API responses may use `isoCode3`. Try both.
+        const found = list.find((c) => (c.isoCode === iso3) || (c.isoCode3 === iso3));
+        if (found) return found.id;
+      }
+    }
+
+    // 2. Whole-word name match — diacritics stripped on both sides so a
+    //    file named "Sao_Tome_2026.html" matches the DB's "São Tomé and
+    //    Príncipe", and longest names checked first so "South Africa" wins
+    //    over "Africa" / "South".
     const sorted = [...list].sort((a, b) => b.name.length - a.name.length);
     for (const c of sorted) {
-      const n = c.name.toLowerCase();
-      // Whole-word-ish match: surround with spaces/underscores in the haystack.
-      const haystack = ` ${noise} `;
-      const needle = ` ${n} `;
-      if (haystack.includes(needle)) return c.id;
+      const needle = ` ${normalize(c.name)} `;
+      if (padded.includes(needle)) return c.id;
     }
-    // Fallback: ISO3 / ISO2 token match (e.g. "AGO" or "AO").
-    const upper = base.toUpperCase();
+
+    // 3. ISO3 / ISO2 token match (e.g. "AGO" or "AO" appearing as its own
+    //    word in the original filename — case-insensitive).
+    const upper = fname.replace(/\.[^.]+$/, '').toUpperCase();
     for (const c of sorted) {
-      if (c.isoCode3 && new RegExp(`(^|[^A-Z])${c.isoCode3}([^A-Z]|$)`).test(upper)) return c.id;
-      if (c.isoCode2 && new RegExp(`(^|[^A-Z])${c.isoCode2}([^A-Z]|$)`).test(upper)) return c.id;
+      const iso3 = c.isoCode3 || c.isoCode;
+      const iso2 = c.isoCode2;
+      if (iso3 && new RegExp(`(^|[^A-Z])${iso3}([^A-Z]|$)`).test(upper)) return c.id;
+      if (iso2 && new RegExp(`(^|[^A-Z])${iso2}([^A-Z]|$)`).test(upper)) return c.id;
     }
     return undefined;
   };

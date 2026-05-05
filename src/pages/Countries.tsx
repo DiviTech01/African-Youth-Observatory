@@ -16,8 +16,6 @@ import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Content } from '@/components/cms';
 import ScrollReveal from '@/components/ScrollReveal';
-import { usePkpbUploads } from '@/hooks/usePkpbUploads';
-import { CheckCircle2 } from 'lucide-react';
 
 // Slugify a country name for the URL: "South Africa" → "south-africa". The
 // PKPB country resolver on the API accepts id, ISO3, ISO2, name, or slug,
@@ -74,12 +72,6 @@ const Countries = () => {
       search: searchTerm || undefined,
     }),
   });
-
-  // Which countries have an uploaded PKPB report → drives the green
-  // "Uploaded" badge on each country card. Shared with the PKPB index page
-  // via the same query key so badges stay in sync, and DataUpload invalidates
-  // this key on a successful upload so the badge appears immediately.
-  const pkpbUploads = usePkpbUploads();
 
   const filteredCountries = useMemo(() => {
     // Use API data if available
@@ -255,26 +247,12 @@ const Countries = () => {
                                 </>
                               ) : null;
                             })()}
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <Badge
-                                variant="outline"
-                                className={`w-fit text-[10px] px-1.5 py-0 ${regionColors[region] || ''}`}
-                              >
-                                {region}
-                              </Badge>
-                              {/* "Uploaded" badge — visible when this country
-                                  has at least one PKPB report on file, so a
-                                  contributor can tell at a glance whether
-                                  their work is needed here. */}
-                              {pkpbUploads.bySlug.has(toCountrySlug(country)) && (
-                                <Badge
-                                  variant="outline"
-                                  className="w-fit text-[10px] px-1.5 py-0 gap-1 bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                                >
-                                  <CheckCircle2 className="h-2.5 w-2.5" /> Uploaded
-                                </Badge>
-                              )}
-                            </div>
+                            <Badge
+                              variant="outline"
+                              className={`w-fit text-[10px] px-1.5 py-0 ${regionColors[region] || ''}`}
+                            >
+                              {region}
+                            </Badge>
                           </div>
 
                           {/* Sparkline chart */}

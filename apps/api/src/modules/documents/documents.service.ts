@@ -220,14 +220,49 @@ export class DocumentsService {
     return countryId ? `${base}/${countryId}` : base;
   }
 
+  // Common informal aliases that contributors put in filenames or query
+  // strings — DRC, CAR, Cameroun, Sao Tome (no diacritics), Swaziland (the
+  // pre-2018 name for Eswatini), etc. Each maps to the ISO3 of the canonical
+  // country in our DB. Keep this list in sync with the same map in the
+  // frontend's DataUpload.tsx so filename auto-detect and ?country=… query
+  // strings resolve to the same row.
+  private static readonly COUNTRY_ALIASES: Record<string, string> = {
+    'drc': 'COD', 'rdc': 'COD', 'dr congo': 'COD', 'drcongo': 'COD',
+    'congo kinshasa': 'COD', 'congo drc': 'COD',
+    'congo brazzaville': 'COG',
+    'car': 'CAF', 'rca': 'CAF',
+    'cameroun': 'CMR',
+    'sao tome': 'STP', 'sao tome and principe': 'STP', 'stp': 'STP',
+    'swaziland': 'SWZ',
+    'ivory coast': 'CIV', 'cote d ivoire': 'CIV', 'cote divoire': 'CIV',
+    'cape verde': 'CPV',
+    'united republic of tanzania': 'TZA',
+  };
+
   private async resolveCountry(ref: string) {
-    // Accept id, ISO3, ISO2 (case-insensitive), exact name, or slug-style
-    // ("south-africa" → "South Africa"). The frontend's hardcoded country list
-    // sends lowercase ISO2 (e.g. "ao", "dz") as the id — this resolver matches.
-    // Only select fields we can safely serialize to JSON (Country.population
+    // Accept id, ISO3, ISO2 (case-insensitive), exact name, slug-style
+    // ("south-africa" → "South Africa"), and a handful of informal aliases
+    // (DRC, CAR, Cameroun, Sao Tome, Swaziland, etc.). We strip diacritics
+    // and normalise separators before matching aliases so a query like
+    // "São_Tomé" still resolves cleanly. The frontend's hardcoded country
+    // list sends lowercase ISO2 (e.g. "ao", "dz") as the id — this resolver
+    // matches that path too.
+    //
+    // Only select fields we can safely serialise to JSON (Country.population
     // and youthPopulation are BigInt in Prisma; default JSON.stringify chokes).
     const decoded = decodeURIComponent(ref).trim();
     const slugAsName = decoded.replace(/-/g, ' ');
+
+    // Alias resolution — diacritic-stripped, lowercased, separator-normalised.
+    const normalised = decoded
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[_\-.]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const aliasIso3 = DocumentsService.COUNTRY_ALIASES[normalised];
+
     return this.prisma.country.findFirst({
       where: {
         OR: [
@@ -236,6 +271,7 @@ export class DocumentsService {
           { isoCode2: decoded.toUpperCase() },
           { name: { equals: decoded, mode: 'insensitive' } },
           { name: { equals: slugAsName, mode: 'insensitive' } },
+          ...(aliasIso3 ? [{ isoCode3: aliasIso3 }] : []),
         ],
       },
       select: { id: true, name: true, isoCode2: true, isoCode3: true, region: true },
