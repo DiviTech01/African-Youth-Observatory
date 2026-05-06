@@ -1,10 +1,37 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
 import { Search, ArrowRight, TrendingUp, Globe, Database } from 'lucide-react';
 
+const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api';
+
+interface HeroPlatformStats {
+  totalCountries?: number;
+  totalIndicators?: number;
+  totalDataPoints?: number;
+}
+
 const Hero = () => {
+  // Real headline numbers from /platform/stats. We deliberately don't ship
+  // a hardcoded fallback — until the API responds, the tile shows "—" so
+  // visitors never see a fabricated count.
+  const { data: stats } = useQuery<HeroPlatformStats | null>({
+    queryKey: ['hero-platform-stats'],
+    queryFn: async () => {
+      const r = await fetch(`${API_BASE}/platform/stats`);
+      return r.ok ? r.json() : null;
+    },
+    staleTime: 60_000,
+  });
+  const fmt = (v: number | undefined): string => {
+    if (v == null) return '—';
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 10_000) return `${(v / 1000).toFixed(0)}K`;
+    if (v >= 1000) return v.toLocaleString();
+    return String(v);
+  };
   return (
     <section className="py-10 sm:py-16 md:py-24 gradient-hero">
       <div className="container px-4 md:px-6">
@@ -55,19 +82,21 @@ const Hero = () => {
               </Link>
             </div>
 
-            {/* Quick Stats */}
+            {/* Live platform stats — real counts from the database. Each
+                tile shows "—" until the API resolves; we never display a
+                fabricated number. */}
             <div className="grid grid-cols-3 gap-4 pt-4 max-w-md mx-auto lg:mx-0">
               <div className="text-center lg:text-left">
-                <p className="text-2xl sm:text-3xl font-bold text-primary">54</p>
+                <p className="text-2xl sm:text-3xl font-bold text-primary tabular-nums">{fmt(stats?.totalCountries)}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Countries</p>
               </div>
               <div className="text-center lg:text-left">
-                <p className="text-2xl sm:text-3xl font-bold text-primary">500+</p>
+                <p className="text-2xl sm:text-3xl font-bold text-primary tabular-nums">{fmt(stats?.totalIndicators)}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Indicators</p>
               </div>
               <div className="text-center lg:text-left">
-                <p className="text-2xl sm:text-3xl font-bold text-primary">226M</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Youth Covered</p>
+                <p className="text-2xl sm:text-3xl font-bold text-primary tabular-nums">{fmt(stats?.totalDataPoints)}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Data Points</p>
               </div>
             </div>
           </div>

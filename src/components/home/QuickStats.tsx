@@ -5,57 +5,16 @@ import { Users, GraduationCap, Heart, Briefcase, BookOpen } from 'lucide-react';
 import { GlowCard } from '@/components/ui/spotlight-card';
 import { Content } from '@/components/cms';
 
+// Tile scaffolding only — every numeric `value` is filled in from the real
+// YouthIndexScore averages at render time. The starter "—" lets the page
+// render before the API responds and stays put if the score doesn't exist.
+// Per admin directive: no synthesised numbers anywhere on the landing page.
 const statsData = [
-  {
-    slug: 'population',
-    title: 'Population',
-    value: '226M',
-    description: 'African youth aged 15-24',
-    trend: '+2.3%',
-    glowColor: 'green' as const,
-    icon: Users,
-    link: '/dashboard'
-  },
-  {
-    slug: 'education',
-    title: 'Education',
-    value: '63%',
-    description: 'Secondary enrollment rate',
-    trend: '+5.7%',
-    glowColor: 'blue' as const,
-    icon: GraduationCap,
-    link: '/dashboard'
-  },
-  {
-    slug: 'health',
-    title: 'Health',
-    value: '72%',
-    description: 'Access to healthcare',
-    trend: '+3.1%',
-    glowColor: 'purple' as const,
-    icon: Heart,
-    link: '/dashboard'
-  },
-  {
-    slug: 'employment',
-    title: 'Employment',
-    value: '42%',
-    description: 'Youth labor participation',
-    trend: '-1.2%',
-    glowColor: 'orange' as const,
-    icon: Briefcase,
-    link: '/dashboard'
-  },
-  {
-    slug: 'entrepreneurship',
-    title: 'Entrepreneurship',
-    value: '18%',
-    description: 'Youth-led businesses',
-    trend: '+4.5%',
-    glowColor: 'green' as const,
-    icon: BookOpen,
-    link: '/dashboard'
-  }
+  { slug: 'population',      title: 'Coverage',         description: 'Countries with live data',         glowColor: 'green'  as const, icon: Users,         link: '/dashboard' },
+  { slug: 'education',       title: 'Education',        description: 'Avg education dimension score',    glowColor: 'blue'   as const, icon: GraduationCap, link: '/dashboard' },
+  { slug: 'health',          title: 'Health',           description: 'Avg health dimension score',       glowColor: 'purple' as const, icon: Heart,         link: '/dashboard' },
+  { slug: 'employment',      title: 'Employment',       description: 'Avg employment dimension score',   glowColor: 'orange' as const, icon: Briefcase,     link: '/dashboard' },
+  { slug: 'entrepreneurship',title: 'Innovation',       description: 'Avg innovation dimension score',   glowColor: 'green'  as const, icon: BookOpen,      link: '/dashboard' },
 ];
 
 interface PlatformStats {
@@ -67,45 +26,76 @@ interface PlatformStats {
   dataYearRange?: { earliest?: number; latest?: number };
 }
 
+const API_BASE = (import.meta as any).env?.VITE_API_URL || '/api';
+const RANKINGS_YEAR = 2025;
+
 const QuickStats = () => {
-  // Fetch real stats from API. The endpoint returns totalCountries /
-  // totalIndicators / totalDataPoints / dataYearRange — older code used
-  // shorter key names that no longer exist server-side, which is why every
-  // value looked frozen.
+  // Real platform counts — countries · indicators · data points · year range.
   const { data: platformStats } = useQuery<PlatformStats | null>({
     queryKey: ['platform-stats'],
-    queryFn: () => fetch(`${import.meta.env.VITE_API_URL || '/api'}/platform/stats`).then(r => r.ok ? r.json() : null).catch(() => null),
+    queryFn: () => fetch(`${API_BASE}/platform/stats`).then(r => r.ok ? r.json() : null).catch(() => null),
     staleTime: 60_000,
   });
 
-  // Build a fresh array per render from the API, falling back to the seeded
-  // defaults if the response is empty. We mutate a copy here, never the
-  // module-level `statsData` (mutating that caused stale display when the
-  // API was slow to respond).
-  const baseYear = platformStats?.dataYearRange?.earliest ?? new Date().getFullYear() - 5;
-  const liveStats = statsData.map((s) => ({ ...s }));
-  if (platformStats) {
-    const countries = platformStats.totalCountries ?? 54;
-    const indicators = platformStats.totalIndicators ?? 59;
-    const dataPoints = platformStats.totalDataPoints ?? 0;
-    const withData = platformStats.countriesWithData ?? countries;
-    liveStats[0] = {
-      ...liveStats[0],
-      title: 'Coverage',
-      value: `${withData}/${countries}`,
-      description: `Countries with live data · ${indicators} indicators tracked`,
-      trend: 'Live',
-    };
-    if (dataPoints > 0) {
-      liveStats[4] = {
-        ...liveStats[4],
-        title: 'Data Points',
-        value: dataPoints >= 1000 ? `${(dataPoints / 1000).toFixed(dataPoints >= 10_000 ? 0 : 1)}K` : String(dataPoints),
-        description: 'Indicator values across the platform',
-        trend: 'Live',
-      };
+  // Real Youth Index dimension averages — same source of truth the
+  // Dashboard widgets use. Each tile shows the mean of its dimension's
+  // score across the 54 countries that have a computed YouthIndexScore
+  // for the latest year. If the rankings haven't been computed yet (API
+  // returns []), every tile renders "—" instead of a fabricated number.
+  const { data: rankings } = useQuery<any[] | null>({
+    queryKey: ['platform-stats', 'rankings', RANKINGS_YEAR],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/youth-index/rankings?year=${RANKINGS_YEAR}`);
+      if (!res.ok) return null;
+      const j = await res.json();
+      return Array.isArray(j) ? j : (j?.data ?? []);
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const dimensionAvg = (key: 'educationScore' | 'healthScore' | 'employmentScore' | 'innovationScore'): number | null => {
+    if (!Array.isArray(rankings) || rankings.length === 0) return null;
+    const vals = rankings.map((r) => r[key]).filter((v) => typeof v === 'number');
+    if (!vals.length) return null;
+    return vals.reduce((a, b) => a + b, 0) / vals.length;
+  };
+  const fmtScore = (v: number | null): string => (v == null ? '—' : v.toFixed(1));
+
+  const latestYear = platformStats?.dataYearRange?.latest ?? RANKINGS_YEAR;
+
+  // Compose every tile's `value` / `trend` from real numbers. Anything
+  // unavailable falls through as "—" — never a guess.
+  const liveStats = statsData.map((s) => {
+    let value = '—';
+    let trend = 'No data';
+    let description = s.description;
+    if (s.slug === 'population') {
+      const countries = platformStats?.totalCountries;
+      const indicators = platformStats?.totalIndicators;
+      const dataPoints = platformStats?.totalDataPoints;
+      const withData = platformStats?.countriesWithData;
+      if (countries != null) {
+        value = withData != null ? `${withData}/${countries}` : `${countries}`;
+        trend = 'Live';
+        description = `Countries with live data${
+          indicators != null ? ` · ${indicators} indicators` : ''
+        }${dataPoints != null ? ` · ${dataPoints.toLocaleString()} data points` : ''}`;
+      }
+    } else if (s.slug === 'education') {
+      const v = dimensionAvg('educationScore');
+      if (v != null) { value = fmtScore(v); trend = 'Live'; }
+    } else if (s.slug === 'health') {
+      const v = dimensionAvg('healthScore');
+      if (v != null) { value = fmtScore(v); trend = 'Live'; }
+    } else if (s.slug === 'employment') {
+      const v = dimensionAvg('employmentScore');
+      if (v != null) { value = fmtScore(v); trend = 'Live'; }
+    } else if (s.slug === 'entrepreneurship') {
+      const v = dimensionAvg('innovationScore');
+      if (v != null) { value = fmtScore(v); trend = 'Live'; }
     }
-  }
+    return { ...s, value, trend, description };
+  });
 
   return (
     <section className="relative py-16 md:py-24 bg-black overflow-hidden">
@@ -138,15 +128,12 @@ const QuickStats = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {liveStats.map((stat, index) => {
             const isLive = stat.trend === 'Live';
-            const isPositive = stat.trend.startsWith('+');
             const trendClass = isLive
               ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-              : isPositive
-              ? 'bg-green-500/20 text-green-400'
-              : 'bg-red-500/20 text-red-400';
+              : 'bg-gray-500/15 text-gray-400 ring-1 ring-gray-500/30';
             const trendLabel = isLive
-              ? `Live · since ${baseYear}`
-              : `${stat.trend} since ${baseYear}`;
+              ? `Live · ${latestYear}`
+              : 'Awaiting upload';
             return (
               <Link key={stat.slug} to={stat.link} className="block group">
                 <GlowCard
