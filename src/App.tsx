@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -51,8 +51,6 @@ const Methodology = lazy(() => import("./pages/resources/Methodology"));
 const Toolkits = lazy(() => import("./pages/resources/Toolkits"));
 const CountryProfilePage = lazy(() => import("./pages/CountryProfilePage"));
 const CountryDataProfile = lazy(() => import("./pages/CountryDataProfile"));
-const PromiseKeptBrokenCountry = lazy(() => import("./pages/PromiseKeptBrokenCountry"));
-const PromiseKeptBrokenIndex = lazy(() => import("./pages/PromiseKeptBrokenIndex"));
 const ContributorReports = lazy(() => import("./pages/ContributorReports"));
 const DataUpload = lazy(() => import("./pages/DataUpload"));
 const ContentManager = lazy(() => import("./pages/admin/ContentManager"));
@@ -105,8 +103,8 @@ const App = () => (
               <Route path="/contact" element={<PublicLayout><PageTransition><Contact /></PageTransition></PublicLayout>} />
 
               {/* ── Open dashboard (no auth gate) ──
-                  Anyone can browse data, charts, country profiles, PKPB
-                  reports, etc. Signin is only prompted per-action by
+                  Anyone can browse data, charts, country profiles, reports,
+                  etc. Signin is only prompted per-action by
                   `useExportGuard` when a user tries to download / export. */}
               <Route path="/dashboard" element={<DashboardLayout><PageTransition><Dashboard /></PageTransition></DashboardLayout>} />
               <Route path="/explore" element={<DashboardLayout><PageTransition><Explore /></PageTransition></DashboardLayout>} />
@@ -119,10 +117,14 @@ const App = () => (
               <Route path="/dashboard/countries" element={<DashboardLayout><PageTransition><Countries /></PageTransition></DashboardLayout>} />
               <Route path="/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
-              <Route path="/pkpb" element={<DashboardLayout><PageTransition><PromiseKeptBrokenIndex /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/pkpb" element={<DashboardLayout><PageTransition><PromiseKeptBrokenIndex /></PageTransition></DashboardLayout>} />
-              <Route path="/pkpb/:countryRef" element={<DashboardLayout><PageTransition><PromiseKeptBrokenCountry /></PageTransition></DashboardLayout>} />
-              <Route path="/dashboard/pkpb/:countryRef" element={<DashboardLayout><PageTransition><PromiseKeptBrokenCountry /></PageTransition></DashboardLayout>} />
+              {/* PKPB is withdrawn pending sourcing + legal review (2026-09 audit).
+                  Old links, shares and the mobile app's "open full report" land
+                  on the country's data profile instead of a dead page. The
+                  PromiseKeptBroken* pages are kept in the tree for re-issue. */}
+              <Route path="/pkpb" element={<Navigate to="/dashboard/countries" replace />} />
+              <Route path="/dashboard/pkpb" element={<Navigate to="/dashboard/countries" replace />} />
+              <Route path="/pkpb/:id" element={<CountryProfilePage />} />
+              <Route path="/dashboard/pkpb/:id" element={<CountryProfilePage />} />
               <Route path="/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
               <Route path="/youth-index" element={<DashboardLayout><PageTransition><YouthIndex /></PageTransition></DashboardLayout>} />

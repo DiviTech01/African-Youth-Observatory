@@ -237,13 +237,6 @@ const ReportsManager: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 self-start">
-                      {r.type === 'PKPB_REPORT' && countrySlug && (
-                        <Link to={`/dashboard/pkpb/${countrySlug}`} title="View PKPB page">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
-                        </Link>
-                      )}
                       <a
                         href={api.documents.downloadUrl(r.id, 'attachment')}
                         target="_blank"

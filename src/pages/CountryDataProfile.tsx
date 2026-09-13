@@ -5,18 +5,36 @@ import { Button } from '@/components/ui/button';
 import CountryProfile from '@/components/countries/CountryProfile';
 import { listCountries } from '@/data/countryReports';
 
+// Reduce a slug / name / ISO3 to bare lowercase letters+digits, so
+// "cote-d-ivoire", "côte-divoire" and "Côte d'Ivoire" all compare equal.
+const squash = (s: string) =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// Informal names used across the app and in old shared links.
+const ALIASES: Record<string, string> = {
+  drc: 'COD', drcongo: 'COD', congokinshasa: 'COD',
+  congo: 'COG', congobrazzaville: 'COG',
+  car: 'CAF', caboverde: 'CPV', ivorycoast: 'CIV', swaziland: 'SWZ',
+};
+
+function findCountry(ref: string) {
+  const key = squash(decodeURIComponent(ref));
+  const iso3 = ALIASES[key] ?? key.toUpperCase();
+  return listCountries().find(
+    (c) => squash(c.slug) === key || squash(c.country) === key || c.iso3 === iso3,
+  ) ?? null;
+}
+
 /**
  * /dashboard/profile/:slug — full country data profile with charts/tabs.
- * Reached from clicking a country in the Youth Index (strip or rankings table).
- * The Promise Kept · Promise Broken report card lives at /dashboard/countries/:slug.
+ * Reached from the Countries grid, the Youth Index, and the redirects that
+ * replaced the withdrawn PKPB country pages. Accepts slug, name or ISO3.
  */
 const CountryDataProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
 
-  const match = slug
-    ? listCountries().find((c) => c.slug === slug.toLowerCase())
-    : null;
+  const match = slug ? findCountry(slug) : null;
 
   if (!match) {
     return (

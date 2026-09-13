@@ -14,6 +14,19 @@ const ACCEPTED_MIME = new Set([
   'application/xhtml+xml',
 ]);
 
+/**
+ * PKPB reports are withdrawn from every public read path unless
+ * PKPB_PUBLIC=true. The 2026-09 audit found 114 published reports making
+ * uncited "Promise Broken" findings against named governments and named heads
+ * of state, so they stay offline until each is re-issued with per-claim
+ * sources and a legal read. Uploads still work, so editors can stage corrected
+ * versions. This gate is server-side on purpose: installed mobile builds call
+ * these endpoints directly and cannot be patched from the web app.
+ */
+export function isPkpbPublic(): boolean {
+  return process.env.PKPB_PUBLIC?.trim().toLowerCase() === 'true';
+}
+
 @Injectable()
 export class DocumentsService {
   private readonly logger = new Logger(DocumentsService.name);
@@ -128,10 +141,12 @@ export class DocumentsService {
   }
 
   async list(filter: { countryId?: string; type?: DocumentTypeName; limit?: number }) {
+    const pkpbPublic = isPkpbPublic();
+    if (!pkpbPublic && filter.type === 'PKPB_REPORT') return [];
     const docs = await this.prisma.document.findMany({
       where: {
         countryId: filter.countryId,
-        type: filter.type as any,
+        type: filter.type ? (filter.type as any) : pkpbPublic ? undefined : { not: 'PKPB_REPORT' },
         status: 'PUBLISHED',
       },
       orderBy: { createdAt: 'desc' },
@@ -146,7 +161,7 @@ export class DocumentsService {
     // status as part of the unique-ish filter prevents IDOR on DRAFT/unpublished
     // reports via cuid enumeration. Admins go through the admin module instead.
     const doc = await this.prisma.document.findFirst({
-      where: { id, status: 'PUBLISHED' },
+      where: { id, status: 'PUBLISHED', ...(isPkpbPublic() ? {} : { type: { not: 'PKPB_REPORT' as any } }) },
       include: { country: { select: { id: true, name: true, isoCode3: true } } },
     });
     if (!doc) throw new NotFoundException('Document not found');
@@ -169,6 +184,12 @@ export class DocumentsService {
   async getLatestPkpbForCountry(countryRef: string) {
     const country = await this.resolveCountry(countryRef);
     if (!country) throw new NotFoundException(`Country not found: ${countryRef}`);
+
+    // Withdrawn: answer with the empty shape rather than 404 so installed
+    // mobile builds fall into their existing "coming soon" state, not an error.
+    if (!isPkpbPublic()) {
+      return { country, document: null, htmlDocument: null, pdfDocument: null };
+    }
 
     const docs = await this.prisma.document.findMany({
       where: { countryId: country.id, type: 'PKPB_REPORT', status: 'PUBLISHED' },
@@ -196,7 +217,9 @@ export class DocumentsService {
   async getDownloadStream(id: string) {
     // Public download path — only stream published files. Prevents enumerating
     // and pulling DRAFT/unpublished report files by cuid (IDOR).
-    const doc = await this.prisma.document.findFirst({ where: { id, status: 'PUBLISHED' } });
+    const doc = await this.prisma.document.findFirst({
+      where: { id, status: 'PUBLISHED', ...(isPkpbPublic() ? {} : { type: { not: 'PKPB_REPORT' as any } }) },
+    });
     if (!doc) throw new NotFoundException('Document not found');
     const obj = await this.r2.getObject(doc.storageKey);
     return { ...obj, document: doc };

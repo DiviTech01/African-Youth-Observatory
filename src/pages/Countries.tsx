@@ -17,9 +17,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Content } from '@/components/cms';
 import ScrollReveal from '@/components/ScrollReveal';
 
-// Slugify a country name for the URL: "South Africa" → "south-africa". The
-// PKPB country resolver on the API accepts id, ISO3, ISO2, name, or slug,
-// so this is the friendliest form for the URL bar.
+// Slugify a country name for the URL: "South Africa" → "south-africa".
+// CountryDataProfile also accepts names and ISO3, so this just needs to be
+// readable in the URL bar.
 const toCountrySlug = (name: string) =>
   name.toLowerCase().replace(/['.]/g, '').replace(/\s+/g, '-');
 
@@ -141,7 +141,7 @@ const Countries = () => {
                 </h1>
               </div>
               <p className="text-sm sm:text-base text-[#A89070]">
-                Promise Kept · Promise Broken — youth empowerment audit across all 54 African nations.
+                Youth data profiles for all 54 African nations.
               </p>
             </div>
 
@@ -213,14 +213,9 @@ const Countries = () => {
                         className={`hover-lift cursor-pointer group rounded-2xl border border-gray-800 bg-white/[0.03] hover:border-gray-600 transition-colors ${isMyCountry ? 'ring-2 ring-[#D4A017] border-[#D4A017]/50' : ''}`}
                         onClick={() => {
                           trackCountryView(country);
-                          // Single source of truth: route to the PKPB country
-                          // page. When a contributor has uploaded an HTML/PDF
-                          // report it renders that file in a sandboxed iframe
-                          // (preserving the original design + branding 1:1, with
-                          // a Download button that streams the original file);
-                          // when none is uploaded it falls back to the parametric
-                          // CountryReportCard with real DB data.
-                          navigate(`/dashboard/pkpb/${toCountrySlug(country)}`);
+                          // PKPB reports are withdrawn pending sourcing + legal
+                          // review, so a country opens its data profile.
+                          navigate(`/dashboard/profile/${toCountrySlug(country)}`);
                         }}
                       >
                         <CardContent className="p-2.5 sm:p-4 flex flex-col gap-1.5 sm:gap-2.5">

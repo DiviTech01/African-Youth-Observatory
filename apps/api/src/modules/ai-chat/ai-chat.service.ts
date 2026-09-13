@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NlqService } from '../nlq/nlq.service';
+import { isPkpbPublic } from '../documents/documents.service';
 
 export interface AiChatResponse {
   answer: string;
@@ -193,7 +194,8 @@ export class AiChatService {
         }),
         this.prisma.document.findMany({
           where: {
-            type: { in: ['PKPB_REPORT', 'COUNTRY_REPORT'] },
+            // PKPB is withdrawn from public view; don't advertise it via chat.
+            type: { in: isPkpbPublic() ? ['PKPB_REPORT', 'COUNTRY_REPORT'] : ['COUNTRY_REPORT'] },
             status: 'PUBLISHED',
           },
           select: {

@@ -100,7 +100,7 @@ const dataLinks = [
 const contributorLinks = [
   { to: '/dashboard/data-upload', label: 'Contributor Hub', icon: Upload },
   { to: '/dashboard/contributor/reports', label: 'Reports & Files', icon: FileText },
-  { to: '/dashboard/pkpb', label: 'Promise Kept · Promise Broken', icon: ShieldCheck },
+  // PKPB nav entry removed while the reports are withdrawn (2026-09 audit).
 ];
 
 interface DashboardLayoutProps {
