@@ -16,6 +16,7 @@ import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { api, ApiError } from '@/lib/api-client';
 import {
   X, Trash2, RotateCcw, Settings as SettingsIcon, Globe, User as UserIcon, Lock,
   Sliders, Mail, Shield, Star, Save, Eye, EyeOff, LogOut, Building2, Loader2, Check,
@@ -76,6 +77,45 @@ const Settings = () => {
   } = useUserPreferences();
   const { toast } = useToast();
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+
+  // --- Account deletion ------------------------------------------------
+  // Google Play requires an in-app deletion path for any app offering account
+  // creation, and our Privacy Policy promises one. Confirmation is by typing the
+  // word rather than by clicking a second button: this is irreversible, and a
+  // destructive button in a dialog is one mis-tap away from being pressed.
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const deleteConfirmed = deleteConfirmText.trim().toUpperCase() === 'DELETE';
+
+  const handleDeleteAccount = async () => {
+    if (!deleteConfirmed || deletingAccount) return;
+    setDeletingAccount(true);
+    try {
+      await api.account.delete();
+      toast({
+        title: 'Account deleted',
+        description: 'Your account and personal data have been removed. Sorry to see you go.',
+      });
+      // The credential is gone, so the local session is meaningless - clear it
+      // rather than leaving the app signed in against a dead account.
+      await signOut();
+      window.location.assign('/');
+    } catch (err) {
+      const detail =
+        err instanceof ApiError
+          ? ((err.body as { message?: string } | null)?.message ?? err.statusText)
+          : err instanceof Error
+            ? err.message
+            : 'Please try again.';
+      toast({
+        title: 'Could not delete your account',
+        description: detail,
+        variant: 'destructive',
+      });
+      setDeletingAccount(false);
+    }
+  };
 
   // ─── Profile editing ───────────────────────────────────────────
   const [editName, setEditName] = useState(user?.name ?? '');
@@ -411,6 +451,82 @@ const Settings = () => {
               <Button variant="outline" size="sm" onClick={() => signOut()} className="gap-1.5">
                 <LogOut className="h-3.5 w-3.5" /> Sign out
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-red-500/[0.04] border-red-900/50 rounded-2xl">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Trash2 className="h-4 w-4 text-red-400" /> Delete account
+              </CardTitle>
+              <CardDescription className="text-gray-400 text-xs">
+                Permanently deletes your profile, your saved dashboards and your newsletter
+                subscription, and removes your sign-in credential. This cannot be undone.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Dialog
+                open={deleteDialogOpen}
+                onOpenChange={(open) => {
+                  setDeleteDialogOpen(open);
+                  if (!open) setDeleteConfirmText('');
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="gap-1.5">
+                    <Trash2 className="h-3.5 w-3.5" /> Delete my account
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-black/95 border-gray-800">
+                  <DialogHeader>
+                    <DialogTitle>Delete your account?</DialogTitle>
+                    <DialogDescription asChild>
+                      <div className="space-y-2">
+                        <p>
+                          This permanently deletes the account for{' '}
+                          <span className="text-gray-200">{user?.email}</span>, along with your saved
+                          dashboards and newsletter subscription. It cannot be undone, and we cannot
+                          recover it for you afterwards.
+                        </p>
+                        <p>
+                          Data you contributed to published datasets stays as part of the record of
+                          where those figures came from, but it will no longer be linked to you.
+                        </p>
+                      </div>
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-2">
+                    <Label htmlFor="delete-confirm" className="text-xs text-gray-400">
+                      Type DELETE to confirm
+                    </Label>
+                    <Input
+                      id="delete-confirm"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      autoComplete="off"
+                      placeholder="DELETE"
+                    />
+                  </div>
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                      Keep my account
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      disabled={!deleteConfirmed || deletingAccount}
+                      onClick={handleDeleteAccount}
+                      className="gap-1.5"
+                    >
+                      {deletingAccount ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                      Delete permanently
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         </TabsContent>

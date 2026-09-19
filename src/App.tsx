@@ -28,6 +28,12 @@ import NotFound from "./pages/NotFound";
 // OAuth bridge — must be static so it's available on the first paint
 // after Supabase redirects here with tokens in the URL hash.
 import AuthCallback from "./pages/AuthCallback";
+import ErrorBoundary from "./components/ErrorBoundary";
+import EmailSent from "./pages/auth/EmailSent";
+import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
+import TermsOfService from "./pages/legal/TermsOfService";
+import DataLicensing from "./pages/legal/DataLicensing";
+import CookiePolicy from "./pages/legal/CookiePolicy";
 
 // Lazy-loaded pages
 const Explore = lazy(() => import("./pages/Explore"));
@@ -68,6 +74,9 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
+  // Outermost, so a throw in a provider, a layout or a page is contained instead
+  // of unmounting the app and leaving a blank white page.
+  <ErrorBoundary>
   <LanguageProvider>
   <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
     <QueryClientProvider client={queryClient}>
@@ -90,6 +99,10 @@ const App = () => (
                 <Route path="/landing" element={<PageTransition><Landing /></PageTransition>} />
                 <Route path="/auth/signin" element={<PageTransition><SignIn /></PageTransition>} />
                 <Route path="/auth/signup" element={<PageTransition><SignUp /></PageTransition>} />
+                {/* Sign-up has always navigated here; the route never existed, so
+                    every new user landed on NotFound at the exact moment they had
+                    just handed over their email address. */}
+                <Route path="/auth/email-sent" element={<PageTransition><EmailSent /></PageTransition>} />
               </Route>
 
               {/* OAuth bridge — accessible to everyone (signed-in or not).
@@ -101,6 +114,23 @@ const App = () => (
               {/* ── Public marketing pages (minimal layout) ── */}
               <Route path="/about" element={<PublicLayout><PageTransition><About /></PageTransition></PublicLayout>} />
               <Route path="/contact" element={<PublicLayout><PageTransition><Contact /></PageTransition></PublicLayout>} />
+
+              {/* ── Legal documents ──
+                  The footer and the signup consent checkboxes have always linked
+                  here, but there were no routes, so every one of them landed on
+                  the catch-all NotFound. A reachable privacy-policy URL is a
+                  condition of publishing on Google Play and of GDPR Art. 13, so
+                  these are launch-blocking rather than cosmetic. Kept as eager
+                  imports: a reviewer or a crawler fetching /privacy must get the
+                  document, not a chunk-load failure. */}
+              <Route path="/privacy" element={<PublicLayout><PageTransition><PrivacyPolicy /></PageTransition></PublicLayout>} />
+              <Route path="/terms" element={<PublicLayout><PageTransition><TermsOfService /></PageTransition></PublicLayout>} />
+              <Route path="/data-licensing" element={<PublicLayout><PageTransition><DataLicensing /></PageTransition></PublicLayout>} />
+              <Route path="/cookies" element={<PublicLayout><PageTransition><CookiePolicy /></PageTransition></PublicLayout>} />
+              {/* Aliases people and app stores type by habit. */}
+              <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
+              <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
+              <Route path="/cookie-policy" element={<Navigate to="/cookies" replace />} />
 
               {/* ── Open dashboard (no auth gate) ──
                   Anyone can browse data, charts, country profiles, reports,
@@ -179,6 +209,7 @@ const App = () => (
     </QueryClientProvider>
   </ThemeProvider>
   </LanguageProvider>
+  </ErrorBoundary>
 );
 
 export default App;

@@ -68,6 +68,15 @@ export class OpsService {
     } else if (!aiReport.ok) {
       problems.push(`AI report generation is degraded. ${aiReport.error}`);
     }
+    // Once the daily ceiling is hit, every AI answer silently becomes rule-based.
+    // That is the designed degradation, but an operator must be told, because the
+    // symptom otherwise looks like the model getting worse.
+    const budget = this.ai.budgetSnapshot();
+    if (budget.exhausted) {
+      problems.push(
+        `The daily AI budget of $${budget.budgetUsd} is spent, so AI answers and reports are falling back to the rule-based engine until ${budget.day} rolls over. ${budget.rejectedCalls} call(s) refused.`,
+      );
+    }
     if (dataFreshness.stale) {
       problems.push(
         `No new data has been ingested since ${dataFreshness.lastIngestedAt}. The numbers are still served, but they are going stale.`,
@@ -103,6 +112,7 @@ export class OpsService {
           error: ai.error ?? aiReport.error,
           chat: { ok: ai.ok, model: ai.model, error: ai.error },
           reports: { ok: aiReport.ok, model: aiReport.model, error: aiReport.error },
+          budget,
         },
       },
       data: dataFreshness,

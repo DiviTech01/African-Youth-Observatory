@@ -2,6 +2,9 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+// The consent line used to point both links at href="#": users were agreeing to
+// documents they had no way to read. These resolve to the real legal routes.
+import { LEGAL_LINKS } from '@/config/legal';
 
 interface AuthSwitchProps {
   onSignIn?: (data: { email: string; password: string }) => void;
@@ -113,7 +116,7 @@ export function AuthSwitch({ onSignIn, onSignUp, className, initialMode = 'signi
                 Create Account
               </button>
               <p className="text-[10px] text-gray-500 text-center leading-relaxed">
-                By signing up, you agree to our <a href="#" className="text-[#D4A017] hover:underline">Terms</a> & <a href="#" className="text-[#D4A017] hover:underline">Privacy</a>
+                By signing up, you agree to our <a href={LEGAL_LINKS.terms} className="text-[#D4A017] hover:underline">Terms</a> & <a href={LEGAL_LINKS.privacy} className="text-[#D4A017] hover:underline">Privacy</a>
               </p>
             </form>
           ) : (
@@ -256,7 +259,7 @@ export function AuthSwitch({ onSignIn, onSignUp, className, initialMode = 'signi
               Create Account
             </button>
             <p className="text-[10px] text-gray-500 text-center">
-              By signing up, you agree to our <a href="#" className="text-[#D4A017] hover:underline">Terms</a> & <a href="#" className="text-[#D4A017] hover:underline">Privacy</a>
+              By signing up, you agree to our <a href={LEGAL_LINKS.terms} className="text-[#D4A017] hover:underline">Terms</a> & <a href={LEGAL_LINKS.privacy} className="text-[#D4A017] hover:underline">Privacy</a>
             </p>
           </form>
 

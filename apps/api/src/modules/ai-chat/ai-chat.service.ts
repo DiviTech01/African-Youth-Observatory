@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NlqService } from '../nlq/nlq.service';
+import { AiService, AiBudgetExceededError } from '../insights/ai.service';
 import { isPkpbPublic } from '../documents/documents.service';
 
 export interface AiChatResponse {
@@ -97,45 +98,47 @@ Block syntax:
 - Open-ended policy/qualitative questions — answer in prose, no chart.
 - Anything where the user explicitly asks for "no chart" or "just text".`;
 
-// Default model when AI_MODEL is unset. Anthropic's model registry rotates;
-// keep this on a current Sonnet ID so a fresh deploy works without env tuning.
-const DEFAULT_AI_MODEL = 'claude-sonnet-4-5';
-
 const PLATFORM_CONTEXT_TTL_MS = 10 * 60 * 1000;
 
+/**
+ * Chat is a public surface, so it shares AiService's client rather than
+ * constructing its own.
+ *
+ * Two bugs came from owning a second client. It read the legacy `AI_MODEL`
+ * variable, which production has pinned to a model ID this account can no
+ * longer reach — so every chat answer there silently degrades to the rule-based
+ * engine, exactly the failure `AI_MODEL_CHAT`/`AI_MODEL_REPORT` were introduced
+ * to end. And a private client is not metered, so this endpoint could spend past
+ * the daily ceiling that AiService enforces. Taking the shared client fixes both
+ * and leaves one place that knows how to reach Anthropic.
+ */
 @Injectable()
 export class AiChatService {
   private readonly logger = new Logger(AiChatService.name);
-  private anthropic: Anthropic | null = null;
-  private model: string = DEFAULT_AI_MODEL;
   private platformContextCache: { text: string; expiry: number } | null = null;
 
   constructor(
     private readonly nlqService: NlqService,
     private readonly prisma: PrismaService,
-  ) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    this.model = process.env.AI_MODEL || DEFAULT_AI_MODEL;
-    if (apiKey) {
-      this.anthropic = new Anthropic({ apiKey });
-      this.logger.log(`Anthropic API client initialized (model=${this.model})`);
-    } else {
-      this.logger.warn(
-        'ANTHROPIC_API_KEY not configured — AI chat will fall back to NLQ rule-based service',
-      );
-    }
-  }
+    private readonly ai: AiService,
+  ) {}
 
   async chat(
     message: string,
     context?: string,
     history?: Array<{ role: 'user' | 'assistant'; content: string }>,
   ): Promise<AiChatResponse> {
-    if (this.anthropic) {
+    if (await this.ai.isAvailable()) {
       try {
         return await this.callClaude(message, context, history);
       } catch (error) {
-        this.logger.error(`Claude API call failed: ${error instanceof Error ? error.message : String(error)}`);
+        // A budget refusal is an expected degradation, not a fault: log it as
+        // such so it is distinguishable from a genuine API failure.
+        if (error instanceof AiBudgetExceededError) {
+          this.logger.warn(`AI chat fell back to rule-based: ${error.reason}`);
+        } else {
+          this.logger.error(`Claude API call failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
     }
 
@@ -359,7 +362,8 @@ export class AiChatService {
       { role: 'user', content: userContent },
     ];
 
-    if (!this.anthropic) throw new Error('Anthropic client not initialized');
+    const client = await this.ai.getClient();
+    if (!client) throw new Error('Anthropic client not initialized');
 
     const platformContext = await this.getPlatformContext();
 
@@ -380,8 +384,8 @@ export class AiChatService {
       systemBlocks[0].cache_control = { type: 'ephemeral' };
     }
 
-    const response = await this.anthropic.messages.create({
-      model: this.model,
+    const response = await client.messages.create({
+      model: this.ai.getModel('chat'),
       // Bumped from 2048 → 4096 because the new viz playbook can produce
       // multi-chart answers with structured data arrays; truncating mid-JSON
       // would surface as a parse failure and lose the visualization.

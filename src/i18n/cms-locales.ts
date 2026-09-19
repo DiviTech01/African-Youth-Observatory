@@ -54,9 +54,12 @@ export const CMS_TRANSLATIONS: Record<NonEnglish, Record<string, string>> = {
     'footer.legal.terms': "Conditions d'utilisation",
     'footer.legal.data_licensing': 'Licence des données',
     // Cookie consent
-    'cookie_consent.message': "Nous utilisons des cookies pour améliorer votre expérience. En continuant à utiliser ce site, vous acceptez notre utilisation des cookies.",
+    'cookie_consent.message': "Nous stockons quelques données sur votre appareil pour vous garder connecté et mémoriser vos préférences. Nous n'affichons aucune publicité et n'utilisons aucun traceur tiers.",
     'cookie_consent.manage': 'Gérer les préférences',
     'cookie_consent.accept': 'Tout accepter',
+    'cookie_consent.learn_more': 'Ce que nous stockons',
+    'cookie_consent.reject': 'Refuser le non-essentiel',
+    'footer.legal.cookies': 'Politique relative aux cookies',
     // Home — hero
     'home.hero.eyebrow': "La principale plateforme de données sur la jeunesse africaine",
     'home.hero.title': "Donner du pouvoir à la jeunesse africaine grâce aux données",
@@ -424,9 +427,12 @@ export const CMS_TRANSLATIONS: Record<NonEnglish, Record<string, string>> = {
     'footer.legal.terms': 'شروط الخدمة',
     'footer.legal.data_licensing': 'ترخيص البيانات',
     // Cookie consent
-    'cookie_consent.message': 'نستخدم ملفات تعريف الارتباط لتحسين تجربتك. بمتابعة استخدام هذا الموقع فإنك توافق على استخدامنا لملفات تعريف الارتباط.',
+    'cookie_consent.message': 'نخزّن قدرًا يسيرًا من البيانات على جهازك لإبقائك مسجّل الدخول ولتذكّر تفضيلاتك. لا نعرض أي إعلانات ولا نستخدم أي أدوات تتبع تابعة لجهات خارجية.',
     'cookie_consent.manage': 'إدارة التفضيلات',
     'cookie_consent.accept': 'قبول الكل',
+    'cookie_consent.learn_more': 'ما الذي نخزّنه',
+    'cookie_consent.reject': 'رفض غير الضروري',
+    'footer.legal.cookies': 'سياسة ملفات تعريف الارتباط',
     // Home — hero
     'home.hero.eyebrow': 'المنصة الرائدة لبيانات الشباب الأفريقي',
     'home.hero.title': 'تمكين الشباب الأفريقي من خلال البيانات',
@@ -794,9 +800,12 @@ export const CMS_TRANSLATIONS: Record<NonEnglish, Record<string, string>> = {
     'footer.legal.terms': 'Termos de Serviço',
     'footer.legal.data_licensing': 'Licenciamento de Dados',
     // Cookie consent
-    'cookie_consent.message': 'Utilizamos cookies para melhorar a sua experiência. Ao continuar a usar este site, concorda com a nossa utilização de cookies.',
+    'cookie_consent.message': 'Guardamos alguns dados no seu dispositivo para o manter com sessão iniciada e recordar as suas preferências. Não exibimos publicidade nem usamos rastreadores de terceiros.',
     'cookie_consent.manage': 'Gerir preferências',
     'cookie_consent.accept': 'Aceitar tudo',
+    'cookie_consent.learn_more': 'O que guardamos',
+    'cookie_consent.reject': 'Rejeitar não essenciais',
+    'footer.legal.cookies': 'Política de cookies',
     // Home — hero
     'home.hero.eyebrow': 'A principal plataforma de dados sobre a juventude africana',
     'home.hero.title': 'Capacitar a juventude africana através dos dados',
@@ -1164,9 +1173,12 @@ export const CMS_TRANSLATIONS: Record<NonEnglish, Record<string, string>> = {
     'footer.legal.terms': 'Masharti ya Huduma',
     'footer.legal.data_licensing': 'Leseni ya Data',
     // Cookie consent
-    'cookie_consent.message': 'Tunatumia vidakuzi kuboresha matumizi yako. Kwa kuendelea kutumia tovuti hii unakubali matumizi yetu ya vidakuzi.',
+    'cookie_consent.message': 'Tunahifadhi data kidogo kwenye kifaa chako ili kukuweka umeingia na kukumbuka mapendeleo yako. Hatuonyeshi matangazo wala kutumia vifuatiliaji vya wahusika wengine.',
     'cookie_consent.manage': 'Dhibiti mapendeleo',
     'cookie_consent.accept': 'Kubali zote',
+    'cookie_consent.learn_more': 'Tunahifadhi nini',
+    'cookie_consent.reject': 'Kataa zisizo muhimu',
+    'footer.legal.cookies': 'Sera ya vidakuzi',
     // Home — hero
     'home.hero.eyebrow': 'Jukwaa kuu la data ya vijana wa Afrika',
     'home.hero.title': 'Kuwawezesha vijana wa Afrika kupitia data',

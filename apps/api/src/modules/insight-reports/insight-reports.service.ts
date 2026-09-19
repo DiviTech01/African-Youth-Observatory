@@ -32,8 +32,16 @@ export type ReportScope = 'continental' | 'country' | 'theme';
  */
 const MAX_TOOL_ITERATIONS = 6;
 
-/** Long enough for genuinely long-form sections; short enough to stay non-streaming. */
-const MAX_OUTPUT_TOKENS = 16000;
+/**
+ * Long enough for genuinely long-form sections; short enough to stay non-streaming.
+ *
+ * Raised from 16,000 after a verified country report finished on 15,759 output
+ * tokens — 98% of the ceiling. Adaptive thinking draws on the same budget, so a
+ * report one section longer would stop at `max_tokens` with its tool-input JSON
+ * unfinished, and an unfinished report is indistinguishable in the response from
+ * a rule-based one. The headroom is the point; typical reports use half of it.
+ */
+const MAX_OUTPUT_TOKENS = 32000;
 
 /**
  * Tool name → the `executeDataQuery` discriminator. Generation reuses
@@ -282,6 +290,7 @@ export class InsightReportsService {
 
       const emit = toolUses.find((b: any) => b.name === EMIT_TOOL);
       if (emit) {
+        this.describeEmit(emit, response, iteration);
         const doc = this.coerceDocument(emit.input, opts.title);
         if (doc) {
           this.logger.log(`AI report emitted after ${iteration} data round-trip(s) on ${model}`);
@@ -326,7 +335,15 @@ export class InsightReportsService {
     const trailing = response.content?.find(
       (b: any) => b.type === 'tool_use' && b.name === EMIT_TOOL,
     );
-    if (trailing) return this.coerceDocument(trailing.input, opts.title);
+    if (trailing) {
+      this.describeEmit(trailing, response, MAX_TOOL_ITERATIONS);
+      const doc = this.coerceDocument(trailing.input, opts.title, 'trailing');
+      if (doc) {
+        this.logger.log(`AI report emitted on the final turn on ${model}`);
+        return doc;
+      }
+      return null;
+    }
 
     this.logger.warn(`Report loop ended without ${EMIT_TOOL} (stop_reason=${response.stop_reason})`);
     return null;
@@ -445,30 +462,117 @@ export class InsightReportsService {
    * block types are dropped rather than passed to renderers that would throw on
    * them, and `generatedAt` is always the server's clock.
    */
-  private coerceDocument(raw: any, fallbackTitle: string): ReportDocument | null {
-    if (!raw || typeof raw !== 'object') return null;
+  /**
+   * An array from a value that should be one, parsing a JSON string if that is
+   * what arrived.
+   *
+   * Claude serialises a deeply nested tool argument as a JSON string rather than
+   * as structured JSON often enough that treating it as malformed is simply
+   * wrong. That is what broke report generation: the model returned a complete
+   * report with `sections` as a string, the validator asked `Array.isArray`, got
+   * false, and fell back to the rule-based document — so every report on the
+   * platform read "generated without AI analysis" while the AI had in fact
+   * written one. Parse it, then validate it exactly as before; a string that does
+   * not parse to an array still fails.
+   */
+  private asArray(value: unknown): any[] {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        /* Not JSON. Falls through to the empty array and the caller reports it. */
+      }
+    }
+    return [];
+  }
 
-    const sections: ReportSection[] = Array.isArray(raw.sections)
-      ? raw.sections
-          .map((s: any): ReportSection | null => {
-            const heading = this.str(s?.heading);
-            const blocks = Array.isArray(s?.blocks)
-              ? (s.blocks.map((b: any) => this.coerceBlock(b)).filter(Boolean) as ReportBlock[])
-              : [];
-            if (!heading || !blocks.length) return null;
-            return { heading, blocks };
-          })
-          .filter(Boolean)
-      : [];
+  /**
+   * Logs the shape of what the model handed us before validation runs.
+   *
+   * Exists because a rejected report is indistinguishable from a rule-based one
+   * in the response, so the log is the only place the truth can live. The token
+   * counts and stop_reason are here because output truncation is the likeliest
+   * cause of a structurally complete but empty report: a `max_tokens` stop leaves
+   * the tool-input JSON unfinished, and the SDK then surfaces the half-built
+   * object rather than an error.
+   */
+  private describeEmit(emit: any, response: any, iteration: number): void {
+    const raw = emit?.input;
+    const sections = raw?.sections;
+    this.logger.log(
+      `${EMIT_TOOL} received on iteration ${iteration}: stop_reason=${response?.stop_reason}, ` +
+        `sections=${Array.isArray(sections) ? `array(${sections.length})` : typeof sections}, ` +
+        `summary=${typeof raw?.summary === 'string' ? `${raw.summary.length} chars` : typeof raw?.summary}, ` +
+        `output_tokens=${response?.usage?.output_tokens ?? '?'}/${MAX_OUTPUT_TOKENS}`,
+    );
+    if (typeof sections === 'string') {
+      this.logger.warn(
+        `sections arrived as a ${sections.length}-char string. Head: ${sections.slice(0, 300)} | Tail: ${sections.slice(-120)}`,
+      );
+    }
+  }
+
+  /**
+   * Validates untrusted model output into a ReportDocument, or explains why it
+   * could not.
+   *
+   * Every rejection is logged with its reason. Without that, a report the model
+   * wrote in full could be dropped on a single missing field and the caller
+   * would serve the rule-based document instead — a 201 with plausible content
+   * and no hint that the AI path had been discarded. `where` names the call site
+   * so a rejection can be told from a rejection on the other path.
+   */
+  private coerceDocument(raw: any, fallbackTitle: string, where = 'emit'): ReportDocument | null {
+    if (!raw || typeof raw !== 'object') {
+      this.logger.warn(`Report rejected (${where}): tool input was ${typeof raw}, not an object`);
+      return null;
+    }
+
+    const rawSections: any[] = this.asArray(raw.sections);
+    const rejectedSections: string[] = [];
+    const sections: ReportSection[] = rawSections
+      .map((s: any): ReportSection | null => {
+        const heading = this.str(s?.heading);
+        const rawBlocks: any[] = this.asArray(s?.blocks);
+        const blocks = rawBlocks.map((b: any) => this.coerceBlock(b)).filter(Boolean) as ReportBlock[];
+        if (!heading || !blocks.length) {
+          rejectedSections.push(
+            `"${heading || '(no heading)'}": ${!heading ? 'missing heading' : `all ${rawBlocks.length} block(s) invalid (types: ${rawBlocks.map((b: any) => b?.type ?? typeof b).join(', ') || 'none'})`}`,
+          );
+          return null;
+        }
+        if (blocks.length < rawBlocks.length) {
+          this.logger.warn(
+            `Report section "${heading}" (${where}): dropped ${rawBlocks.length - blocks.length} of ${rawBlocks.length} block(s)`,
+          );
+        }
+        return { heading, blocks };
+      })
+      .filter(Boolean) as ReportSection[];
 
     const summary = this.str(raw.summary);
-    if (!sections.length || !summary) return null;
+    if (!sections.length || !summary) {
+      const why = [
+        !summary ? 'no usable summary' : null,
+        !sections.length
+          ? `no usable sections (received ${rawSections.length}${rejectedSections.length ? `; rejected — ${rejectedSections.join('; ')}` : ''})`
+          : null,
+      ]
+        .filter(Boolean)
+        .join('; ');
+      this.logger.warn(`Report rejected (${where}): ${why}. Keys present: ${Object.keys(raw).join(', ') || 'none'}`);
+      return null;
+    }
 
-    const citations: ReportCitation[] = Array.isArray(raw.citations)
-      ? raw.citations
-          .map((c: any) => ({ label: this.str(c?.label), detail: this.str(c?.detail) }))
-          .filter((c: ReportCitation) => c.label && c.detail)
-      : [];
+    if (rejectedSections.length) {
+      this.logger.warn(`Report accepted (${where}) with ${rejectedSections.length} section(s) dropped: ${rejectedSections.join('; ')}`);
+    }
+
+    const citations: ReportCitation[] = this.asArray(raw.citations)
+      .map((c: any) => ({ label: this.str(c?.label), detail: this.str(c?.detail) }))
+      .filter((c: ReportCitation) => c.label && c.detail);
 
     return {
       title: this.str(raw.title) || fallbackTitle,
@@ -489,9 +593,7 @@ export class InsightReportsService {
         return text ? { type: 'paragraph', text } : null;
       }
       case 'bullets': {
-        const items = Array.isArray(raw.items)
-          ? raw.items.map((i: any) => this.str(i)).filter(Boolean)
-          : [];
+        const items = this.asArray(raw.items).map((i: any) => this.str(i)).filter(Boolean);
         return items.length ? { type: 'bullets', items } : null;
       }
       case 'stat': {
@@ -501,40 +603,34 @@ export class InsightReportsService {
         return { type: 'stat', label, value, context: this.str(raw.context) || undefined };
       }
       case 'table': {
-        const columns = Array.isArray(raw.columns)
-          ? raw.columns.map((c: any) => this.str(c))
-          : [];
-        const rows = Array.isArray(raw.rows)
-          ? raw.rows
-              .filter(Array.isArray)
-              .map((r: any[]) =>
-                r.map((cell) =>
-                  cell === null || cell === undefined
-                    ? null
-                    : typeof cell === 'number'
-                      ? cell
-                      : String(cell),
-                ),
-              )
-          : [];
+        const columns = this.asArray(raw.columns).map((c: any) => this.str(c));
+        // Each row may itself have arrived as a JSON string, so coerce per row.
+        const rows = this.asArray(raw.rows)
+          .map((r: any) => this.asArray(r))
+          .filter((r: any[]) => r.length)
+          .map((r: any[]) =>
+            r.map((cell) =>
+              cell === null || cell === undefined
+                ? null
+                : typeof cell === 'number'
+                  ? cell
+                  : String(cell),
+            ),
+          );
         if (!columns.length || !rows.length) return null;
         return { type: 'table', columns, rows, caption: this.str(raw.caption) || undefined };
       }
       case 'chart': {
         const chartType = ['bar', 'line', 'pie'].includes(raw.chartType) ? raw.chartType : null;
-        const categories = Array.isArray(raw.categories)
-          ? raw.categories.map((c: any) => this.str(c))
-          : [];
-        const series = Array.isArray(raw.series)
-          ? raw.series
-              .map((s: any) => ({
-                name: this.str(s?.name),
-                values: Array.isArray(s?.values)
-                  ? s.values.map((v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null))
-                  : [],
-              }))
-              .filter((s: any) => s.name && s.values.length)
-          : [];
+        const categories = this.asArray(raw.categories).map((c: any) => this.str(c));
+        const series = this.asArray(raw.series)
+          .map((s: any) => ({
+            name: this.str(s?.name),
+            values: this.asArray(s?.values).map((v: any) =>
+              typeof v === 'number' && Number.isFinite(v) ? v : null,
+            ),
+          }))
+          .filter((s: any) => s.name && s.values.length);
         if (!chartType || !categories.length || !series.length) return null;
         return {
           type: 'chart',

@@ -49,9 +49,14 @@ export const chromeEntries: CmsRegistryEntry[] = [
   { key: 'footer.legal.privacy', page: FOOTER, section: 'bottom', contentType: 'TEXT', defaultContent: 'Privacy Policy' },
   { key: 'footer.legal.terms', page: FOOTER, section: 'bottom', contentType: 'TEXT', defaultContent: 'Terms of Service' },
   { key: 'footer.legal.data_licensing', page: FOOTER, section: 'bottom', contentType: 'TEXT', defaultContent: 'Data Licensing' },
+  { key: 'footer.legal.cookies', page: FOOTER, section: 'bottom', contentType: 'TEXT', defaultContent: 'Cookie Policy' },
 
-  // Cookie consent banner
-  { key: 'cookie_consent.message', page: COOKIE, section: 'banner', contentType: 'RICH_TEXT', defaultContent: 'We use cookies to improve your experience. By continuing to use this site you agree to our use of cookies.' },
+  // Cookie consent banner. `manage` is retained only because published CMS
+  // entries may still reference it; the banner no longer renders it, since the
+  // button it labelled made no choice and stored consent nothing read back.
+  { key: 'cookie_consent.message', page: COOKIE, section: 'banner', contentType: 'RICH_TEXT', defaultContent: 'We store a little data on your device to keep you signed in and remember your preferences. We run no advertising and no third-party tracking.' },
   { key: 'cookie_consent.manage', page: COOKIE, section: 'banner', contentType: 'TEXT', defaultContent: 'Manage Preferences' },
-  { key: 'cookie_consent.accept', page: COOKIE, section: 'banner', contentType: 'TEXT', defaultContent: 'Accept All' },
+  { key: 'cookie_consent.learn_more', page: COOKIE, section: 'banner', contentType: 'TEXT', defaultContent: 'What we store' },
+  { key: 'cookie_consent.reject', page: COOKIE, section: 'banner', contentType: 'TEXT', defaultContent: 'Reject non-essential' },
+  { key: 'cookie_consent.accept', page: COOKIE, section: 'banner', contentType: 'TEXT', defaultContent: 'Accept all' },
 ];

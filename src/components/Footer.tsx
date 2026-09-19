@@ -4,10 +4,21 @@ import { Link } from 'react-router-dom';
 import { Linkedin, Facebook, CheckCircle2, Loader2, Smartphone } from 'lucide-react';
 import { Content } from '@/components/cms';
 import { useContentText } from '@/contexts/ContentContext';
-import { LEGAL_LINKS } from '@/config/legal';
+import { LEGAL_LINKS, isInternalLegalLink } from '@/config/legal';
 import { ANDROID_APK_URL } from '@/config/app-download';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+// The legal documents live at in-app routes now, so they must render as <Link>
+// rather than as anchors with target="_blank" — a client-side route opened in a
+// new tab costs a full app reload. The external branch stays for the case where
+// VITE_*_URL points the link at a copy hosted elsewhere.
+const LEGAL_FOOTER_LINKS = [
+  { href: LEGAL_LINKS.privacy, id: 'footer.legal.privacy', label: 'Privacy Policy' },
+  { href: LEGAL_LINKS.terms, id: 'footer.legal.terms', label: 'Terms of Service' },
+  { href: LEGAL_LINKS.dataLicensing, id: 'footer.legal.data_licensing', label: 'Data Licensing' },
+  { href: LEGAL_LINKS.cookies, id: 'footer.legal.cookies', label: 'Cookie Policy' },
+] as const;
 
 const NAV_LINKS = [
   { slug: 'home', to: '/', label: 'Home' },
@@ -196,30 +207,23 @@ const Footer = () => {
             >
               <Content as="span" id="footer.legal.pacsda" fallback="A PACSDA Initiative" />
             </a>
-            <a
-              href={LEGAL_LINKS.privacy}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground transition-colors"
-            >
-              <Content as="span" id="footer.legal.privacy" fallback="Privacy Policy" />
-            </a>
-            <a
-              href={LEGAL_LINKS.terms}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground transition-colors"
-            >
-              <Content as="span" id="footer.legal.terms" fallback="Terms of Service" />
-            </a>
-            <a
-              href={LEGAL_LINKS.dataLicensing}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground transition-colors"
-            >
-              <Content as="span" id="footer.legal.data_licensing" fallback="Data Licensing" />
-            </a>
+            {LEGAL_FOOTER_LINKS.map(({ href, id, label }) =>
+              isInternalLegalLink(href) ? (
+                <Link key={id} to={href} className="hover:text-foreground transition-colors">
+                  <Content as="span" id={id} fallback={label} />
+                </Link>
+              ) : (
+                <a
+                  key={id}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-foreground transition-colors"
+                >
+                  <Content as="span" id={id} fallback={label} />
+                </a>
+              ),
+            )}
           </div>
         </div>
       </div>

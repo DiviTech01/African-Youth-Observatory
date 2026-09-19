@@ -358,6 +358,15 @@ export const api = {
       request<{ campaignId: string; audience: string; recipientCount: number }>(`/insight-reports/${id}/send`, { method: 'POST', body: JSON.stringify(body) }),
   },
 
+  // The signed-in user's own account
+  account: {
+    // Irreversible, and required by Google Play for any app that lets people
+    // create an account. Deletes the profile, saved dashboards, newsletter
+    // subscription and the Supabase sign-in credential.
+    delete: () =>
+      request<{ deleted: boolean; message: string }>('/auth/account', { method: 'DELETE' }),
+  },
+
 };
 
 // ─── Additional response types for the real-data wiring ──────────────────────

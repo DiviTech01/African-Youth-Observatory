@@ -1,18 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AiContextService } from './ai-context.service';
 import { CacheService } from '../../common/cache.service';
+import { AiBudgetService, AiBudgetExceededError } from './ai-budget.service';
+import { DEFAULT_MODELS, type AiSurface } from './ai.types';
 
-/** Which product surface a call is for — decides which model it routes to. */
-export type AiSurface = 'chat' | 'report';
-
-/**
- * Current-generation defaults. Sonnet 5 is $2/$10 per MTok, Opus 5 is $5/$25 —
- * the split keeps high-volume chat cheap while reports get the better model.
- */
-const DEFAULT_MODELS: Record<AiSurface, string> = {
-  chat: 'claude-sonnet-5',
-  report: 'claude-opus-5',
-};
+export { AiBudgetExceededError };
+export type { AiSurface };
 
 /**
  * AYO AI Intelligence Service — answers ANY question with full database access.
@@ -27,6 +20,7 @@ export class AiService {
   constructor(
     private contextService: AiContextService,
     private cache: CacheService,
+    private readonly budget: AiBudgetService,
   ) {}
 
   /**
@@ -70,6 +64,54 @@ export class AiService {
   }
 
   /**
+   * Wraps the SDK client so every `messages.create` is checked against the daily
+   * budget before it goes out and recorded after it returns.
+   *
+   * The meter sits here rather than at each call site because report generation
+   * drives its own tool-use loop through `getClient()` — up to seven Opus calls
+   * for one HTTP request. Metering per call site means the next surface that
+   * takes a client forgets to do it; metering at the chokepoint means it cannot.
+   * The surface is inferred from the requested model, which is how the callers
+   * already express intent (`getModel('report')`).
+   */
+  private meter(raw: any): any {
+    if (!raw) return raw;
+    const budget = this.budget;
+    const surfaceOf = (model: string): AiSurface =>
+      model === this.getModel('report') ? 'report' : 'chat';
+
+    // A Proxy rather than a spread: the SDK client carries methods on its
+    // prototype and sub-resources beyond `messages`, and `{...client}` would
+    // silently drop them. This intercepts exactly one property.
+    const messagesProxy = new Proxy(raw.messages, {
+      get(target, prop, receiver) {
+        if (prop !== 'create') return Reflect.get(target, prop, receiver);
+        return async (params: any, ...rest: any[]) => {
+          const model = String(params?.model ?? '');
+          const surface = surfaceOf(model);
+          budget.assertWithinBudget(surface);
+          const response = await target.create(params, ...rest);
+          budget.record(surface, model, response?.usage);
+          return response;
+        };
+      },
+    });
+
+    return new Proxy(raw, {
+      get(target, prop, receiver) {
+        if (prop === 'messages') return messagesProxy;
+        const value = Reflect.get(target, prop, receiver);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  }
+
+  /** Daily spend/usage counters, for /ops/status. */
+  budgetSnapshot() {
+    return this.budget.snapshot();
+  }
+
+  /**
    * The initialized Anthropic client, or null when no key is configured.
    *
    * Exposed for callers that need request features `generate()` deliberately
@@ -78,7 +120,7 @@ export class AiService {
    * shares this client so key handling and SDK loading stay in one place.
    */
   async getClient(): Promise<any> {
-    return this.ensureClient();
+    return this.meter(await this.ensureClient());
   }
 
   /**
@@ -163,7 +205,7 @@ export class AiService {
     maxTokens?: number,
     surface: AiSurface = 'chat',
   ): Promise<string | null> {
-    const client = await this.ensureClient();
+    const client = this.meter(await this.ensureClient());
     if (!client) return null;
 
     try {
@@ -177,6 +219,10 @@ export class AiService {
       const first = response.content[0];
       return first?.type === 'text' ? first.text ?? null : null;
     } catch (error: unknown) {
+      if (error instanceof AiBudgetExceededError) {
+        this.logger.warn(`AI generation skipped: ${error.reason}`);
+        return null;
+      }
       const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`AI generation failed: ${msg}`);
       return null;
@@ -199,7 +245,7 @@ export class AiService {
     const cached = this.cache.get<AiAnswer>(cacheKey);
     if (cached) return cached;
 
-    const client = await this.ensureClient();
+    const client = this.meter(await this.ensureClient());
     if (!client) {
       return this.fallbackAnswer(question, options);
     }
@@ -271,7 +317,11 @@ export class AiService {
       this.cache.set(cacheKey, answer, 1800);
       return answer;
     } catch (err: any) {
-      this.logger.error(`AI query failed: ${err.message}`);
+      if (err instanceof AiBudgetExceededError) {
+        this.logger.warn(`AI query fell back to rule-based: ${err.reason}`);
+      } else {
+        this.logger.error(`AI query failed: ${err.message}`);
+      }
       return this.fallbackAnswer(question, options);
     }
   }

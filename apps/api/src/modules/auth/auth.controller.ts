@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Put, Post, Delete, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { UpdateProfileDto, ContactFormDto } from './auth.dto';
@@ -24,6 +24,23 @@ export class AuthController {
   @ApiOperation({ summary: 'Update current user profile' })
   updateProfile(@Request() req: { user: { id: string } }, @Body() dto: UpdateProfileDto) {
     return this.authService.updateProfile(req.user.id, dto);
+  }
+
+  /**
+   * Self-service account deletion. Play requires an in-app path and a public web
+   * URL for this; the web app exposes it from Settings, and the mobile app calls
+   * the same endpoint.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Delete('account')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Delete the signed-in user's own account and personal data",
+    description:
+      'Irreversible. Removes the profile, saved dashboards, newsletter subscription and the Supabase sign-in credential.',
+  })
+  deleteAccount(@Request() req: { user: { id: string } }) {
+    return this.authService.deleteOwnAccount(req.user.id);
   }
 
   @Public()

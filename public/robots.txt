@@ -12,3 +12,6 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+# Generated at build time by scripts/generate-sitemap.mjs
+Sitemap: https://africanyouthobservatory.org/sitemap.xml

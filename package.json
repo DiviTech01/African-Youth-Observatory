@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "cd apps/api && npm run dev",
+    "prebuild": "node scripts/generate-sitemap.mjs",
     "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "//build:dev": "Deliberately a production build. Cloudflare Pages was configured to run build:dev, which is why production shipped React in development mode - slower, larger, dev-only warnings, and no minified-error stripping. Aliasing it removes the foot-gun whichever command the deploy runs. Use `npm run dev` for development, or build:devmode if you genuinely need a development-mode bundle.",
+    "build:dev": "npm run build",
+    "build:devmode": "node scripts/generate-sitemap.mjs && vite build --mode development",
     "build:api": "cd apps/api && npm run build",
     "lint": "eslint .",
     "preview": "vite preview",

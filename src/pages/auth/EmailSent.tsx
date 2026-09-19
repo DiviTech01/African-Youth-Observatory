@@ -1,10 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Mail } from 'lucide-react';
+import { Mail, Loader2, Check } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 const EmailSent = () => {
   const [params] = useSearchParams();
-  const email = params.get('email') || 'your inbox';
+  const emailParam = params.get('email');
+  const email = emailParam || 'your inbox';
+  const { toast } = useToast();
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+
+  // A confirmation email that never arrives is a dead end: the account exists but
+  // cannot be used, and the only recovery was to sign up again with the same
+  // address, which Supabase rejects.
+  const handleResend = async () => {
+    if (!emailParam || resending) return;
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email: emailParam });
+      if (error) throw new Error(error.message);
+      setResent(true);
+      toast({ title: 'Sent again', description: `We sent another link to ${emailParam}.` });
+    } catch (err) {
+      toast({
+        title: 'Could not resend the email',
+        description: err instanceof Error ? err.message : 'Please try again in a moment.',
+        variant: 'destructive',
+      });
+    } finally {
+      setResending(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 py-12">
@@ -39,10 +67,29 @@ const EmailSent = () => {
           >
             Back to Sign In
           </Link>
+          {emailParam && (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending || resent}
+              className="w-full h-11 rounded-lg border border-gray-800 text-gray-300 font-medium text-sm hover:border-gray-700 hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {resending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {resent && <Check className="h-3.5 w-3.5" />}
+              {resent ? 'Email sent again' : 'Resend the email'}
+            </button>
+          )}
           <p className="text-xs text-gray-600">
             Wrong email?{' '}
             <Link to="/auth/signup" className="text-[#D4A017] hover:underline">
               Sign up again
+            </Link>
+          </p>
+          {/* Nobody has to wait on an inbox to use AYO - the data is open. */}
+          <p className="text-xs text-gray-600">
+            You don't need an account to explore the data.{' '}
+            <Link to="/dashboard" className="text-[#D4A017] hover:underline">
+              Start browsing
             </Link>
           </p>
         </div>

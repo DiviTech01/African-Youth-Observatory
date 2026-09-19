@@ -96,20 +96,15 @@ export async function detectDefaultLanguage(): Promise<Language | null> {
     /* fall through */
   }
 
-  // 2. Public IP geolocation service (no key).
-  try {
-    const res = await fetchWithTimeout('https://ipwho.is/?fields=country_code', 3000);
-    if (res && res.ok) {
-      const json = (await res.json()) as { country_code?: string };
-      if (json?.country_code && /^[A-Za-z]{2}$/.test(json.country_code)) {
-        return mapCountryToLanguage(json.country_code);
-      }
-    }
-  } catch {
-    /* fall through */
-  }
-
-  // 3. Browser locale (reflects device language, not physical location).
+  // 2. Browser locale (reflects device language, not physical location).
+  //
+  // There used to be a third step here that sent the visitor's IP to
+  // https://ipwho.is before any consent was asked for. It was an undisclosed
+  // transfer of personal data to a processor named in no policy, on the critical
+  // path of the first paint, costing up to 3s when it hung — to guess at a
+  // language the browser already tells us. Removed rather than disclosed: the
+  // Cloudflare trace above is same-origin and covers the location case in
+  // production, and this covers everything else. Do not reintroduce it.
   try {
     return languageFromNavigator();
   } catch {
