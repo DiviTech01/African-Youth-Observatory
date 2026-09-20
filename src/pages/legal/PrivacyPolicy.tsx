@@ -13,9 +13,8 @@ const SECTIONS: LegalSection[] = [
       <>
         <p>
           The African Youth Observatory ("AYO", "we") publishes open statistical data on youth
-          across the 54 countries of Africa. AYO is an initiative of the Pan-African Centre for
-          Sustainable Development in Africa (PACSDA), which is the controller of the personal data
-          described in this policy.
+          across the 54 countries of Africa. AYO is an initiative of PACSDA, which is the controller
+          of the personal data described in this policy.
         </p>
         <p>
           For any question about this policy, or to exercise the rights in section 7, write to{' '}
