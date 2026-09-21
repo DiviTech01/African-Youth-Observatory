@@ -29,7 +29,8 @@ export class OpsService {
   // ── Status: "is the site up / what's broken" ─────────────────
 
   async getStatus() {
-    // Chat and reports route to different models now (Sonnet 5 / Opus 5), so
+    // Chat and reports are probed as separate surfaces, since each can be pointed
+    // at a different model by env, so
     // each is probed separately — one can be reachable while the other is not.
     const [database, website, ai, aiReport] = await Promise.all([
       this.checkDatabase(),

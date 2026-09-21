@@ -68,8 +68,8 @@ export class AiService {
    * budget before it goes out and recorded after it returns.
    *
    * The meter sits here rather than at each call site because report generation
-   * drives its own tool-use loop through `getClient()` — up to seven Opus calls
-   * for one HTTP request. Metering per call site means the next surface that
+   * drives its own tool-use loop through `getClient()` — several model calls for
+   * one HTTP request. Metering per call site means the next surface that
    * takes a client forgets to do it; metering at the chokepoint means it cannot.
    * The surface is inferred from the requested model, which is how the callers
    * already express intent (`getModel('report')`).
@@ -178,9 +178,10 @@ export class AiService {
   /**
    * Model routing is per-surface, not global.
    *
-   * Chat and NLQ are high-volume and latency-sensitive, so they run Sonnet 5.
-   * Reports are low-volume, long-form and cited — the place where reasoning
-   * quality is worth paying for — so they run Opus 5.
+   * Both surfaces run Sonnet 5 today. The split stays because each can be pointed
+   * at a different model by env — chat is high-volume and latency-sensitive, while
+   * reports are low-volume and long-form — and because /ops/status probes them
+   * separately, so one can be reported degraded while the other is healthy.
    *
    * The legacy `AI_MODEL` variable is deliberately NOT read. Production had it
    * pinned to `claude-sonnet-4-20250514`, a model this account can no longer

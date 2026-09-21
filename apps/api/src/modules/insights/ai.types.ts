@@ -2,20 +2,20 @@
 export type AiSurface = 'chat' | 'report';
 
 /**
- * Current-generation defaults. Per MTok input/output: Haiku 4.5 $1/$5,
- * Sonnet 5 $2/$10, Opus 5 $5/$25.
+ * Every surface runs on Sonnet 5 ($2/$10 per MTok). Haiku 4.5 ($1/$5) is the only
+ * cheaper option worth considering.
  *
- * Reports ran on Opus 5 until 2026-09-21. Six test reports cost ~1.83M tokens —
- * about 305k per report, because the tool loop resends its whole growing history
- * on every iteration — which came to roughly $10 for six documents. At that rate
- * a public, uncapped report endpoint is not a feature, it is a liability.
+ * Reports used to route to a frontier-tier model on the reasoning that they are
+ * the low-volume, high-stakes surface. Measured, six test reports cost ~1.83M
+ * tokens — about 305k each, because the tool loop resends its whole growing
+ * history every iteration — roughly $10 for six documents. On a public, uncapped
+ * endpoint that is a liability rather than a feature.
  *
- * Sonnet 5 is 2.5x cheaper on both sides and is a capable long-form writer; the
- * quality risk in a report is fabricated numbers, and that is controlled by the
- * tool loop and the validator, not by model size. Together with the request-shape
- * changes in insight-reports.service.ts this cuts the per-report cost by roughly
- * an order of magnitude. Do not put reports back on Opus without a per-report
- * cost ceiling in front of it.
+ * The quality risk in a report is a fabricated number, and that is controlled by
+ * the tool loop fetching real figures and the validator rejecting malformed
+ * output — not by model size. Premium-tier models are not used anywhere on this
+ * platform; if that ever changes, put a per-report cost ceiling in front of it
+ * first.
  */
 export const DEFAULT_MODELS: Record<AiSurface, string> = {
   chat: 'claude-sonnet-5',

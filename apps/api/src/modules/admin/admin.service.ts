@@ -501,7 +501,7 @@ export class AdminService {
     // read the legacy AI_MODEL var, which meant it confidently displayed a
     // model the account could not reach while every AI call silently degraded.
     // Defaults come from DEFAULT_MODELS rather than being restated here — the
-    // duplicated literals went stale the moment reports moved off Opus 5, and a
+    // duplicated literals went stale the moment report routing changed, and a
     // dashboard that reports the wrong model is how the last routing bug hid.
     aiAvailable = !!process.env.ANTHROPIC_API_KEY;
     aiModel = process.env.AI_MODEL_CHAT?.trim() || DEFAULT_MODELS.chat;

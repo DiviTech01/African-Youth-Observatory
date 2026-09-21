@@ -15,10 +15,16 @@ export class AiBudgetExceededError extends Error {
 
 /** USD per million tokens, input/output. Keep in step with DEFAULT_MODELS. */
 const PRICES: Record<string, { in: number; out: number }> = {
-  'claude-opus-5': { in: 5, out: 25 },
   'claude-sonnet-5': { in: 2, out: 10 },
   'claude-haiku-4-5-20251001': { in: 1, out: 5 },
 };
+
+/**
+ * Used when a model id is not in the table above — deliberately pessimistic, so
+ * an unrecognised model is over-counted and trips the ceiling early rather than
+ * spending silently. Under-estimating an unknown model is the failure that costs
+ * money; over-estimating one only causes an early, visible refusal.
+ */
 const FALLBACK_PRICE = { in: 5, out: 25 };
 
 interface DayLedger {
@@ -45,8 +51,8 @@ function envNumber(name: string, fallback: number): number {
  * A hard ceiling on what the Anthropic key can be made to spend in a day.
  *
  * Per-IP throttles do not bound this: `/nlq/query` and `/insight-reports/generate`
- * are public, and a report is a tool-use loop of up to seven Opus calls, so an
- * actor rotating IPs can spend without limit. This meters every call at the SDK
+ * are public, and a report is a multi-call tool-use loop, so an actor rotating
+ * IPs can spend without limit. This meters every call at the SDK
  * chokepoint and refuses once the day's ceiling is reached, which degrades the
  * product to rule-based answers instead of running up a bill.
  *

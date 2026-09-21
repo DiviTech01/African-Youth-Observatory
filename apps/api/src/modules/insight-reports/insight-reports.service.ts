@@ -379,11 +379,19 @@ export class InsightReportsService {
       // Assistant content is echoed back verbatim so the model sees its own prior
       // turns intact.
       //
-      // Then mark the newest tool_result as a cache breakpoint. Without this only
-      // the static system+tools prefix was cached, and every iteration re-paid
-      // full input price for the entire conversation so far — which is why six
-      // reports cost 1.83M tokens. With it, each turn reads the previous turns at
-      // 10% of input price and only the new content is charged in full.
+      // Then move the cache breakpoint to the newest tool_result. Without a
+      // breakpoint in the conversation only the static system+tools prefix was
+      // cached, and every iteration re-paid full input price for the whole history
+      // so far — which is why six reports cost 1.83M tokens. With one, each turn
+      // reads all previous turns at 10% of input price.
+      //
+      // The breakpoint has to MOVE, not accumulate: the API allows at most four
+      // cache_control blocks per request, so marking one per iteration and leaving
+      // the old ones in place sent five on the fourth round trip and the whole
+      // request failed with a 400 — which surfaced only as a silent fall back to
+      // the rule-based document. One static breakpoint on the system block plus
+      // one moving breakpoint at the end of the conversation is the whole scheme.
+      this.clearCacheBreakpoints(messages);
       const lastResult = toolResults[toolResults.length - 1];
       if (lastResult) lastResult.cache_control = { type: 'ephemeral' };
 
@@ -413,6 +421,24 @@ export class InsightReportsService {
 
     this.logger.warn(`Report loop ended without ${EMIT_TOOL} (stop_reason=${response.stop_reason})`);
     return null;
+  }
+
+  /**
+   * Strips `cache_control` from every content block in the conversation.
+   *
+   * Called before setting the next breakpoint so exactly one moving breakpoint
+   * exists at any time, keeping the request under the four-block limit however
+   * many round trips the loop takes.
+   */
+  private clearCacheBreakpoints(messages: any[]): void {
+    for (const message of messages) {
+      if (!Array.isArray(message?.content)) continue;
+      for (const block of message.content) {
+        if (block && typeof block === 'object' && 'cache_control' in block) {
+          delete block.cache_control;
+        }
+      }
+    }
   }
 
   /**
