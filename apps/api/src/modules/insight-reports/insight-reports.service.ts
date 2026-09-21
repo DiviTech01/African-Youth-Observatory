@@ -27,21 +27,43 @@ export type ReportScope = 'continental' | 'country' | 'theme';
  * Reports are the one surface where a wrong number is worse than no report, so
  * the model is not asked to recall figures from a context blob — it is given
  * the same read-only query tools the chat analyst uses and has to fetch what it
- * cites. Six round trips is enough for a country deep-dive (index, trend,
- * regional average, peer comparison) without letting a runaway loop bill us.
+ * cites.
+ *
+ * Four round trips, down from six. Every iteration resends the entire
+ * conversation so far, so the input cost of a loop grows quadratically, not
+ * linearly — the last two iterations were the most expensive and the least
+ * used. Measured reports emitted on iteration 4 or 5 of 6; four is enough for
+ * index, trend, regional average and peer comparison, and the final-round
+ * instruction below tells the model to spend its last turn writing.
  */
-const MAX_TOOL_ITERATIONS = 6;
+const MAX_TOOL_ITERATIONS = 4;
+
+/**
+ * Ceiling on a single tool result, in characters (~4 chars per token, so ~3k
+ * tokens). Resent on every subsequent iteration, so this is charged repeatedly.
+ */
+const MAX_TOOL_RESULT_CHARS = 12000;
+
+/**
+ * How long a generated report answers the same request before it is regenerated.
+ * Twelve hours: the underlying data moves on uploads, not on page views, and the
+ * alternative is paying for a new document every time someone reloads.
+ */
+const REPORT_REUSE_MS = 12 * 60 * 60 * 1000;
 
 /**
  * Long enough for genuinely long-form sections; short enough to stay non-streaming.
  *
- * Raised from 16,000 after a verified country report finished on 15,759 output
- * tokens — 98% of the ceiling. Adaptive thinking draws on the same budget, so a
- * report one section longer would stop at `max_tokens` with its tool-input JSON
- * unfinished, and an unfinished report is indistinguishable in the response from
- * a rule-based one. The headroom is the point; typical reports use half of it.
+ * A report once finished on 15,759 of 16,000 output tokens — 98% of the ceiling —
+ * because adaptive thinking drew on the same budget. Truncation there is
+ * particularly nasty: the tool-input JSON stops mid-object and an unfinished
+ * report is indistinguishable in the response from a rule-based one.
+ *
+ * Thinking is now off (see `request` below), so this budget is prose only and
+ * 20,000 is generous headroom. `max_tokens` is a ceiling, not a reservation — it
+ * costs nothing unless the model spends it.
  */
-const MAX_OUTPUT_TOKENS = 32000;
+const MAX_OUTPUT_TOKENS = 20000;
 
 /**
  * Tool name → the `executeDataQuery` discriminator. Generation reuses
@@ -131,6 +153,26 @@ export class InsightReportsService {
           ? `${themeName} Across Africa — Youth Data Report`
           : 'Africa Youth Development — Continental Report';
 
+    // Reuse before spending. Identical requests were each running a full model
+    // loop: six identical Nigeria/2024 reports during one debugging session cost
+    // six generations and ~1.8M tokens, where one would have done. A report is a
+    // derived artefact of the database, so the same request against unchanged data
+    // has the same answer — and the endpoint is public, so without this a refresh
+    // button is a spend button.
+    const signature = this.requestSignature(scope, opts);
+    const existingId = await this.store.findByRequest(signature, REPORT_REUSE_MS);
+    if (existingId) {
+      const existing = await this.store.get(existingId);
+      // Only reuse a real AI document. Reusing a rule-based fallback would make a
+      // transient AI outage permanent for that request.
+      if (existing && existing.source === 'ai') {
+        this.logger.log(
+          `Reusing report ${existingId} for ${signature} (generated ${existing.createdAt})`,
+        );
+        return existing;
+      }
+    }
+
     let document: ReportDocument | null = null;
     let source: 'ai' | 'rule-based' = 'rule-based';
     let model: string | null = null;
@@ -166,6 +208,13 @@ export class InsightReportsService {
     };
 
     await this.store.save(report);
+
+    // Only point at an AI report. Caching a rule-based fallback would turn a
+    // momentary AI outage into a stale document served for the next 12 hours.
+    if (source === 'ai') {
+      await this.store.rememberRequest(signature, id);
+    }
+
     return report;
   }
 
@@ -264,10 +313,15 @@ export class InsightReportsService {
       client.messages.create({
         model,
         max_tokens: MAX_OUTPUT_TOKENS,
-        // Adaptive thinking + high effort: reports are the low-volume, high-stakes
-        // surface. budget_tokens is rejected on Opus 5 — do not reintroduce it.
-        thinking: { type: 'adaptive' },
-        output_config: { effort: 'high' },
+        // Adaptive thinking and effort:high were set here on the reasoning that
+        // reports are the low-volume, high-stakes surface. Measured, they were the
+        // single largest cost item: thinking tokens bill as output, which is the
+        // expensive side, and one report reached 15,759 output tokens where the
+        // finished prose was a fraction of that. The accuracy guarantee in a
+        // report comes from the tool loop fetching real figures and the validator
+        // rejecting malformed output — not from the model thinking longer about a
+        // number it has already been handed. Removed deliberately; re-adding
+        // either one roughly triples the cost of every report.
         system: [
           {
             type: 'text',
@@ -305,7 +359,10 @@ export class InsightReportsService {
         toolResults.push({
           type: 'tool_result',
           tool_use_id: toolUse.id,
-          content: JSON.stringify(await this.executeDataTool(toolUse.name, toolUse.input)),
+          content: this.capToolResult(
+            JSON.stringify(await this.executeDataTool(toolUse.name, toolUse.input)),
+            toolUse.name,
+          ),
         });
       }
 
@@ -319,8 +376,17 @@ export class InsightReportsService {
         });
       }
 
-      // Assistant content is echoed back verbatim so thinking blocks survive the
-      // round trip — stripping them breaks reasoning continuity across tool calls.
+      // Assistant content is echoed back verbatim so the model sees its own prior
+      // turns intact.
+      //
+      // Then mark the newest tool_result as a cache breakpoint. Without this only
+      // the static system+tools prefix was cached, and every iteration re-paid
+      // full input price for the entire conversation so far — which is why six
+      // reports cost 1.83M tokens. With it, each turn reads the previous turns at
+      // 10% of input price and only the new content is charged in full.
+      const lastResult = toolResults[toolResults.length - 1];
+      if (lastResult) lastResult.cache_control = { type: 'ephemeral' };
+
       messages = [
         ...messages,
         { role: 'assistant', content: response.content },
@@ -347,6 +413,44 @@ export class InsightReportsService {
 
     this.logger.warn(`Report loop ended without ${EMIT_TOOL} (stop_reason=${response.stop_reason})`);
     return null;
+  }
+
+  /**
+   * Stable key for "the same report request": scope plus whichever of country,
+   * theme and year apply. Year is included because a 2024 report and a 2025
+   * report are different documents.
+   */
+  private requestSignature(
+    scope: ReportScope,
+    opts: { countryId?: string; themeId?: string; year?: number },
+  ): string {
+    return [
+      scope,
+      opts.countryId ?? 'no-country',
+      opts.themeId ?? 'no-theme',
+      opts.year ?? 'no-year',
+    ].join('_');
+  }
+
+  /**
+   * Caps a tool result before it enters the conversation.
+   *
+   * A tool result is not paid for once: it is resent on every later iteration, so
+   * an oversized query response is charged three or four times over. These are
+   * database reads that can return long row sets, and a report cites a handful of
+   * figures from them. Truncating with an explicit marker lets the model narrow
+   * its query instead of silently reasoning over a clipped array.
+   */
+  private capToolResult(json: string, toolName: string): string {
+    if (json.length <= MAX_TOOL_RESULT_CHARS) return json;
+    this.logger.warn(
+      `Tool ${toolName} returned ${json.length} chars — truncated to ${MAX_TOOL_RESULT_CHARS}`,
+    );
+    return (
+      json.slice(0, MAX_TOOL_RESULT_CHARS) +
+      `\n\n[TRUNCATED: this result was ${json.length} characters. Narrow the query ` +
+      `(fewer years, one country, or a specific indicator) if you need the rest.]`
+    );
   }
 
   private async executeDataTool(toolName: string, input: any): Promise<any> {

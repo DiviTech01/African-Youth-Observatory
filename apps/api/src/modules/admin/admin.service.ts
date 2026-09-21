@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { ListUsersDto, DeleteDataDto } from './admin.dto';
 import * as crypto from 'crypto';
+import { DEFAULT_MODELS } from '../insights/ai.types';
 
 interface ImportJob {
   id: string;
@@ -499,9 +500,12 @@ export class AdminService {
     // both. This used to hardcode 'claude-sonnet-4-20250514' as its fallback and
     // read the legacy AI_MODEL var, which meant it confidently displayed a
     // model the account could not reach while every AI call silently degraded.
+    // Defaults come from DEFAULT_MODELS rather than being restated here — the
+    // duplicated literals went stale the moment reports moved off Opus 5, and a
+    // dashboard that reports the wrong model is how the last routing bug hid.
     aiAvailable = !!process.env.ANTHROPIC_API_KEY;
-    aiModel = process.env.AI_MODEL_CHAT?.trim() || 'claude-sonnet-5';
-    aiReportModel = process.env.AI_MODEL_REPORT?.trim() || 'claude-opus-5';
+    aiModel = process.env.AI_MODEL_CHAT?.trim() || DEFAULT_MODELS.chat;
+    aiReportModel = process.env.AI_MODEL_REPORT?.trim() || DEFAULT_MODELS.report;
 
     // Database row counts
     const [countries, indicators, indicatorValues, users, themes, experts, policies, dashboards] =

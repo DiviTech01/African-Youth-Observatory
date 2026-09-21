@@ -72,9 +72,13 @@ export class AiBudgetService {
 
   get limits() {
     return {
-      usdPerDay: envNumber('AI_DAILY_BUDGET_USD', 25),
-      reportsPerDay: envNumber('AI_DAILY_MAX_REPORTS', 60),
-      chatCallsPerDay: envNumber('AI_DAILY_MAX_CHAT_CALLS', 2000),
+      // Deliberately low defaults. A ceiling only protects you if it is lower
+      // than the amount that would hurt: $10 of unexpected spend was already
+      // enough to be a problem here, so the default refuses at $5/day and the
+      // owner raises it consciously rather than discovering it after the fact.
+      usdPerDay: envNumber('AI_DAILY_BUDGET_USD', 5),
+      reportsPerDay: envNumber('AI_DAILY_MAX_REPORTS', 25),
+      chatCallsPerDay: envNumber('AI_DAILY_MAX_CHAT_CALLS', 500),
     };
   }
 

@@ -4,11 +4,12 @@ import { NewsletterAdminController } from './newsletter-admin.controller';
 import { NewsletterService } from './newsletter.service';
 import { NewsletterScheduler } from './newsletter.scheduler';
 import { ContentModule } from '../content/content.module'; // for R2Service
+import { InsightsModule } from '../insights/insights.module'; // for the metered AiService
 
 // MailService (global MailModule) and PrismaService (global PrismaModule) are
 // injected without explicit imports here. R2Service comes from ContentModule.
 @Module({
-  imports: [ContentModule],
+  imports: [ContentModule, InsightsModule],
   controllers: [NewsletterController, NewsletterAdminController],
   providers: [NewsletterService, NewsletterScheduler],
   exports: [NewsletterService],

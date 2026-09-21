@@ -50,6 +50,9 @@ export class ReportStoreService implements ReportStore {
   /** Guards the degradation warning so an outage logs once, not once per call. */
   private degradedWarned = false;
 
+  /** request signature -> most recent report id, mirrored in R2. */
+  private readonly pointers = new Map<string, { id: string; at: number }>();
+
   constructor(private readonly r2: R2Service) {}
 
   // R2 keys are derived from the report id alone, so a fresh process can find
@@ -60,6 +63,58 @@ export class ReportStoreService implements ReportStore {
 
   private renderedKey(id: string, format: ReportFormat): string {
     return `insight-reports/${id}/report.${format}`;
+  }
+
+  /**
+   * Key for the pointer that maps a request signature to the last report id
+   * generated for it. Lets `generate` reuse an existing document instead of
+   * paying a model to rewrite one that already exists.
+   */
+  private pointerKey(signature: string): string {
+    return `insight-reports/by-request/${signature}.json`;
+  }
+
+  /** Records that `signature` was most recently answered by `id`. */
+  async rememberRequest(signature: string, id: string): Promise<void> {
+    this.pointers.set(signature, { id, at: Date.now() });
+    if (!this.r2.isConfigured()) return;
+    try {
+      await this.r2.putBuffer(
+        this.pointerKey(signature),
+        Buffer.from(JSON.stringify({ id, at: new Date().toISOString() }), 'utf8'),
+        'application/json',
+      );
+    } catch (err) {
+      // A lost pointer costs one regeneration, not correctness. Never fail a
+      // successful report because the reuse hint could not be written.
+      this.logger.warn(`Could not store request pointer: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * The id previously generated for this signature, or null.
+   *
+   * `maxAgeMs` keeps a reused report from being indefinitely stale: the database
+   * behind it changes on uploads, so a report is reusable for a while, not
+   * forever.
+   */
+  async findByRequest(signature: string, maxAgeMs: number): Promise<string | null> {
+    const local = this.pointers.get(signature);
+    if (local && Date.now() - local.at <= maxAgeMs) return local.id;
+
+    if (!this.r2.isConfigured()) return null;
+    try {
+      const raw = await this.readObject(this.pointerKey(signature));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw.toString('utf8')) as { id?: string; at?: string };
+      if (!parsed?.id || !parsed.at) return null;
+      const age = Date.now() - new Date(parsed.at).getTime();
+      if (!Number.isFinite(age) || age > maxAgeMs) return null;
+      this.pointers.set(signature, { id: parsed.id, at: new Date(parsed.at).getTime() });
+      return parsed.id;
+    } catch {
+      return null;
+    }
   }
 
   async save(report: StoredReport): Promise<void> {

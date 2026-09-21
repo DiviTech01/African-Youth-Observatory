@@ -1,10 +1,10 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import Anthropic from '@anthropic-ai/sdk';
 import { NewsletterCampaignStatus, NewsletterAudience } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { R2Service } from '../content/r2.service';
+import { AiService } from '../insights/ai.service';
 import {
   SubscribeDto,
   CreateCampaignDto,
@@ -37,6 +37,7 @@ export class NewsletterService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly r2: R2Service,
+    private readonly ai: AiService,
   ) {}
 
   // ── Attachment upload ─────────────────────────────────────
@@ -633,10 +634,21 @@ export class NewsletterService {
     return ctx;
   }
 
+  /**
+   * Third place in this codebase that built its own Anthropic client, after
+   * AiService and AiChatService.
+   *
+   * Two problems came with owning one. It read the legacy `AI_MODEL`, which
+   * production pins to a model this account can no longer reach, so the monthly
+   * briefing would have thrown and silently fallen back to the static body. And a
+   * private client is not counted by AiBudgetService, so this call could spend
+   * past the daily ceiling every other surface respects. It now takes the shared
+   * metered client like everything else.
+   */
   private async generateBodyWithAI(monthName: string, context: string): Promise<string> {
-    if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not set');
-    const client = new Anthropic();
-    const model = process.env.AI_MODEL || 'claude-sonnet-4-5';
+    const client = await this.ai.getClient();
+    if (!client) throw new Error('Anthropic client is not available');
+    const model = this.ai.getModel('chat');
 
     const systemPrompt =
       'You are writing a monthly youth-data briefing for the African Youth Observatory newsletter — a public email sent to researchers, policymakers, students, and civil-society practitioners. ' +
