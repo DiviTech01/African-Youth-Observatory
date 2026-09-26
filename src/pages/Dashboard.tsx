@@ -65,17 +65,6 @@ const COUNTRIES = [
   'Tanzania', 'Rwanda', 'Senegal', 'Egypt', 'Morocco',
 ];
 
-const INDICATORS = [
-  'Youth Literacy Rate',
-  'Youth Unemployment Rate',
-  'Health Access Index',
-  'Digital Inclusion Score',
-  'Secondary Enrollment Rate',
-  'NEET Rate',
-  'Skilled Employment Share',
-  'Civic Participation Index',
-];
-
 const CHART_COLORS = [
   '#22C55E', // green
   '#F59E0B', // gold
@@ -84,19 +73,33 @@ const CHART_COLORS = [
   '#F43F5E', // rose
 ];
 
-// v5 bump: reorders the default widgets (Cross-Dimensional Profile first,
-// Employment Trends second). Existing users on v1–v4 get migrated to the
-// new defaults on next load via the LEGACY_STORAGE_KEYS sweep.
-const STORAGE_KEY = 'ayd_user_widgets_v5';
-const LEGACY_STORAGE_KEYS = ['ayd_user_widgets_v1', 'ayd_user_widgets_v2', 'ayd_user_widgets_v3', 'ayd_user_widgets_v4'];
+// v6 bump: new default set — Cross-Dimensional Profile, Entrepreneurship &
+// Digital Access, and Access to Justice, each on a distinct, well-populated
+// live indicator with no country repeated across widgets. Existing users on
+// v1–v5 get migrated to the new defaults on next load via the
+// LEGACY_STORAGE_KEYS sweep (custom layouts are preserved).
+const STORAGE_KEY = 'ayd_user_widgets_v6';
+const LEGACY_STORAGE_KEYS = ['ayd_user_widgets_v1', 'ayd_user_widgets_v2', 'ayd_user_widgets_v3', 'ayd_user_widgets_v4', 'ayd_user_widgets_v5'];
 
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 // ── Default widgets ────────────────────────────────────────────────────────────
 
-const EMPLOYMENT_COUNTRIES = ['Ghana', 'Rwanda', 'Senegal', 'Kenya', 'Morocco'];
-const HEALTH_COUNTRIES = ['Ethiopia', 'Tanzania', 'Egypt', 'Nigeria'];
+// The big-5 most-discussed economies anchor the radar. The other two widgets
+// deliberately pick *different* countries (one per region) so no country is
+// repeated across the dashboard and a wider spread of stories is on screen.
 const RADAR_COUNTRIES = ['Nigeria', 'Kenya', 'South Africa', 'Egypt', 'Ghana'];
+// Entrepreneurship: one country from each of 4 regions (East/West/North/South).
+// `internet-access-households` is the only entrepreneurship-theme indicator with
+// full 54-country live coverage, so it drives the digital-economy story here.
+const ENTREPRENEURSHIP_COUNTRIES = ['Rwanda', 'Senegal', 'Morocco', 'Botswana'];
+// Access to Justice spans 3 regions (North/East/West). `juvenile-detentions`
+// is the populated indicator in this theme (47 countries on file).
+const JUSTICE_COUNTRIES = ['Tunisia', 'Uganda', "Cote d'Ivoire"];
+// Health uses a full 5-region spread (East/North/Central/Southern/West) so
+// Central Africa is represented somewhere on the dashboard. `births-by-skilled-staff`
+// has the broadest live coverage in the health theme (~51 countries).
+const HEALTH_COUNTRIES = ['Ethiopia', 'Algeria', 'Cameroon', 'Zambia', 'Mali'];
 
 const defaultWidgets: Widget[] = [
   {
@@ -108,23 +111,23 @@ const defaultWidgets: Widget[] = [
   },
   {
     id: 'w2',
-    title: 'Employment Trends',
+    title: 'Entrepreneurship & Digital Access',
     chartType: 'line',
-    indicator: 'Youth Unemployment Rate',
-    countries: EMPLOYMENT_COUNTRIES,
+    indicator: 'internet-access-households',
+    countries: ENTREPRENEURSHIP_COUNTRIES,
   },
   {
     id: 'w3',
-    title: 'Youth Literacy Rates',
+    title: 'Access to Justice',
     chartType: 'bar',
-    indicator: 'Youth Literacy Rate',
-    countries: ['Nigeria', 'Kenya', 'South Africa'],
+    indicator: 'juvenile-detentions',
+    countries: JUSTICE_COUNTRIES,
   },
   {
     id: 'w4',
-    title: 'Health Access Overview',
+    title: 'Youth Health Access',
     chartType: 'area',
-    indicator: 'Health Access Index',
+    indicator: 'births-by-skilled-staff',
     countries: HEALTH_COUNTRIES,
   },
 ];
@@ -139,7 +142,13 @@ const defaultWidgets: Widget[] = [
 function isStaleDefaults(widgets: Widget[]): boolean {
   if (widgets.length !== 3 && widgets.length !== 4) return false;
   const KNOWN_DEFAULT_TITLES = new Set([
+    // Current (v6) defaults
     'Cross-Dimensional Profile',
+    'Entrepreneurship & Digital Access',
+    'Access to Justice',
+    'Youth Health Access',
+    // Prior defaults (v1–v5) — kept so old default snapshots are detected as
+    // stale and replaced with the current set instead of being preserved.
     'Employment Trends',
     'Youth Literacy Rates',
     'Health Access Overview',
@@ -477,6 +486,24 @@ const Dashboard = () => {
   const [hydrated, setHydrated] = useState(false);
   const [savedRecently, setSavedRecently] = useState(false);
 
+  // Real indicators drive the picker and the widget subtitles, so users only
+  // ever choose indicators that actually exist (and have data) in the DB.
+  const indicatorsQ = useIndicators();
+  const indicatorOptions = useMemo(
+    () =>
+      [...(indicatorsQ.data ?? [])]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((i) => ({ value: i.slug, label: i.name })),
+    [indicatorsQ.data],
+  );
+  const indicatorLabel = useCallback(
+    (value: string) => {
+      const found = (indicatorsQ.data ?? []).find((i) => i.slug === value || i.name === value);
+      return found?.name ?? value;
+    },
+    [indicatorsQ.data],
+  );
+
   // Admins can view the dashboard like any other user — they reach /admin
   // via the sidebar's Administration section. (Previously we force-redirected
   // every admin away from /dashboard which left them with a flash of blank
@@ -700,9 +727,13 @@ const Dashboard = () => {
                       <SelectValue placeholder="Select an indicator" />
                     </SelectTrigger>
                     <SelectContent>
-                      {INDICATORS.map((ind) => (
-                        <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                      ))}
+                      {indicatorOptions.length === 0 ? (
+                        <SelectItem value="__loading" disabled>Loading indicators…</SelectItem>
+                      ) : (
+                        indicatorOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -905,7 +936,7 @@ const Dashboard = () => {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-3.5">
                   <div className="space-y-0.5 min-w-0">
                     <h3 className="font-semibold text-sm leading-tight truncate">{widget.title}</h3>
-                    <p className="text-[11px] text-gray-500 truncate">{widget.indicator}</p>
+                    <p className="text-[11px] text-gray-500 truncate">{indicatorLabel(widget.indicator)}</p>
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0 ml-2 opacity-50 group-hover:opacity-100 transition-opacity">
                     <Button
