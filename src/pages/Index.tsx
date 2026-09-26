@@ -19,7 +19,7 @@ const Index = () => {
 
   return (
     <>
-      <Hero eyebrow={eyebrow} title={title} subtitle={subtitle} ctaLabel={ctaLabel} ctaHref="/dashboard" />
+      <Hero eyebrow={eyebrow} eyebrowHref="/dashboard" title={title} subtitle={subtitle} ctaLabel={ctaLabel} ctaHref="/dashboard" />
       <SaaSHero />
       <QuickStats />
       <FeaturedData />
