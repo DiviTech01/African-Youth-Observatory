@@ -6,10 +6,11 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Sparkles, Brain, Cpu, TrendingUp, Send, Download, Plus, Image as ImageIcon,
   Paperclip, X, Trash2, MessageSquare, Loader2, ChevronLeft, ChevronRight, Bot, User as UserIcon,
-  LogIn, AlertTriangle,
+  LogIn, AlertTriangle, Database, ShieldAlert,
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -53,6 +54,7 @@ interface ChatMessage {
   visualizations?: AiVisualization[];
   citations?: AiDataCitation[];
   source?: 'ai' | 'rule-based';
+  /** Legacy: only present on chats stored before it was dropped; never shown. */
   confidence?: number;
   timestamp: number;
 }
@@ -455,8 +457,12 @@ function normalizeVisualization(raw: any): AiVisualization | null {
 
   // Tables can come either as `{headers, rows}` or as `{columns, rows}`. The
   // backend prompt uses `columns`. Map both onto the renderer's `headers`.
-  const headers = raw.headers ?? raw.columns;
-  const data = Array.isArray(raw.data) ? raw.data : [];
+  const headers = asArray(raw.headers ?? raw.columns);
+  const data = asArray(raw.data) ?? [];
+  const rows = asArray(raw.rows);
+  // Never hand the renderer a chart with nothing in it — an empty frame
+  // reads as "the data is zero" rather than "there is no chart".
+  if (t === 'table' ? !rows || rows.length === 0 : data.length === 0) return null;
   return {
     type: t,
     title: raw.title || 'Visualization',
@@ -464,8 +470,20 @@ function normalizeVisualization(raw: any): AiVisualization | null {
     xAxis: raw.xAxis,
     yAxis: raw.yAxis,
     headers,
-    rows: raw.rows,
+    rows,
   };
+}
+
+/** An array, or a JSON string holding one (the model sometimes double-encodes). */
+function asArray(v: any): any[] | undefined {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string' && v.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed : undefined;
+    } catch { return undefined; }
+  }
+  return undefined;
 }
 
 /**
@@ -613,6 +631,7 @@ function ConversationSidebar({
 
 /* ─── Message bubble ─────────────────────────────────────────── */
 function MessageBubble({ message }: { message: ChatMessage }) {
+  const { t } = useLanguage();
   const isUser = message.role === 'user';
   const vizId = `viz-${message.id}`;
 
@@ -681,11 +700,16 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             );
           })()}
         </div>
-        {/* The "AI · 100% confidence" footer used to render here. Removed —
-            the badge added noise under every reply, and the 100% number on
-            an AI response is meaningless (Claude doesn't return a calibrated
-            confidence). The "Rule-based" badge can come back behind a debug
-            flag if needed; for now the message body speaks for itself. */}
+        {/* AI answers carry no footer: the old "AI · 100% confidence" badge
+            was noise, and Claude returns no calibrated confidence to show.
+            Rule-based answers DO get a small note — the page is presented as
+            an AI assistant, so a templated answer must say it isn't one. */}
+        {!isUser && message.source === 'rule-based' && (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[10px] text-gray-500">
+            <Database className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+            {t('ask.ruleBasedNote')}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -709,6 +733,7 @@ function Composer({
   onAddAttachments: (files: FileList | File[]) => void;
   onRemoveAttachment: (id: string) => void;
 }) {
+  const { t } = useLanguage();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -758,6 +783,10 @@ function Composer({
           ))}
         </div>
       )}
+      <p className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500 text-center mb-2 max-w-3xl mx-auto">
+        <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+        {t('ask.privacyNote')}
+      </p>
       <div className="relative flex items-end gap-2 max-w-3xl mx-auto bg-white/[0.04] border border-gray-800 rounded-2xl px-3 py-2.5 focus-within:border-[#D4A017]/40 transition-colors">
         <input
           ref={fileInputRef}
@@ -985,13 +1014,14 @@ const NaturalLanguageQuery = () => {
     // ── Live AI call ─────────────────────────────────────────────────────
     // POST to the NestJS `/ai/chat` endpoint. The backend chooses between
     // the Claude API (when ANTHROPIC_API_KEY is configured) and a rule-based
-    // NLQ fallback automatically — we surface the chosen `source` so users
-    // see an "AI" vs "Rule-based" pill on the response.
+    // NLQ fallback automatically — we keep the chosen `source` so a
+    // rule-based answer is labelled as such under the bubble.
     let assistantContent = '';
     let visualization: AiVisualization | null = null;
     let visualizations: AiVisualization[] = [];
-    let source: 'ai' | 'rule-based' = 'ai';
-    let confidence: number | undefined;
+    // Undefined when the request itself failed: that message is an error,
+    // not an answer from either engine.
+    let source: 'ai' | 'rule-based' | undefined;
 
     try {
       // Build conversation context — last N turns of the existing chat,
@@ -1038,17 +1068,14 @@ const NaturalLanguageQuery = () => {
       assistantContent = allViz.length > 0 ? stripVisualizationBlocks(rawAnswer) : rawAnswer;
 
       source = payload.source === 'rule-based' ? 'rule-based' : 'ai';
-      // Backend doesn't return confidence for AI responses — only the
-      // rule-based service has scored confidence. Show 100% on AI (we trust
-      // the model output as-is) and the backend's number on rule-based.
-      confidence = source === 'ai' ? 1 : (typeof payload.confidence === 'number' ? payload.confidence : undefined);
+      // No confidence is stored: /ai/chat returns none, and the old hard-coded
+      // 100% for AI answers was a number nobody measured.
     } catch (err) {
       assistantContent =
         "I couldn't reach the AI service just now — the request failed before getting a response. " +
         "Try again in a moment, or rephrase your question. " +
         "(In the meantime, you can explore the same data in **Data Explorer** or **Compare Countries**.)";
-      source = 'rule-based';
-      confidence = undefined;
+      source = undefined;
     }
 
     const assistantMsg: ChatMessage = {
@@ -1058,7 +1085,6 @@ const NaturalLanguageQuery = () => {
       visualization,
       visualizations: visualizations.length > 0 ? visualizations : undefined,
       source,
-      confidence,
       timestamp: Date.now(),
     };
     setConversations((prev) => prev.map((c) => c.id === convId

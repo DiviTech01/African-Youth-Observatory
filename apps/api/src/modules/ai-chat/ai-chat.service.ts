@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import Anthropic from '@anthropic-ai/sdk';
+// Types only: the client itself always comes from AiService.getClient(), the
+// metered chokepoint — never construct one here.
+import type Anthropic from '@anthropic-ai/sdk';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NlqService } from '../nlq/nlq.service';
 import { AiService, AiBudgetExceededError } from '../insights/ai.service';
@@ -189,7 +191,7 @@ export class AiChatService {
         this.prisma.countryPolicy.findMany({
           select: {
             aycRatified: true,
-            wpayCompliant: true,
+            afcftaProtocolStatus: true,
             complianceScore: true,
             yearAdopted: true,
             country: { select: { name: true } },
@@ -283,7 +285,18 @@ export class AiChatService {
       // Policy snapshot
       if (policies.length) {
         const ratified = policies.filter((p) => p.aycRatified).length;
-        const wpay = policies.filter((p) => p.wpayCompliant).length;
+        // The protocol is a per-country fact but policies are per-policy rows,
+        // so count each country once, at its most advanced recorded status.
+        const STATUS_ORDER = ['UNKNOWN', 'NOT_SIGNED', 'SIGNED', 'RATIFIED'] as const;
+        const statusByCountry = new Map<string, (typeof STATUS_ORDER)[number]>();
+        for (const p of policies) {
+          const prev = statusByCountry.get(p.country.name);
+          if (!prev || STATUS_ORDER.indexOf(p.afcftaProtocolStatus) > STATUS_ORDER.indexOf(prev)) {
+            statusByCountry.set(p.country.name, p.afcftaProtocolStatus);
+          }
+        }
+        const afcfta = { RATIFIED: 0, SIGNED: 0, NOT_SIGNED: 0, UNKNOWN: 0 };
+        for (const status of statusByCountry.values()) afcfta[status] += 1;
         const scored = policies
           .map((p) => p.complianceScore)
           .filter((s): s is number => typeof s === 'number');
@@ -295,9 +308,14 @@ export class AiChatService {
           .sort((a, b) => (b.complianceScore ?? 0) - (a.complianceScore ?? 0))
           .slice(0, 5);
         lines.push('');
-        lines.push('## Policy compliance (AYC / WPAY / national youth policy)');
+        lines.push('## Policy compliance (AYC / AfCFTA Women & Youth Protocol / national youth policy)');
         lines.push(
-          `Tracked: ${policies.length} · AYC ratified: ${ratified} · WPAY-aligned: ${wpay}${avg != null ? ` · avg compliance ${avg}/100` : ''}.`,
+          `Tracked: ${policies.length} · AYC ratified: ${ratified}${avg != null ? ` · avg compliance ${avg}/100` : ''}.`,
+        );
+        // UNKNOWN means "not yet assessed", not "not signed" — keep them apart
+        // so the assistant never reports an unassessed country as a refusal.
+        lines.push(
+          `AfCFTA W&Y Protocol: ${afcfta.RATIFIED} ratified, ${afcfta.SIGNED} signed${afcfta.NOT_SIGNED ? `, ${afcfta.NOT_SIGNED} not signed` : ''}, ${afcfta.UNKNOWN} not yet assessed.`,
         );
         if (topPolicy.length) {
           lines.push(
@@ -420,33 +438,32 @@ export class AiChatService {
   private async fallbackToNlq(message: string): Promise<AiChatResponse> {
     this.logger.log('Falling back to NLQ rule-based service');
 
-    const nlqResult = await this.nlqService.processQuery(message);
+    // allowAi stays off: Claude has just failed or been refused by the spend
+    // meter, and this answer is labelled rule-based, so no model may write it.
+    const nlqResult = await this.nlqService.processQuery(message, { allowAi: false });
 
+    // The engine returns null rather than a chart with nothing to draw.
+    const viz = nlqResult.visualization ?? undefined;
     return {
       answer: nlqResult.answer,
-      visualization: nlqResult.visualization || undefined,
+      visualization: viz,
+      visualizations: viz ? [viz] : undefined,
       followUpQuestions: nlqResult.followUpQuestions,
       source: 'rule-based',
     };
   }
 
-  private extractVisualization(text: string): object | null {
-    const jsonMatch = text.match(/```json\s*(\{[\s\S]*?\})\s*```/);
-    if (!jsonMatch) return null;
-
-    try {
-      return JSON.parse(jsonMatch[1]);
-    } catch {
-      return null;
-    }
-  }
-
   /**
    * Extracts every fenced JSON block in the assistant's text and returns
    * the ones that look like visualization payloads (have a `type` and a
-   * `data` array, OR are a `table` with `rows`). Blocks that don't parse
-   * or don't fit either shape are silently dropped — we'd rather miss a
-   * malformed chart than corrupt the rendered prose.
+   * non-empty `data` array, OR are a `table` with `rows`). Blocks that don't
+   * parse or don't fit either shape are dropped — we'd rather miss a
+   * malformed chart than corrupt the rendered prose, and a chart with no
+   * points must never reach the UI as an empty frame.
+   *
+   * Claude sometimes encodes a nested array as a JSON string
+   * (`"data": "[{…}]"`), so `data`, `rows` and `columns` are decoded first;
+   * a bare Array.isArray check would silently discard the whole chart.
    */
   private extractAllVisualizations(text: string): object[] {
     const re = /```json\s*(\{[\s\S]*?\})\s*```/g;
@@ -456,11 +473,15 @@ export class AiChatService {
       try {
         const parsed = JSON.parse(match[1]);
         if (!parsed || typeof parsed !== 'object') continue;
+        const viz = parsed as Record<string, unknown>;
+        for (const key of ['data', 'rows', 'columns', 'headers']) {
+          viz[key] = decodeJsonArray(viz[key]);
+        }
         const looksLikeViz =
-          typeof (parsed as any).type === 'string' &&
-          (Array.isArray((parsed as any).data) ||
-            ((parsed as any).type === 'table' && Array.isArray((parsed as any).rows)));
-        if (looksLikeViz) out.push(parsed);
+          typeof viz.type === 'string' &&
+          ((Array.isArray(viz.data) && viz.data.length > 0) ||
+            (viz.type === 'table' && Array.isArray(viz.rows) && viz.rows.length > 0));
+        if (looksLikeViz) out.push(viz);
       } catch {
         // skip malformed JSON
       }
@@ -492,5 +513,18 @@ export class AiChatService {
     }
 
     return followUps.slice(0, 3);
+  }
+}
+
+/** An array, or a JSON string holding one, as an array; anything else unchanged. */
+function decodeJsonArray(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('[')) return value;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : value;
+  } catch {
+    return value;
   }
 }

@@ -1,6 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
+import {
+  type Point,
+  THOUSANDS_SLUGS,
+  asStringArray,
+  detectCountries,
+  latestPerSeries,
+  loadPoints,
+  rankingYear,
+  resolveCountry,
+} from '../nlq/indicator-data';
 
 const SHORT_THEME_LABELS: Record<string, string> = {
   'youth-demography-participation': 'Demo',
@@ -50,15 +60,17 @@ export class AiContextService {
       indicators,
       platformStats,
       youthIndexLatest,
-      recentData,
     ] = await Promise.all([
       this.getCountrySummaries(),
       this.getThemeSummaries(),
       this.getIndicatorCatalog(),
       this.getPlatformStats(),
       this.getLatestYouthIndex(),
-      this.getRecentDataSnapshot(),
     ]);
+    // After, not inside, the Promise.all: the pool has one connection, and the
+    // snapshot is the heaviest read, so queued behind it the other five can
+    // hit Prisma's 10s pool timeout.
+    const recentData = await this.getRecentDataSnapshot();
 
     const context = `
 ## PLATFORM OVERVIEW
@@ -226,40 +238,32 @@ ${regionalPeers}
     ).join('\n');
   }
 
+  /**
+   * One compact line per headline indicator, every country, latest year.
+   *
+   * The old list named slugs with no rows (`internet-penetration`,
+   * `life-expectancy`, `adolescent-fertility-rate`, …) and filtered
+   * `gender: 'TOTAL'`, which the sex-split headline indicators don't have — so
+   * this section reached Claude empty. These six all have ~1,000+ rows across
+   * 52–54 countries. Countries are written as ISO3 codes (the country list
+   * above maps them) to keep the cached prompt small.
+   */
   private async getRecentDataSnapshot(): Promise<string> {
     const keyIndicators = [
+      'youth-population-15-35',
       'youth-unemployment-rate',
       'youth-literacy-rate',
-      'internet-penetration',
-      'life-expectancy',
-      'adolescent-fertility-rate',
-      'education-expenditure-gdp',
-      'health-expenditure-gdp',
+      'secondary-school-net-enrollment-rate',
+      'hiv-prevalence-rate-youth',
+      'internet-access-households',
     ];
-
-    const data = await this.prisma.indicatorValue.findMany({
-      where: {
-        indicator: { slug: { in: keyIndicators } },
-        gender: 'TOTAL',
-      },
-      include: {
-        country: { select: { name: true, isoCode3: true } },
-        indicator: { select: { name: true, slug: true, unit: true } },
-      },
-      orderBy: [{ year: 'desc' }],
-      distinct: ['countryId', 'indicatorId'],
-    });
-
-    const grouped: Record<string, string[]> = {};
-    for (const d of data) {
-      const key = d.indicator.name;
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(`${d.country.name}: ${d.value} (${d.year})`);
-    }
-
-    return Object.entries(grouped).map(([indicator, values]) =>
-      `### ${indicator}\n${values.join(' | ')}`
-    ).join('\n\n');
+    // Only recent years are read: the pool has one connection, and 20 years
+    // of rows for six indicators held it long enough to time other queries
+    // out. Countries with nothing in the window are simply left out.
+    const points = latestPerSeries(
+      await loadPoints(this.prisma, { slugs: keyIndicators, yearFrom: currentYear() - SNAPSHOT_YEARS }),
+    );
+    return compactBlocks(points, keyIndicators, (p) => p.isoCode3);
   }
 
   private async getCountryIndicatorValues(
@@ -334,57 +338,39 @@ ${regionalPeers}
     ).join('\n');
   }
 
+  /**
+   * Latest value per country for every indicator in the theme (within the
+   * year window, never past the current year), grouped by indicator. The old
+   * version filtered TOTAL, which dropped the sex-split headline indicators,
+   * and sorted by year, which filled its 500 rows with 2030 policy targets.
+   */
   private async getThemeData(themeSlug: string, yearStart?: number, yearEnd?: number): Promise<string> {
     const theme = await this.prisma.theme.findUnique({
       where: { slug: themeSlug },
-      include: { indicators: true },
+      include: { indicators: { select: { name: true, slug: true } } },
     });
     if (!theme) return 'Theme not found.';
 
-    const where: any = {
-      indicator: { themeId: theme.id },
-      gender: 'TOTAL',
-    };
-    if (yearStart) where.year = { ...where.year, gte: yearStart };
-    if (yearEnd) where.year = { ...where.year, lte: yearEnd };
-
-    const values = await this.prisma.indicatorValue.findMany({
-      where,
-      include: {
-        country: { select: { name: true } },
-        indicator: { select: { name: true, unit: true } },
-      },
-      orderBy: [{ year: 'desc' }],
-      distinct: ['countryId', 'indicatorId'],
-      take: 500,
-    });
-
-    return `Theme: ${theme.name}\nIndicators: ${theme.indicators.map(i => i.name).join(', ')}\n\nData:\n` +
-      values.map(v => `${v.country.name} | ${v.indicator.name}: ${v.value} ${v.indicator.unit} (${v.year})`).join('\n');
+    const slugs = theme.indicators.map((i) => i.slug);
+    const points = latestPerSeries(
+      await loadPoints(this.prisma, {
+        slugs,
+        yearFrom: yearStart ?? (yearEnd ? null : currentYear() - RECENT_YEARS),
+        yearTo: yearEnd ?? null,
+      }),
+    );
+    return `Theme: ${theme.name}\nIndicators: ${theme.indicators.map(i => i.name).join(', ')}\n\nData (latest per country):\n` +
+      compactBlocks(points, slugs, (p) => p.country);
   }
 
   private async getRegionData(region: string, indicatorSlugs?: string[]): Promise<string> {
-    const where: any = {
-      country: { region: region as any },
-      gender: 'TOTAL',
-    };
-    if (indicatorSlugs?.length) {
-      where.indicator = { slug: { in: indicatorSlugs } };
-    }
-
-    const values = await this.prisma.indicatorValue.findMany({
-      where,
-      include: {
-        country: { select: { name: true } },
-        indicator: { select: { name: true, unit: true } },
-      },
-      orderBy: [{ year: 'desc' }],
-      distinct: ['countryId', 'indicatorId'],
-      take: 500,
-    });
-
-    return `Region: ${region}\n` +
-      values.map(v => `${v.country.name} | ${v.indicator.name}: ${v.value} ${v.indicator.unit} (${v.year})`).join('\n');
+    const slugs = indicatorSlugs?.length
+      ? indicatorSlugs
+      : (await this.prisma.indicator.findMany({ select: { slug: true }, orderBy: { name: 'asc' } })).map((i) => i.slug);
+    const points = latestPerSeries(
+      await loadPoints(this.prisma, { slugs, region, yearFrom: currentYear() - RECENT_YEARS }),
+    );
+    return `Region: ${region}\nData (latest per country):\n` + compactBlocks(points, slugs, (p) => p.country);
   }
 
   /**
@@ -397,17 +383,13 @@ ${regionalPeers}
     switch (query.type) {
       case 'country_data': {
         const { countryName, indicatorSlug, yearStart, yearEnd } = query.params;
-        const country = await this.prisma.country.findFirst({
-          where: { name: { contains: countryName, mode: 'insensitive' } },
-        });
+        const country = await resolveCountry(this.prisma, countryName);
         if (!country) return { error: `Country "${countryName}" not found` };
         const where: any = { countryId: country.id };
         if (indicatorSlug) where.indicator = { slug: indicatorSlug };
-        if (yearStart || yearEnd) {
-          where.year = {};
-          if (yearStart) where.year.gte = yearStart;
-          if (yearEnd) where.year.lte = yearEnd;
-        }
+        // Capped at the current year: later rows are policy targets, not data.
+        where.year = { lte: Math.min(Number(yearEnd) || currentYear(), currentYear()) };
+        if (yearStart) where.year.gte = Number(yearStart);
         const values = await this.prisma.indicatorValue.findMany({
           where,
           include: { indicator: { select: { name: true, slug: true, unit: true } } },
@@ -422,6 +404,7 @@ ${regionalPeers}
             unit: v.indicator.unit,
             year: v.year,
             gender: v.gender,
+            source: v.source,
           })),
         };
       }
@@ -430,46 +413,48 @@ ${regionalPeers}
         const { indicatorSlug, year, limit, order } = query.params;
         const indicator = await this.prisma.indicator.findUnique({ where: { slug: indicatorSlug } });
         if (!indicator) return { error: `Indicator "${indicatorSlug}" not found` };
-        const targetYear = year || (await this.prisma.indicatorValue.findFirst({
-          where: { indicatorId: indicator.id },
-          orderBy: { year: 'desc' },
-        }))?.year;
-        const values = await this.prisma.indicatorValue.findMany({
-          where: { indicatorId: indicator.id, year: targetYear, gender: 'TOTAL' },
-          include: { country: { select: { name: true, isoCode3: true, region: true } } },
-          orderBy: { value: order === 'asc' ? 'asc' : 'desc' },
-          take: limit || 54,
-        });
+        const requested = Number(year) || null;
+        const points = await loadPoints(this.prisma, { slugs: [indicator.slug], yearTo: requested });
+        const targetYear = rankingYear(points, requested);
+        if (targetYear === null) {
+          return { indicator: indicator.name, unit: indicator.unit, ranking: [], note: 'No data for this indicator.' };
+        }
+        const inYear = points
+          .filter((p) => p.year === targetYear)
+          .sort((a, b) => (order === 'asc' ? a.value - b.value : b.value - a.value));
+        const take = Math.max(1, Math.min(Number(limit) || 54, 54));
         return {
           indicator: indicator.name,
           unit: indicator.unit,
           year: targetYear,
-          ranking: values.map((v, i) => ({
-            rank: i + 1,
-            country: v.country.name,
-            isoCode3: v.country.isoCode3,
-            region: v.country.region,
-            value: v.value,
-          })),
+          countriesReporting: inYear.length,
+          ...basisNote(inYear),
+          // `position` among every country reporting that year, computed
+          // before the cut — not a stored rank. Naming it `rank` let the model
+          // quote it as if it were the Youth Index rank, so one country showed
+          // two different ranks.
+          ranking: inYear.slice(0, take).map((p, i) => ({ position: i + 1, ...pointOut(p) })),
         };
       }
 
       case 'time_series': {
         const { countryName, indicatorSlug } = query.params;
-        const country = await this.prisma.country.findFirst({
-          where: { name: { contains: countryName, mode: 'insensitive' } },
-        });
+        const country = await resolveCountry(this.prisma, countryName);
         const indicator = await this.prisma.indicator.findUnique({ where: { slug: indicatorSlug } });
         if (!country || !indicator) return { error: 'Country or indicator not found' };
-        const values = await this.prisma.indicatorValue.findMany({
-          where: { countryId: country.id, indicatorId: indicator.id, gender: 'TOTAL' },
-          orderBy: { year: 'asc' },
-        });
+        const points = (await loadPoints(this.prisma, { slugs: [indicator.slug], countryIds: [country.id] }))
+          .sort((a, b) => a.year - b.year);
         return {
           country: country.name,
           indicator: indicator.name,
           unit: indicator.unit,
-          series: values.map(v => ({ year: v.year, value: v.value })),
+          ...basisNote(points),
+          series: points.map((p) => ({
+            year: p.year,
+            value: round2(p.value),
+            ...(p.basis === 'mf-average' ? { female: round2(p.female!), male: round2(p.male!) } : {}),
+          })),
+          source: [...new Set(points.map((p) => p.source))].join('; ') || undefined,
         };
       }
 
@@ -477,53 +462,46 @@ ${regionalPeers}
         const { region, indicatorSlug, year } = query.params;
         const indicator = await this.prisma.indicator.findUnique({ where: { slug: indicatorSlug } });
         if (!indicator) return { error: `Indicator "${indicatorSlug}" not found` };
-        const values = await this.prisma.indicatorValue.findMany({
-          where: {
-            indicatorId: indicator.id,
-            country: { region: region as any },
-            year: year || undefined,
-            gender: 'TOTAL',
-          },
-          include: { country: { select: { name: true } } },
-          orderBy: { year: 'desc' },
-          distinct: ['countryId'],
-        });
-        const avg = values.reduce((sum, v) => sum + v.value, 0) / (values.length || 1);
+        const requested = Number(year) || null;
+        const points = await loadPoints(this.prisma, { slugs: [indicator.slug], region, yearTo: requested });
+        // One year for every country, chosen the same way as a ranking, so the
+        // average never mixes a 2025 value with a 2009 one.
+        const targetYear = rankingYear(points, requested);
+        const inYear = targetYear === null ? [] : points.filter((p) => p.year === targetYear);
+        const avg = inYear.reduce((sum, p) => sum + p.value, 0) / (inYear.length || 1);
         return {
           region,
           indicator: indicator.name,
-          average: Math.round(avg * 100) / 100,
-          countries: values.map(v => ({ name: v.country.name, value: v.value })),
-          count: values.length,
+          year: targetYear,
+          average: round2(avg),
+          averageMethod: 'simple unweighted mean of country values',
+          ...basisNote(inYear),
+          countries: inYear.map((p) => ({ name: p.country, ...pointOut(p) })),
+          count: inYear.length,
         };
       }
 
       case 'comparison': {
-        const { countryNames, indicatorSlugs } = query.params;
+        // The model sometimes sends these arrays JSON-encoded as strings.
+        const countryNames = asStringArray(query.params.countryNames);
+        const indicatorSlugs = asStringArray(query.params.indicatorSlugs);
         const results: any[] = [];
-        for (const name of (countryNames || [])) {
-          const country = await this.prisma.country.findFirst({
-            where: { name: { contains: name, mode: 'insensitive' } },
-          });
-          if (!country) continue;
-          const values = await this.prisma.indicatorValue.findMany({
-            where: {
-              countryId: country.id,
-              indicator: { slug: { in: indicatorSlugs } },
-              gender: 'TOTAL',
-            },
-            include: { indicator: { select: { name: true, slug: true, unit: true } } },
-            orderBy: { year: 'desc' },
-            distinct: ['indicatorId'],
-          });
+        for (const name of countryNames) {
+          const country = await resolveCountry(this.prisma, name);
+          if (!country) {
+            results.push({ country: name, error: 'Country not found' });
+            continue;
+          }
+          const latest = latestPerSeries(
+            await loadPoints(this.prisma, { slugs: indicatorSlugs, countryIds: [country.id] }),
+          );
           results.push({
             country: country.name,
-            indicators: values.map(v => ({
-              name: v.indicator.name,
-              slug: v.indicator.slug,
-              value: v.value,
-              unit: v.indicator.unit,
-              year: v.year,
+            indicators: latest.map((p) => ({
+              name: p.indicator,
+              slug: p.slug,
+              unit: p.unit,
+              ...pointOut(p),
             })),
           });
         }
@@ -544,12 +522,21 @@ ${regionalPeers}
 
       case 'search': {
         const { term } = query.params;
+        // Countries named in the term (whole words, aliases, ISO3) come first,
+        // so "Niger" finds Niger rather than Nigeria and a full question such
+        // as "youth unemployment in Kenya" still finds Kenya. Substring search
+        // is kept only as the fallback for partial names.
+        const named = detectCountries(String(term ?? ''));
+        const countrySelect = { id: true, name: true, isoCode3: true, region: true } as const;
         const [countries, indicators] = await Promise.all([
-          this.prisma.country.findMany({
-            where: { name: { contains: term, mode: 'insensitive' } },
-            select: { id: true, name: true, isoCode3: true, region: true },
-            take: 5,
-          }),
+          named.length
+            ? this.prisma.country.findMany({ where: { name: { in: named } }, select: countrySelect })
+                .then((rows) => named.map((n) => rows.find((r) => r.name === n)).filter((r): r is NonNullable<typeof r> => !!r))
+            : this.prisma.country.findMany({
+                where: { name: { contains: term, mode: 'insensitive' } },
+                select: countrySelect,
+                take: 5,
+              }),
           this.prisma.indicator.findMany({
             where: {
               OR: [
@@ -568,4 +555,112 @@ ${regionalPeers}
         return { error: 'Unknown query type' };
     }
   }
+}
+
+function currentYear(): number {
+  return new Date().getFullYear();
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+/**
+ * One tool-result row. When only male and female rows exist, `value` is their
+ * simple average and both sexes ride along, so the model can quote the real
+ * published figures instead of the derived one.
+ */
+function pointOut(p: Point) {
+  return {
+    country: p.country,
+    isoCode3: p.isoCode3,
+    region: p.region,
+    value: round2(p.value),
+    basis: p.basis,
+    // Stored in thousands although the catalogue says millions — say so.
+    ...(THOUSANDS_SLUGS.has(p.slug) ? { valueUnit: 'thousands of people' } : {}),
+    ...(p.female !== undefined ? { female: round2(p.female) } : {}),
+    ...(p.male !== undefined ? { male: round2(p.male) } : {}),
+    year: p.year,
+    source: p.source,
+  };
+}
+
+/** Tells the model, in the result itself, when values are derived averages. */
+function basisNote(points: Point[]): { note?: string } {
+  return points.some((p) => p.basis === 'mf-average')
+    ? {
+        note:
+          'Published by sex only: "value" is the simple average of the male and female rates (basis "mf-average"). ' +
+          'Quote the female and male figures where possible.',
+      }
+    : {};
+}
+
+/** Latest context values look this far back; older-only series are left out. */
+const RECENT_YEARS = 6;
+/** The always-sent snapshot looks back less far, to keep its read light. */
+const SNAPSHOT_YEARS = 3;
+
+const UNIT_SHORT: Record<string, string> = {
+  PERCENTAGE: '%',
+  NUMBER: 'number',
+  INDEX: 'index',
+  RATIO: 'ratio',
+  RATE: 'rate',
+  CURRENCY: 'currency',
+  SCORE: 'score',
+};
+
+/** Thousands → millions; two decimals under a million so Seychelles isn't "0". */
+function millions(thousands: number): string {
+  const m = thousands / 1000;
+  return String(m < 1 ? Math.round(m * 100) / 100 : Math.round(m * 10) / 10);
+}
+
+function fmt(n: number): string {
+  return String(Math.round(n * 10) / 10);
+}
+
+/**
+ * Context text, one block per indicator:
+ *
+ *   ### Youth Literacy Rate (%, female/male) — 2025 unless noted
+ *   Kenya 92.3/94 | Nigeria 65.5/80 | Chad 30/42 (2023)
+ *
+ * The year goes in the header once (the most common year) and only on the
+ * values that differ, and sex-split indicators show both published figures
+ * rather than a derived average. Population is stored in thousands and is
+ * written in millions. This keeps the cached prompt about as small as the
+ * old one-row-per-line format while carrying more of the actual data.
+ */
+function compactBlocks(points: Point[], slugOrder: string[], label: (p: Point) => string): string {
+  const bySlug = new Map<string, Point[]>();
+  for (const p of points) bySlug.set(p.slug, [...(bySlug.get(p.slug) ?? []), p]);
+  const order = (s: string) => {
+    const i = slugOrder.indexOf(s);
+    return i === -1 ? slugOrder.length : i;
+  };
+
+  const blocks: string[] = [];
+  for (const slug of [...bySlug.keys()].sort((a, b) => order(a) - order(b))) {
+    const ps = bySlug.get(slug)!.sort((a, b) => label(a).localeCompare(label(b)));
+    const first = ps[0];
+    const yearCount = new Map<number, number>();
+    for (const p of ps) yearCount.set(p.year, (yearCount.get(p.year) ?? 0) + 1);
+    const commonYear = [...yearCount.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+    const sexSplit = ps.some((p) => p.basis === 'mf-average');
+    const thousands = THOUSANDS_SLUGS.has(slug);
+    const unit = thousands ? 'millions' : UNIT_SHORT[first.unit] ?? first.unit.toLowerCase();
+    const values = ps.map((p) => {
+      const v = p.basis === 'mf-average'
+        ? `${fmt(p.female!)}/${fmt(p.male!)}`
+        : `${thousands ? millions(p.value) : fmt(p.value)}${p.basis === 'female' ? ' (F only)' : p.basis === 'male' ? ' (M only)' : ''}`;
+      return `${label(p)} ${v}${p.year !== commonYear ? ` (${p.year})` : ''}`;
+    });
+    blocks.push(
+      `### ${first.indicator} (${unit}${sexSplit ? ', female/male' : ''}) — ${commonYear} unless noted\n${values.join(' | ')}`,
+    );
+  }
+  return blocks.join('\n');
 }
