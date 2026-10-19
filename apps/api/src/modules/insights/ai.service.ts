@@ -16,6 +16,10 @@ export class AiService {
   private readonly logger = new Logger(AiService.name);
   private client: any = null;
   private clientPromise: Promise<any> | null = null;
+  // Outcome of the most recent real (metered) call per surface. Free health
+  // signal for /ops/status, so it need not spend money on a probe to notice
+  // that e.g. the account ran out of credit.
+  private lastOutcome: Partial<Record<AiSurface, { ok: boolean; error: string | null; at: string; model: string }>> = {};
 
   constructor(
     private contextService: AiContextService,
@@ -77,6 +81,7 @@ export class AiService {
   private meter(raw: any): any {
     if (!raw) return raw;
     const budget = this.budget;
+    const outcomes = this.lastOutcome;
     const surfaceOf = (model: string): AiSurface =>
       model === this.getModel('report') ? 'report' : 'chat';
 
@@ -89,9 +94,21 @@ export class AiService {
         return async (params: any, ...rest: any[]) => {
           const model = String(params?.model ?? '');
           const surface = surfaceOf(model);
-          budget.assertWithinBudget(surface);
-          const response = await target.create(params, ...rest);
-          budget.record(surface, model, response?.usage);
+          await budget.assertWithinBudget(surface);
+          let response: any;
+          try {
+            response = await target.create(params, ...rest);
+          } catch (err: any) {
+            outcomes[surface] = {
+              ok: false,
+              error: describeAnthropicError(err, model),
+              at: new Date().toISOString(),
+              model,
+            };
+            throw err;
+          }
+          outcomes[surface] = { ok: true, error: null, at: new Date().toISOString(), model };
+          await budget.record(surface, model, response?.usage);
           return response;
         };
       },
@@ -106,9 +123,14 @@ export class AiService {
     });
   }
 
-  /** Daily spend/usage counters, for /ops/status. */
+  /** Daily spend/usage counters (shared DB ledger), for /ops/status. */
   budgetSnapshot() {
     return this.budget.snapshot();
+  }
+
+  /** Result of the last real metered call on this surface, if any since boot. */
+  lastCallOutcome(surface: AiSurface) {
+    return this.lastOutcome[surface] ?? null;
   }
 
   /**

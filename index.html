@@ -37,7 +37,23 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <!-- First-paint shell: plain HTML/CSS (no script, so the CSP stays
+         script-src 'self'). React's createRoot replaces everything inside
+         #root on mount, so this disappears by itself. -->
+    <style>
+      .ayo-boot { position: fixed; inset: 0; background: #090d15; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e8ecf3; }
+      .ayo-boot-mark { font-size: 40px; font-weight: 800; letter-spacing: 0.08em; }
+      .ayo-boot-mark span { color: #28bd5f; }
+      .ayo-boot-spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.12); border-top-color: #28bd5f; animation: ayo-boot-spin 0.9s linear infinite; }
+      @keyframes ayo-boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .ayo-boot-spin { animation-duration: 2.5s; } }
+    </style>
+    <div id="root">
+      <div class="ayo-boot" role="status" aria-label="Loading African Youth Observatory">
+        <div class="ayo-boot-mark">AY<span>O</span></div>
+        <div class="ayo-boot-spin" aria-hidden="true"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

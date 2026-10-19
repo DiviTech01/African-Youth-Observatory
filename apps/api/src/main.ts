@@ -28,12 +28,27 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { securityHeaders } from './common/middleware/security-headers.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Global prefix
   app.setGlobalPrefix('api');
+
+  // Render terminates TLS one proxy hop in front of us. Trusting exactly that
+  // hop makes `req.ip` the real client (from X-Forwarded-For) instead of the
+  // load balancer, without letting a client spoof its IP by sending its own
+  // X-Forwarded-For chain. Override with TRUST_PROXY_HOPS if the topology
+  // changes (e.g. Cloudflare proxied in front of Render = 2).
+  const expressInstance = app.getHttpAdapter().getInstance();
+  const proxyHops = Number(process.env.TRUST_PROXY_HOPS ?? 1);
+  expressInstance.set('trust proxy', Number.isFinite(proxyHops) && proxyHops >= 0 ? proxyHops : 1);
+  expressInstance.disable('x-powered-by');
+
+  // HSTS, nosniff, frame-ancestors etc. — see the middleware for why there is
+  // no full CSP on the API.
+  app.use(securityHeaders);
 
   const isProd = process.env.NODE_ENV === 'production';
   const localhostOrigins = isProd ? [] : [
@@ -127,6 +142,7 @@ World Bank, ILO, UNESCO, national statistics bureaus`,
     .addTag('admin', 'Platform administration')
     .addTag('platform', 'Platform stats and health checks')
     .addTag('ops', 'Operator status and headline numbers (service-token auth, read-only)')
+    .addTag('notifications', 'Mobile push-token registration')
     .build();
 
   if (enableSwagger) {

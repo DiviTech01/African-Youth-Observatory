@@ -2,10 +2,53 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as https from 'https';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
-import { AiService } from '../insights/ai.service';
+import { AiService, type AiSurface } from '../insights/ai.service';
+import { R2Service } from '../content/r2.service';
+import { MailService } from '../mail/mail.service';
 import { DEFAULT_AGE_GROUP } from '../../shared/constants';
 
 const PUBLIC_SITE = 'https://africanyouthobservatory.org';
+
+type AiHealth = {
+  ok: boolean;
+  model: string;
+  error: string | null;
+  // How the answer was reached. Only 'probe', 'cached-probe' and
+  // 'recent-traffic' are evidence that Anthropic actually answers; 'config'
+  // just means a key is set.
+  checkedBy: 'probe' | 'cached-probe' | 'recent-traffic' | 'config';
+  verified: boolean;
+  checkedAt: string | null;
+};
+
+type ComponentCheck = { ok: boolean; configured: boolean; latencyMs: number | null; detail: string };
+
+/** Plain GET with a hard timeout; never rejects. */
+function httpGet(
+  url: string,
+  headers: Record<string, string>,
+  timeoutMs = 8000,
+): Promise<{ status: number | null; body: string; latencyMs: number; error?: string }> {
+  const started = Date.now();
+  return new Promise((resolve) => {
+    const req = https.request(url, { method: 'GET', timeout: timeoutMs, headers }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () =>
+        resolve({
+          status: res.statusCode ?? null,
+          body: Buffer.concat(chunks).toString('utf8').slice(0, 20_000),
+          latencyMs: Date.now() - started,
+        }),
+      );
+    });
+    req.on('timeout', () => req.destroy(new Error(`timed out after ${timeoutMs / 1000} seconds`)));
+    req.on('error', (err) =>
+      resolve({ status: null, body: '', latencyMs: Date.now() - started, error: err.message }),
+    );
+    req.end();
+  });
+}
 
 /**
  * Operator-facing rollups for the AYO platform.
@@ -24,19 +67,31 @@ export class OpsService {
     private prisma: PrismaService,
     private cache: CacheService,
     private ai: AiService,
+    private r2: R2Service,
+    private mail: MailService,
   ) {}
 
   // ── Status: "is the site up / what's broken" ─────────────────
 
-  async getStatus() {
-    // Chat and reports are probed as separate surfaces, since each can be pointed
-    // at a different model by env, so
-    // each is probed separately — one can be reachable while the other is not.
-    const [database, website, ai, aiReport] = await Promise.all([
+  /**
+   * `deep` = run the paid 1-token Anthropic probe (still cached 10 min / 60 s by
+   * AiService.probe). Without it, AI health comes from free signals only — the
+   * last real call's outcome, a cached probe, or failing those the config — so
+   * a status poll never spends money. Every other check here is free.
+   */
+  async getStatus(opts: { deep?: boolean } = {}) {
+    const deep = Boolean(opts.deep);
+    // Chat and reports are checked as separate surfaces, since each can be
+    // pointed at a different model by env — one can be reachable while the
+    // other is not.
+    const [database, website, ai, aiReport, storage, email, auth] = await Promise.all([
       this.checkDatabase(),
       this.checkPublicSite(),
-      this.ai.probe("chat"),
-      this.ai.probe("report"),
+      this.aiHealth('chat', deep),
+      this.aiHealth('report', deep),
+      this.checkStorage(),
+      this.checkEmail(),
+      this.checkAuth(),
     ]);
 
     const dataFreshness = database.connected
@@ -69,11 +124,30 @@ export class OpsService {
     } else if (!aiReport.ok) {
       problems.push(`AI report generation is degraded. ${aiReport.error}`);
     }
+    if (!auth.ok) {
+      problems.push(
+        `Sign-in is not working: ${auth.detail} Nobody can sign up or log in until it recovers.`,
+      );
+    }
+    if (!storage.ok) {
+      problems.push(
+        `File storage is not working: ${storage.detail} Document downloads, uploads and saved reports will fail.`,
+      );
+    }
+    if (!email.ok) {
+      problems.push(
+        `Email sending is not working: ${email.detail} Welcome emails, newsletters and admin notices will not go out.`,
+      );
+    }
     // Once the daily ceiling is hit, every AI answer silently becomes rule-based.
     // That is the designed degradation, but an operator must be told, because the
     // symptom otherwise looks like the model getting worse.
-    const budget = this.ai.budgetSnapshot();
-    if (budget.exhausted) {
+    const budget = await this.ai.budgetSnapshot();
+    if (!budget.ledgerReachable) {
+      problems.push(
+        'The AI spend ledger cannot be read, so every AI call is being refused and answers fall back to the rule-based engine.',
+      );
+    } else if (budget.exhausted) {
       problems.push(
         `The daily AI budget of $${budget.budgetUsd} is spent, so AI answers and reports are falling back to the rule-based engine until ${budget.day} rolls over. ${budget.rejectedCalls} call(s) refused.`,
       );
@@ -111,12 +185,19 @@ export class OpsService {
           ok: ai.ok && aiReport.ok,
           model: ai.model,
           error: ai.error ?? aiReport.error,
-          chat: { ok: ai.ok, model: ai.model, error: ai.error },
-          reports: { ok: aiReport.ok, model: aiReport.model, error: aiReport.error },
+          // false = nothing has proved Anthropic answers yet (no probe, no real
+          // call since boot). Pass ?deep=1 to force a probe.
+          verified: ai.verified && aiReport.verified,
+          chat: ai,
+          reports: aiReport,
           budget,
         },
+        auth,
+        storage,
+        email,
       },
       data: dataFreshness,
+      deep,
     };
   }
 
@@ -213,6 +294,169 @@ export class OpsService {
     });
 
     this.cache.set(cacheKey, result, 60);
+    return result;
+  }
+
+  private async aiHealth(surface: AiSurface, deep: boolean): Promise<AiHealth> {
+    const model = this.ai.getModel(surface);
+    if (deep) {
+      const probed = await this.ai.probe(surface);
+      return { ...probed, checkedBy: 'probe', verified: true, checkedAt: new Date().toISOString() };
+    }
+    // A real call is better evidence than a probe, so it wins when both exist.
+    const last = this.ai.lastCallOutcome(surface);
+    if (last && last.model === model) {
+      return { ok: last.ok, model, error: last.error, checkedBy: 'recent-traffic', verified: true, checkedAt: last.at };
+    }
+    // Same key AiService.probe() writes; reading it costs nothing.
+    const cached = this.cache.get<{ ok: boolean; model: string; error: string | null }>(`ai-probe:${model}`);
+    if (cached) {
+      return { ...cached, checkedBy: 'cached-probe', verified: true, checkedAt: null };
+    }
+    const available = await this.ai.isAvailable();
+    return {
+      ok: available,
+      model,
+      error: available
+        ? null
+        : process.env.ANTHROPIC_API_KEY
+          ? 'The Anthropic SDK could not be loaded on the server.'
+          : 'No Anthropic API key is configured on the server.',
+      checkedBy: 'config',
+      verified: false,
+      checkedAt: null,
+    };
+  }
+
+  /** Supabase Auth: the service every sign-up and sign-in goes through. */
+  private async checkAuth(): Promise<ComponentCheck> {
+    const cached = this.cache.get<ComponentCheck>('ops:auth');
+    if (cached) return cached;
+
+    const base = process.env.SUPABASE_URL?.replace(/\/+$/, '');
+    const key = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    let result: ComponentCheck;
+    if (!base || !key) {
+      result = {
+        ok: false,
+        configured: false,
+        latencyMs: null,
+        detail: 'SUPABASE_URL or SUPABASE_ANON_KEY is not set on the API server.',
+      };
+    } else {
+      const res = await httpGet(`${base}/auth/v1/health`, { apikey: key, 'User-Agent': 'AYO-ops-check' });
+      const ok = res.status === 200;
+      result = {
+        ok,
+        configured: true,
+        latencyMs: res.status ? res.latencyMs : null,
+        detail: ok
+          ? `Responded in ${res.latencyMs}ms.`
+          : res.status
+            ? `the Supabase Auth health check returned HTTP ${res.status}.`
+            : `the Supabase Auth service could not be reached (${res.error}).`,
+      };
+    }
+    this.cache.set('ops:auth', result, 60);
+    return result;
+  }
+
+  /** R2: documents, CMS images and persisted reports. HeadBucket is free. */
+  private async checkStorage(): Promise<ComponentCheck & { bucket: string | null }> {
+    const cached = this.cache.get<ComponentCheck & { bucket: string | null }>('ops:storage');
+    if (cached) return cached;
+
+    const started = Date.now();
+    const health = await this.r2.health();
+    const latencyMs = Date.now() - started;
+    const result = {
+      ok: health.configured && health.reachable,
+      configured: health.configured,
+      latencyMs: health.reachable ? latencyMs : null,
+      bucket: health.bucket,
+      detail: !health.configured
+        ? `R2 is not configured on the API server (missing ${health.missingVars?.join(', ') || 'env vars'}).`
+        : health.reachable
+          ? `Bucket answered in ${latencyMs}ms.`
+          : 'the R2 bucket did not answer a test request.',
+    };
+    if (!result.ok && health.reason) this.logger.warn(`R2 check failed: ${health.reason}`);
+    this.cache.set('ops:storage', result, 60);
+    return result;
+  }
+
+  /**
+   * Resend: listing domains is a free read that proves the key works and shows
+   * whether the sending domain is verified. A send-only ("restricted") key
+   * cannot list domains; its 401 still proves the key is genuine.
+   */
+  private async checkEmail(): Promise<ComponentCheck & { domainVerified: boolean | null }> {
+    const cached = this.cache.get<ComponentCheck & { domainVerified: boolean | null }>('ops:email');
+    if (cached) return cached;
+
+    const apiKey = process.env.RESEND_API_KEY;
+    let result: ComponentCheck & { domainVerified: boolean | null };
+    if (!apiKey || !this.mail.isConfigured) {
+      result = {
+        ok: false,
+        configured: false,
+        latencyMs: null,
+        domainVerified: null,
+        detail: 'RESEND_API_KEY is not set on the API server.',
+      };
+    } else {
+      const res = await httpGet('https://api.resend.com/domains', {
+        Authorization: `Bearer ${apiKey}`,
+        'User-Agent': 'AYO-ops-check',
+      });
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(res.body);
+      } catch {
+        /* non-JSON body */
+      }
+      const fromDomain = (process.env.FROM_EMAIL || 'noreply@pacsda.org')
+        .match(/@([^>\s]+)/)?.[1]
+        ?.toLowerCase();
+      if (res.status === 200) {
+        const domains: any[] = Array.isArray(parsed?.data) ? parsed.data : [];
+        const match = domains.find((d) => String(d?.name).toLowerCase() === fromDomain);
+        const verified = match ? match.status === 'verified' : false;
+        result = {
+          ok: verified,
+          configured: true,
+          latencyMs: res.latencyMs,
+          domainVerified: verified,
+          detail: verified
+            ? `Key accepted and ${fromDomain} is verified (${res.latencyMs}ms).`
+            : match
+              ? `the sending domain ${fromDomain} is "${match.status}" in Resend, not verified.`
+              : `the sending domain ${fromDomain} is not set up in this Resend account.`,
+        };
+      } else if (res.status === 401 && /restricted/i.test(res.body)) {
+        result = {
+          ok: true,
+          configured: true,
+          latencyMs: res.latencyMs,
+          domainVerified: null,
+          detail: 'Send-only key accepted (domain status cannot be read with this key).',
+        };
+      } else {
+        result = {
+          ok: false,
+          configured: true,
+          latencyMs: res.status ? res.latencyMs : null,
+          domainVerified: null,
+          detail:
+            res.status === 401 || res.status === 403
+              ? 'Resend rejected the API key.'
+              : res.status
+                ? `Resend returned HTTP ${res.status}.`
+                : `Resend could not be reached (${res.error}).`,
+        };
+      }
+    }
+    this.cache.set('ops:email', result, 300);
     return result;
   }
 

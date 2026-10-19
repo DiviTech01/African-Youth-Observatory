@@ -1,0 +1,36 @@
+# Cloudflare Pages response headers (only applied on Cloudflare Pages; vite dev
+# and vite preview ignore this file). The API sets its own headers in
+# apps/api/src/common/middleware/security-headers.middleware.ts.
+#
+# CSP origins, and why each is here:
+#   african-youth-observatory.onrender.com   the Nest API (fetch, PDF <object>/<iframe> previews)
+#   lfvbwpmpuyfujrpwwgol.supabase.co         Supabase Auth (https) and Realtime (wss)
+#   fonts.googleapis.com / fonts.gstatic.com Google Fonts stylesheet + font files
+#   img-src https:                           flagcdn.com, R2 public bucket (pub-*.r2.dev) CMS
+#                                            images, Unsplash and admin-uploaded image URLs
+# Same-origin covers /cdn-cgi/trace (language geo-default), /maps/world-50m.json
+# (map shapes; no remote tile server is used) and the APK link (a plain
+# navigation to GitHub Releases, which CSP does not restrict).
+# style-src needs 'unsafe-inline': Radix, Recharts and framer-motion write inline
+# style attributes, and index.html carries the inline first-paint shell styles.
+# The built bundle has no inline <script>, eval or new Function, so script-src
+# stays 'self'.
+# If the API moves (VITE_API_URL) or a new Supabase project is used, update
+# connect-src, frame-src and object-src below.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://african-youth-observatory.onrender.com https://lfvbwpmpuyfujrpwwgol.supabase.co wss://lfvbwpmpuyfujrpwwgol.supabase.co; frame-src 'self' blob: https://african-youth-observatory.onrender.com; object-src 'self' https://african-youth-observatory.onrender.com; media-src 'self' blob: https:; worker-src 'self' blob:; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+
+# Static, self-contained HTML reports carry their own inline scripts and fonts;
+# the SPA policy would break them. They stay non-frameable via X-Frame-Options.
+/reports/*
+  ! Content-Security-Policy
+
+# Hashed build assets never change, so let browsers keep them for a year.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

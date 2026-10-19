@@ -1,5 +1,5 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { OpsService } from './ops.service';
 import { ServiceTokenGuard } from '../auth/guards/service-token.guard';
@@ -29,10 +29,11 @@ export class OpsController {
   @ApiOperation({
     summary: 'Is the platform up, and what is broken',
     description:
-      'Rolls up the API, database, public website and AI layer into one status plus a plain-language problems list. Unlike /insights/status, the AI check is a real round trip to Anthropic, not a check that an env var exists.',
+      'Rolls up the API, database, public website, Supabase Auth, R2 storage, Resend email and the AI layer into one status plus a plain-language problems list. All checks are free by default: AI health comes from the last real call or a cached probe. Pass deep=1 to force a real (paid, 1-token, cached) round trip to Anthropic.',
   })
-  getStatus() {
-    return this.ops.getStatus();
+  @ApiQuery({ name: 'deep', required: false, description: '1 = run the paid Anthropic probe' })
+  getStatus(@Query('deep') deep?: string) {
+    return this.ops.getStatus({ deep: deep === '1' || deep === 'true' });
   }
 
   @Get('users')

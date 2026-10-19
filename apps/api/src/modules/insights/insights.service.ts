@@ -40,7 +40,7 @@ function dimsLine(yi: YouthIndexLite): string {
 
 // ---- Types ----
 
-interface Insight {
+export interface Insight {
   id: string;
   type: 'trend' | 'anomaly' | 'comparison' | 'achievement' | 'concern' | 'opportunity';
   title: string;
@@ -57,7 +57,7 @@ interface Insight {
   source: 'ai' | 'rule-based';
 }
 
-interface Anomaly {
+export interface Anomaly {
   countryId: string;
   countryName: string;
   indicatorId: string;
@@ -71,7 +71,7 @@ interface Anomaly {
   year: number;
 }
 
-interface Correlation {
+export interface Correlation {
   indicator1: { id: string; name: string; theme: string };
   indicator2: { id: string; name: string; theme: string };
   correlation: number;

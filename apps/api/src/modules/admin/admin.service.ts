@@ -5,7 +5,7 @@ import { ListUsersDto, DeleteDataDto } from './admin.dto';
 import * as crypto from 'crypto';
 import { DEFAULT_MODELS } from '../insights/ai.types';
 
-interface ImportJob {
+export interface ImportJob {
   id: string;
   type: string;
   status: 'pending' | 'running' | 'completed' | 'failed';

@@ -1,7 +1,8 @@
 import { Module, Global, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { RlsMiddleware } from './common/middleware/rls.middleware';
+import { UserAwareThrottlerGuard } from './common/guards/user-throttler.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { CountriesModule } from './modules/countries/countries.module';
 import { ThemesModule } from './modules/themes/themes.module';
@@ -30,6 +31,7 @@ import { ContentModule } from './modules/content/content.module';
 import { InsightReportsModule } from './modules/insight-reports/insight-reports.module';
 import { MailModule } from './modules/mail/mail.module';
 import { OpsModule } from './modules/ops/ops.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { CacheService } from './common/cache.service';
 
 @Global()
@@ -99,12 +101,15 @@ import { CacheService } from './common/cache.service';
     PlatformModule,
     NewsletterModule,
     OpsModule,
+    NotificationsModule,
   ],
   providers: [
     CacheService,
     {
+      // Per-user buckets for signed-in traffic, per-IP for anonymous — see the
+      // guard for why (carrier-grade NAT on mobile networks).
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: UserAwareThrottlerGuard,
     },
   ],
   exports: [CacheService],

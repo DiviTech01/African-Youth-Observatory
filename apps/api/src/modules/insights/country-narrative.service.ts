@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { AiService } from './ai.service';
 
-interface CountryNarrative {
+export interface CountryNarrative {
   countryId: string;
   countryName: string;
   narrative: string;

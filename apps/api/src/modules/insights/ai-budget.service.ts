@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { AiSpendDay } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 import type { AiSurface } from './ai.types';
 
 /**
@@ -27,19 +29,6 @@ const PRICES: Record<string, { in: number; out: number }> = {
  */
 const FALLBACK_PRICE = { in: 5, out: 25 };
 
-interface DayLedger {
-  day: string;
-  usd: number;
-  calls: Record<AiSurface, number>;
-  inputTokens: number;
-  outputTokens: number;
-  rejected: number;
-}
-
-function emptyLedger(day: string): DayLedger {
-  return { day, usd: 0, calls: { chat: 0, report: 0 }, inputTokens: 0, outputTokens: 0, rejected: 0 };
-}
-
 function envNumber(name: string, fallback: number): number {
   const raw = process.env[name];
   if (!raw?.trim()) return fallback;
@@ -56,24 +45,25 @@ function envNumber(name: string, fallback: number): number {
  * chokepoint and refuses once the day's ceiling is reached, which degrades the
  * product to rule-based answers instead of running up a bill.
  *
- * The counters are in-process: a restart resets them, and two Render instances
- * would each get their own allowance. That is a deliberate first cut — it bounds
- * the realistic abuse case (sustained traffic against one instance). A shared
- * counter needs a table; see AYO_WORK_STATE.md.
+ * The ledger is the `AiSpendDay` table (one row per UTC day), written only with
+ * atomic increments, so a restart does not reset it and every Render instance
+ * draws on the same allowance. The check-then-call is not a transaction: calls
+ * that pass the check concurrently can overshoot the ceiling by those few calls.
+ * That is bounded and acceptable; serialising every AI call through a row lock
+ * is not.
+ *
+ * If the ledger cannot be read, spending FAILS CLOSED: the call is refused and
+ * the product degrades to rule-based answers. An unmetered key is exactly the
+ * failure this class exists to prevent.
  */
 @Injectable()
 export class AiBudgetService {
   private readonly logger = new Logger(AiBudgetService.name);
-  private ledger: DayLedger = emptyLedger(AiBudgetService.today());
+
+  constructor(private readonly prisma: PrismaService) {}
 
   private static today(): string {
     return new Date().toISOString().slice(0, 10);
-  }
-
-  private current(): DayLedger {
-    const day = AiBudgetService.today();
-    if (this.ledger.day !== day) this.ledger = emptyLedger(day);
-    return this.ledger;
   }
 
   get limits() {
@@ -88,24 +78,60 @@ export class AiBudgetService {
     };
   }
 
+  /** Atomic increment of today's row, creating it on first use (native upsert). */
+  private bump(day: string, data: {
+    usd?: number;
+    chatCalls?: number;
+    reportCalls?: number;
+    inputTokens?: number;
+    outputTokens?: number;
+    rejected?: number;
+  }) {
+    const increments = Object.fromEntries(
+      Object.entries(data).map(([k, v]) => [k, { increment: v }]),
+    );
+    return this.prisma.aiSpendDay.upsert({
+      where: { day },
+      create: { day, ...data },
+      update: increments,
+    });
+  }
+
+  private refuse(day: string, reason: string): never {
+    // Counting the refusal is best-effort; the refusal itself is not.
+    this.bump(day, { rejected: 1 }).catch(() => undefined);
+    throw new AiBudgetExceededError(reason);
+  }
+
   /** Throws AiBudgetExceededError if this call must not be made. */
-  assertWithinBudget(surface: AiSurface): void {
-    const day = this.current();
+  async assertWithinBudget(surface: AiSurface): Promise<void> {
+    const dayKey = AiBudgetService.today();
     const limits = this.limits;
 
-    if (day.usd >= limits.usdPerDay) {
-      day.rejected++;
+    let day: { usd: number; chatCalls: number; reportCalls: number } | null;
+    try {
+      day = await this.prisma.aiSpendDay.findUnique({
+        where: { day: dayKey },
+        select: { usd: true, chatCalls: true, reportCalls: true },
+      });
+    } catch (err: unknown) {
+      this.logger.error(
+        `AI spend ledger unreachable, refusing AI call: ${err instanceof Error ? err.message : err}`,
+      );
       throw new AiBudgetExceededError(
-        `Daily AI budget of $${limits.usdPerDay} reached (spent ~$${day.usd.toFixed(2)}).`,
+        'The AI spend ledger could not be read, so AI calls are paused until the database answers again.',
       );
     }
 
+    const usd = day?.usd ?? 0;
+    if (usd >= limits.usdPerDay) {
+      this.refuse(dayKey, `Daily AI budget of $${limits.usdPerDay} reached (spent ~$${usd.toFixed(2)}).`);
+    }
+
     const cap = surface === 'report' ? limits.reportsPerDay : limits.chatCallsPerDay;
-    if (day.calls[surface] >= cap) {
-      day.rejected++;
-      throw new AiBudgetExceededError(
-        `Daily ${surface} call limit of ${cap} reached.`,
-      );
+    const used = surface === 'report' ? day?.reportCalls ?? 0 : day?.chatCalls ?? 0;
+    if (used >= cap) {
+      this.refuse(dayKey, `Daily ${surface} call limit of ${cap} reached.`);
     }
   }
 
@@ -117,8 +143,11 @@ export class AiBudgetService {
    * 1.25x the input rate and a cache read 0.1x. Charging both at the plain input
    * rate would overstate a cached report by roughly an order of magnitude and
    * trip the ceiling early.
+   *
+   * Never throws: the money is already spent, and failing the caller's request
+   * now would not get it back. A failed write is logged loudly instead.
    */
-  record(
+  async record(
     surface: AiSurface,
     model: string,
     usage:
@@ -129,46 +158,63 @@ export class AiBudgetService {
           cache_read_input_tokens?: number;
         }
       | undefined,
-  ): void {
-    const day = this.current();
+  ): Promise<void> {
+    const dayKey = AiBudgetService.today();
     const price = PRICES[model] ?? FALLBACK_PRICE;
     const inTok = usage?.input_tokens ?? 0;
     const outTok = usage?.output_tokens ?? 0;
     const cacheWrite = usage?.cache_creation_input_tokens ?? 0;
     const cacheRead = usage?.cache_read_input_tokens ?? 0;
-
-    day.calls[surface]++;
-    day.inputTokens += inTok + cacheWrite + cacheRead;
-    day.outputTokens += outTok;
-    day.usd +=
+    const usd =
       (inTok / 1_000_000) * price.in +
       (cacheWrite / 1_000_000) * price.in * 1.25 +
       (cacheRead / 1_000_000) * price.in * 0.1 +
       (outTok / 1_000_000) * price.out;
 
-    const limits = this.limits;
-    if (day.usd >= limits.usdPerDay * 0.8) {
-      this.logger.warn(
-        `AI spend at ~$${day.usd.toFixed(2)} of $${limits.usdPerDay} for ${day.day}`,
+    try {
+      const row = await this.bump(dayKey, {
+        usd,
+        ...(surface === 'report' ? { reportCalls: 1 } : { chatCalls: 1 }),
+        inputTokens: inTok + cacheWrite + cacheRead,
+        outputTokens: outTok,
+      });
+      const limits = this.limits;
+      if (row.usd >= limits.usdPerDay * 0.8) {
+        this.logger.warn(`AI spend at ~$${row.usd.toFixed(2)} of $${limits.usdPerDay} for ${dayKey}`);
+      }
+    } catch (err: unknown) {
+      this.logger.error(
+        `Could not record ~$${usd.toFixed(4)} of ${surface} AI spend for ${dayKey}: ${err instanceof Error ? err.message : err}`,
       );
     }
   }
 
   /** For /ops/status and the admin surface. */
-  snapshot() {
-    const day = this.current();
+  async snapshot() {
+    const dayKey = AiBudgetService.today();
     const limits = this.limits;
+    let row: AiSpendDay | null = null;
+    let ledgerReachable = true;
+    try {
+      row = await this.prisma.aiSpendDay.findUnique({ where: { day: dayKey } });
+    } catch {
+      ledgerReachable = false;
+    }
+    const usd = row?.usd ?? 0;
     return {
-      day: day.day,
-      estimatedUsd: Number(day.usd.toFixed(4)),
+      day: dayKey,
+      estimatedUsd: Number(usd.toFixed(4)),
       budgetUsd: limits.usdPerDay,
-      exhausted: day.usd >= limits.usdPerDay,
-      calls: { ...day.calls },
-      inputTokens: day.inputTokens,
-      outputTokens: day.outputTokens,
-      rejectedCalls: day.rejected,
+      // An unreadable ledger means every call is being refused (fail closed),
+      // which to an operator looks exactly like an exhausted budget.
+      exhausted: !ledgerReachable || usd >= limits.usdPerDay,
+      calls: { chat: row?.chatCalls ?? 0, report: row?.reportCalls ?? 0 },
+      inputTokens: row?.inputTokens ?? 0,
+      outputTokens: row?.outputTokens ?? 0,
+      rejectedCalls: row?.rejected ?? 0,
       limits,
-      shared: false,
+      shared: true,
+      ledgerReachable,
     };
   }
 }
