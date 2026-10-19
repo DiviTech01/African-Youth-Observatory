@@ -57,10 +57,13 @@ const Methodology = lazy(() => import("./pages/resources/Methodology"));
 const Toolkits = lazy(() => import("./pages/resources/Toolkits"));
 const CountryProfilePage = lazy(() => import("./pages/CountryProfilePage"));
 const CountryDataProfile = lazy(() => import("./pages/CountryDataProfile"));
+const PromiseKeptBrokenCountry = lazy(() => import("./pages/PromiseKeptBrokenCountry"));
+const PromiseKeptBrokenIndex = lazy(() => import("./pages/PromiseKeptBrokenIndex"));
 const ContributorReports = lazy(() => import("./pages/ContributorReports"));
 const DataUpload = lazy(() => import("./pages/DataUpload"));
 const ContentManager = lazy(() => import("./pages/admin/ContentManager"));
 const ReportsManager = lazy(() => import("./pages/admin/ReportsManager"));
+const PolicyManager = lazy(() => import("./pages/admin/PolicyManager"));
 const NewsletterManager = lazy(() => import("./pages/admin/NewsletterManager"));
 
 const queryClient = new QueryClient({
@@ -133,8 +136,8 @@ const App = () => (
               <Route path="/cookie-policy" element={<Navigate to="/cookies" replace />} />
 
               {/* ── Open dashboard (no auth gate) ──
-                  Anyone can browse data, charts, country profiles, reports,
-                  etc. Signin is only prompted per-action by
+                  Anyone can browse data, charts, country profiles, PKPB
+                  reports, etc. Signin is only prompted per-action by
                   `useExportGuard` when a user tries to download / export. */}
               <Route path="/dashboard" element={<DashboardLayout><PageTransition><Dashboard /></PageTransition></DashboardLayout>} />
               <Route path="/explore" element={<DashboardLayout><PageTransition><Explore /></PageTransition></DashboardLayout>} />
@@ -147,14 +150,10 @@ const App = () => (
               <Route path="/dashboard/countries" element={<DashboardLayout><PageTransition><Countries /></PageTransition></DashboardLayout>} />
               <Route path="/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/countries/:id" element={<DashboardLayout><PageTransition><CountryProfilePage /></PageTransition></DashboardLayout>} />
-              {/* PKPB is withdrawn pending sourcing + legal review (2026-09 audit).
-                  Old links, shares and the mobile app's "open full report" land
-                  on the country's data profile instead of a dead page. The
-                  PromiseKeptBroken* pages are kept in the tree for re-issue. */}
-              <Route path="/pkpb" element={<Navigate to="/dashboard/countries" replace />} />
-              <Route path="/dashboard/pkpb" element={<Navigate to="/dashboard/countries" replace />} />
-              <Route path="/pkpb/:id" element={<CountryProfilePage />} />
-              <Route path="/dashboard/pkpb/:id" element={<CountryProfilePage />} />
+              <Route path="/pkpb" element={<DashboardLayout><PageTransition><PromiseKeptBrokenIndex /></PageTransition></DashboardLayout>} />
+              <Route path="/dashboard/pkpb" element={<DashboardLayout><PageTransition><PromiseKeptBrokenIndex /></PageTransition></DashboardLayout>} />
+              <Route path="/pkpb/:countryRef" element={<DashboardLayout><PageTransition><PromiseKeptBrokenCountry /></PageTransition></DashboardLayout>} />
+              <Route path="/dashboard/pkpb/:countryRef" element={<DashboardLayout><PageTransition><PromiseKeptBrokenCountry /></PageTransition></DashboardLayout>} />
               <Route path="/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
               <Route path="/dashboard/reports" element={<DashboardLayout><PageTransition><Reports /></PageTransition></DashboardLayout>} />
               <Route path="/youth-index" element={<DashboardLayout><PageTransition><YouthIndex /></PageTransition></DashboardLayout>} />
@@ -192,6 +191,7 @@ const App = () => (
                 <Route path="/admin" element={<DashboardLayout><PageTransition><Admin /></PageTransition></DashboardLayout>} />
                 <Route path="/admin/cms" element={<DashboardLayout><PageTransition><ContentManager /></PageTransition></DashboardLayout>} />
                 <Route path="/admin/reports" element={<DashboardLayout><PageTransition><ReportsManager /></PageTransition></DashboardLayout>} />
+                <Route path="/admin/policies" element={<DashboardLayout><PageTransition><PolicyManager /></PageTransition></DashboardLayout>} />
                 <Route path="/admin/newsletter" element={<DashboardLayout><PageTransition><NewsletterManager /></PageTransition></DashboardLayout>} />
               </Route>
 

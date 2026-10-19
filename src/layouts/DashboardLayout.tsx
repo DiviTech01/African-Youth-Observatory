@@ -79,6 +79,7 @@ const adminLinks = [
   { to: '/admin', label: 'Admin Panel', icon: ShieldCheck },
   { to: '/admin/cms', label: 'Content Manager', icon: FileText },
   { to: '/admin/reports', label: 'Reports & Files', icon: FileText },
+  { to: '/admin/policies', label: 'Country Policies', icon: ShieldCheck },
   { to: '/admin/newsletter', label: 'Newsletter & Broadcasts', icon: Mail },
   { to: '/dashboard/data-upload', label: 'Upload Data', icon: Upload },
 ];
@@ -100,7 +101,7 @@ const dataLinks = [
 const contributorLinks = [
   { to: '/dashboard/data-upload', label: 'Contributor Hub', icon: Upload },
   { to: '/dashboard/contributor/reports', label: 'Reports & Files', icon: FileText },
-  // PKPB nav entry removed while the reports are withdrawn (2026-09 audit).
+  { to: '/dashboard/pkpb', label: 'Promise Kept · Promise Broken', icon: ShieldCheck },
 ];
 
 interface DashboardLayoutProps {
@@ -627,6 +628,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     const p = location.pathname;
     if (p === '/admin/cms') return 'Content Manager';
     if (p === '/admin/reports') return 'Reports & Files';
+    if (p === '/admin/policies') return 'Country Policies';
     if (p === '/admin') return 'Admin Panel';
     if (p === '/dashboard') return 'Overview';
     if (p.includes('explore')) return 'Data Explorer';
