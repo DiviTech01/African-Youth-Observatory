@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { SAMPLE_EXPERTS } from '../expert-directory/sample-experts';
 
 // ADMIN-only. These endpoints write directly to the production DB (including
 // creating an ADMIN user), so they must never be publicly reachable.
@@ -106,7 +107,8 @@ export class SeedController {
             yearAdopted: 2010 + Math.floor(Math.random() * 13),
             aycRatified: Math.random() > 0.3,
             aycRatifiedYear: Math.random() > 0.3 ? 2005 + Math.floor(Math.random() * 15) : null,
-            wpayCompliant: Math.random() > 0.4,
+            // Never invent a treaty status: every country starts unassessed.
+            afcftaProtocolStatus: 'UNKNOWN',
             complianceScore: Math.round((30 + Math.random() * 60) * 10) / 10,
             status: 'active',
           },
@@ -119,30 +121,23 @@ export class SeedController {
 
   @Post('experts')
   async seedExperts() {
-    const countries = await this.prisma.country.findMany({ take: 28 });
-    const specializations = ['Education', 'Employment', 'Health', 'Governance', 'Technology', 'Gender', 'Agriculture', 'Finance'];
-    const titles = ['Research Fellow', 'Senior Analyst', 'Policy Advisor', 'Program Manager', 'Director', 'Professor', 'Consultant'];
+    // Fictional sample profiles (see sample-experts.ts). Keyed on id and
+    // create-only, so re-seeding never overwrites a row an admin has edited.
+    const countries = await this.prisma.country.findMany({
+      where: { isoCode3: { in: SAMPLE_EXPERTS.map((e) => e.country) } },
+      select: { id: true, isoCode3: true },
+    });
+    const countryByIso3 = new Map(countries.map((c) => [c.isoCode3, c.id]));
     let seeded = 0;
 
-    for (let i = 0; i < Math.min(28, countries.length); i++) {
-      const country = countries[i];
-      const spec = specializations[i % specializations.length];
-      const title = titles[i % titles.length];
+    for (const { id, country, ...profile } of SAMPLE_EXPERTS) {
+      const countryId = countryByIso3.get(country);
+      if (!countryId) continue;
       try {
         await this.prisma.expert.upsert({
-          where: { email: `expert${i + 1}@ayd-research.org` },
+          where: { id },
           update: {},
-          create: {
-            name: `Dr. Expert ${i + 1}`,
-            email: `expert${i + 1}@ayd-research.org`,
-            title: `${title} - ${spec}`,
-            organization: `${country.name} Youth Research Institute`,
-            countryId: country.id,
-            specializations: [spec, specializations[(i + 1) % specializations.length]],
-            languages: ['English', i % 3 === 0 ? 'French' : i % 3 === 1 ? 'Arabic' : 'Portuguese'],
-            bio: `Expert in ${spec.toLowerCase()} policy and youth development in ${country.name}.`,
-            verified: true,
-          },
+          create: { id, ...profile, countryId, verified: true, status: 'APPROVED' },
         });
         seeded++;
       } catch (e) {}

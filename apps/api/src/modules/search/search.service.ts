@@ -163,7 +163,9 @@ export class SearchService {
         title: e.name,
         subtitle: `${e.title}${e.organization ? ` · ${e.organization}` : ''}`,
         description: e.country.name,
-        url: `/experts/${e.id}`,
+        // The web app has no /experts/:id route; the directory opens the
+        // profile dialog from ?expert=<id>.
+        url: `/experts?expert=${encodeURIComponent(e.id)}`,
         relevance: this.scoreRelevance(q, e.name, [e.title, e.organization || '', e.bio || '']),
         icon: undefined,
       }))

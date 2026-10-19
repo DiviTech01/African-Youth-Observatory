@@ -92,9 +92,13 @@ export class ExpertDirectoryService {
       where.country = { region };
     }
 
-    // Verification filter
-    if (verified !== undefined) {
-      where.verified = verified;
+    // Public listing only ever shows verified (approved) experts. Pending and
+    // rejected self-registrations are personal data awaiting review and are
+    // served to admins through listPending() instead. `verified=false` used to
+    // expose them on this public endpoint, so it now matches nothing.
+    where.verified = true;
+    if (verified === false) {
+      return { data: [], total: 0, page, pageSize, totalPages: 0 };
     }
 
     // Specialization filter (array contains)
@@ -166,7 +170,8 @@ export class ExpertDirectoryService {
       },
     });
 
-    if (!expert) {
+    // Unverified registrations are not public, including their email.
+    if (!expert || !expert.verified) {
       throw new NotFoundException(`Expert ${id} not found`);
     }
 
@@ -182,6 +187,40 @@ export class ExpertDirectoryService {
       bio: expert.bio,
       verified: expert.verified,
       createdAt: expert.createdAt.toISOString(),
+    };
+  }
+
+  /**
+   * Registrations awaiting review (admin only). Includes email and status so
+   * the approval queue can contact the registrant.
+   */
+  async listPending() {
+    const experts = await this.prisma.expert.findMany({
+      where: { status: 'PENDING', verified: false },
+      include: {
+        country: {
+          select: { id: true, name: true, isoCode3: true, region: true, flagEmoji: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return {
+      data: experts.map((e) => ({
+        id: e.id,
+        name: e.name,
+        email: e.email,
+        title: e.title,
+        organization: e.organization,
+        country: e.country,
+        specializations: e.specializations,
+        languages: e.languages,
+        bio: e.bio,
+        verified: e.verified,
+        status: e.status,
+        createdAt: e.createdAt.toISOString(),
+      })),
+      total: experts.length,
     };
   }
 

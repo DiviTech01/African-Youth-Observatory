@@ -2,6 +2,12 @@
  * Seed Expert Data — Imports fictional expert directory entries
  * from seed/experts.json
  *
+ * Every entry is an illustrative sample profile: invented people, invented
+ * organisations, reserved example.org emails. The JSON is generated from
+ * apps/api/src/modules/expert-directory/sample-experts.ts; edit that file and
+ * run `tsx scripts/rename-sample-experts.ts --write-json` rather than editing
+ * the JSON by hand.
+ *
  * Usage: pnpm seed:experts
  */
 
@@ -12,6 +18,7 @@ import * as path from 'path';
 const prisma = new PrismaClient();
 
 interface ExpertSeedEntry {
+  id?: string; // stable row id (matches production), preferred upsert key
   name: string;
   email: string | null;
   title: string;
@@ -48,45 +55,34 @@ async function main() {
       continue;
     }
 
-    // Use email as unique key for upsert
-    if (entry.email) {
+    const fields = {
+      name: entry.name,
+      email: entry.email,
+      title: entry.title,
+      organization: entry.organization,
+      countryId: country.id,
+      specializations: entry.specializations,
+      languages: entry.languages,
+      bio: entry.bio,
+      verified: entry.verified,
+      status: entry.verified ? ('APPROVED' as const) : ('PENDING' as const),
+    };
+
+    // Prefer the stable id, then email, as the upsert key
+    if (entry.id) {
+      await prisma.expert.upsert({
+        where: { id: entry.id },
+        update: fields,
+        create: { id: entry.id, ...fields },
+      });
+    } else if (entry.email) {
       await prisma.expert.upsert({
         where: { email: entry.email },
-        update: {
-          name: entry.name,
-          title: entry.title,
-          organization: entry.organization,
-          countryId: country.id,
-          specializations: entry.specializations,
-          languages: entry.languages,
-          bio: entry.bio,
-          verified: entry.verified,
-        },
-        create: {
-          name: entry.name,
-          email: entry.email,
-          title: entry.title,
-          organization: entry.organization,
-          countryId: country.id,
-          specializations: entry.specializations,
-          languages: entry.languages,
-          bio: entry.bio,
-          verified: entry.verified,
-        },
+        update: fields,
+        create: fields,
       });
     } else {
-      await prisma.expert.create({
-        data: {
-          name: entry.name,
-          title: entry.title,
-          organization: entry.organization,
-          countryId: country.id,
-          specializations: entry.specializations,
-          languages: entry.languages,
-          bio: entry.bio,
-          verified: entry.verified,
-        },
-      });
+      await prisma.expert.create({ data: fields });
     }
 
     created++;

@@ -28,7 +28,7 @@ export class ExpertSearchDto {
   @IsString()
   language?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by verification status' })
+  @ApiPropertyOptional({ description: 'Public listing is verified-only; false returns no rows' })
   @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()
@@ -41,13 +41,15 @@ export class ExpertSearchDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ default: 20 })
+  // The directory is small and both the web and mobile pages filter client
+  // side, so default to the full page rather than silently cutting at 20.
+  @ApiPropertyOptional({ default: 100 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
-  pageSize?: number = 20;
+  pageSize?: number = 100;
 }
 
 export class CreateExpertDto {

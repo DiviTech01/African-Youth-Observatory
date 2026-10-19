@@ -191,6 +191,7 @@ const Admin = () => {
             {[
               { to: '/admin/cms', icon: FileText, accent: '#D4A017', label: 'Content Manager', hint: 'Edit copy, labels, and CMS content site-wide.' },
               { to: '/admin/reports', icon: FileText, accent: '#A855F7', label: 'Reports & Files', hint: `Upload PDFs and briefs. ${adminReportsCount} on file.` },
+              { to: '/admin/policies', icon: Shield, accent: '#14B8A6', label: 'Country Policies', hint: 'Set AfCFTA Women & Youth Protocol status, with sources.' },
               { to: '/admin/newsletter', icon: Mail, accent: '#3B82F6', label: 'Newsletter & Briefings', hint: 'Review and approve monthly youth-data briefings.' },
               { to: '/dashboard/data-upload', icon: Upload, accent: '#22C55E', label: 'Upload Data', hint: 'Bulk-import indicators, youth-index, and policy records.' },
             ].map(({ to, icon: Icon, accent, label, hint }) => (
@@ -378,48 +379,49 @@ function PendingExperts() {
 
   const apiBase = import.meta.env.VITE_API_URL || '/api';
 
-  const { data: experts, isLoading } = useQuery({
+  // Admin-only queue. The public /experts listing is verified-only, so the
+  // pending list must come from the guarded endpoint with the admin token.
+  const { data: experts, isLoading, isError } = useQuery({
     queryKey: ['admin-pending-experts'],
     queryFn: async () => {
-      try {
-        const res = await fetch(`${apiBase}/experts?verified=false&pageSize=50`);
-        if (!res.ok) return [];
-        const data = await res.json();
-        return data.data || [];
-      } catch {
-        return [];
-      }
+      const res = await fetch(`${apiBase}/experts/pending`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`Failed to load pending experts (${res.status})`);
+      const data = await res.json();
+      return data.data || [];
     },
   });
 
+  // fetch() only rejects on network errors, so a 401/403/404 must be checked.
+  const putExpert = async (id: string, body: Record<string, unknown>) => {
+    const res = await fetch(`${apiBase}/experts/${id}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  };
+
   const handleApprove = async (id: string) => {
     try {
-      await fetch(`${apiBase}/experts/${id}`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({ status: 'APPROVED', verified: true }),
-      });
-      toast({ title: 'Expert approved', description: 'The expert has been notified.' });
+      await putExpert(id, { status: 'APPROVED', verified: true });
+      toast({ title: 'Expert approved', description: 'The profile is now visible in the directory.' });
       qc.invalidateQueries({ queryKey: ['admin-pending-experts'] });
-    } catch {
-      toast({ title: 'Failed to approve', variant: 'destructive' });
+      qc.invalidateQueries({ queryKey: ['experts'] });
+    } catch (err: any) {
+      toast({ title: 'Failed to approve', description: err?.message, variant: 'destructive' });
     }
   };
 
   const handleReject = async () => {
     if (!rejectDialog) return;
     try {
-      await fetch(`${apiBase}/experts/${rejectDialog.id}`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({ status: 'REJECTED', rejectionReason }),
-      });
-      toast({ title: 'Expert rejected', description: 'The expert has been notified.' });
+      await putExpert(rejectDialog.id, { status: 'REJECTED', verified: false, rejectionReason });
+      toast({ title: 'Expert rejected', description: 'The registration has been removed from the queue.' });
       qc.invalidateQueries({ queryKey: ['admin-pending-experts'] });
       setRejectDialog(null);
       setRejectionReason('');
-    } catch {
-      toast({ title: 'Failed to reject', variant: 'destructive' });
+    } catch (err: any) {
+      toast({ title: 'Failed to reject', description: err?.message, variant: 'destructive' });
     }
   };
 
@@ -443,6 +445,10 @@ function PendingExperts() {
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : isError ? (
+            <div className="text-sm text-red-400 py-4">
+              Couldn't load pending registrations. Check that you are signed in as an admin.
             </div>
           ) : pendingExperts.length === 0 ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">

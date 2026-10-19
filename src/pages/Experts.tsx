@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Users, Search, UserPlus, MapPin, Briefcase, Globe, Check, X, Sparkles, Languages, GraduationCap, ArrowRight } from 'lucide-react';
+import { Users, Search, UserPlus, MapPin, Briefcase, Globe, Check, X, Sparkles, Languages, GraduationCap, ArrowRight, Info, CloudOff, RefreshCw } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import CountryFlag from '@/components/CountryFlag';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
 interface Expert {
-  id: number;
+  id: string;
   name: string;
   initials: string;
   title: string;
@@ -25,116 +26,17 @@ interface Expert {
   country: string;
   specializations: string[];
   languages: string[];
+  bio: string;
   color: string;
 }
 
-const experts: Expert[] = [
-  {
-    id: 1,
-    name: 'Dr. Amina Osei',
-    initials: 'AO',
-    title: 'Senior Research Fellow',
-    organization: 'African Development Bank',
-    country: 'Ghana',
-    specializations: ['Youth Employment', 'Economic Policy', 'Gender Equality'],
-    languages: ['English', 'French', 'Twi'],
-    color: 'bg-pan-green-500',
-  },
-  {
-    id: 2,
-    name: 'Prof. Tendai Moyo',
-    initials: 'TM',
-    title: 'Director of Youth Studies',
-    organization: 'University of Cape Town',
-    country: 'South Africa',
-    specializations: ['Education Policy', 'Digital Literacy'],
-    languages: ['English', 'Zulu', 'Afrikaans'],
-    color: 'bg-pan-blue-500',
-  },
-  {
-    id: 3,
-    name: 'Dr. Fatima Diallo',
-    initials: 'FD',
-    title: 'Policy Advisor',
-    organization: 'African Union Commission',
-    country: 'Senegal',
-    specializations: ['Youth Policy', 'Governance', 'Francophone Africa'],
-    languages: ['French', 'English', 'Wolof'],
-    color: 'bg-pan-gold-500',
-  },
-  {
-    id: 4,
-    name: 'Mr. Kwame Mensah',
-    initials: 'KM',
-    title: 'Programme Manager',
-    organization: 'UNDP Africa Regional Bureau',
-    country: 'Kenya',
-    specializations: ['Youth Entrepreneurship', 'Innovation'],
-    languages: ['English', 'Swahili'],
-    color: 'bg-pan-red-500',
-  },
-  {
-    id: 5,
-    name: 'Dr. Ngozi Eze',
-    initials: 'NE',
-    title: 'Health Systems Researcher',
-    organization: 'WHO AFRO',
-    country: 'Nigeria',
-    specializations: ['Youth Health', 'Reproductive Health', 'Data Systems'],
-    languages: ['English', 'Igbo'],
-    color: 'bg-purple-500',
-  },
-  {
-    id: 6,
-    name: 'Ms. Halima Abdi',
-    initials: 'HA',
-    title: 'Youth Development Specialist',
-    organization: 'UNICEF East Africa',
-    country: 'Ethiopia',
-    specializations: ['Education', 'Child Protection', 'Humanitarian'],
-    languages: ['English', 'Amharic', 'Somali'],
-    color: 'bg-teal-500',
-  },
-  {
-    id: 7,
-    name: 'Dr. Jean-Pierre Habimana',
-    initials: 'JH',
-    title: 'Lead Economist',
-    organization: 'Rwanda Development Board',
-    country: 'Rwanda',
-    specializations: ['Economic Modelling', 'Digital Economy'],
-    languages: ['French', 'English', 'Kinyarwanda'],
-    color: 'bg-indigo-500',
-  },
-  {
-    id: 8,
-    name: 'Prof. Aisha Mohamed',
-    initials: 'AM',
-    title: 'Chair, Dept. of Sociology',
-    organization: 'University of Dar es Salaam',
-    country: 'Tanzania',
-    specializations: ['Youth Civic Participation', 'Social Research'],
-    languages: ['English', 'Swahili', 'Arabic'],
-    color: 'bg-rose-500',
-  },
-  {
-    id: 9,
-    name: 'Mr. Chidi Okafor',
-    initials: 'CO',
-    title: 'Data Science Lead',
-    organization: 'Mo Ibrahim Foundation',
-    country: 'Nigeria',
-    specializations: ['Data Analytics', 'Governance Indicators', 'AI for Development'],
-    languages: ['English', 'Yoruba'],
-    color: 'bg-cyan-500',
-  },
-];
-
-const mockCountries = [...new Set(experts.map((e) => e.country))].sort();
-const mockSpecializations = [...new Set(experts.flatMap((e) => e.specializations))].sort();
-const mockLanguages = [...new Set(experts.flatMap((e) => e.languages))].sort();
-
 const avatarColors = ['bg-pan-green-500', 'bg-pan-blue-500', 'bg-pan-gold-500', 'bg-pan-red-500', 'bg-purple-500', 'bg-teal-500', 'bg-indigo-500', 'bg-rose-500', 'bg-cyan-500'];
+// Hex for each avatar class, used by the card's top accent stripe.
+const accentHex: Record<string, string> = {
+  'bg-pan-green-500': '#22C55E', 'bg-pan-blue-500': '#3B82F6', 'bg-pan-gold-500': '#F59E0B',
+  'bg-pan-red-500': '#EF4444', 'bg-purple-500': '#A855F7', 'bg-teal-500': '#14B8A6',
+  'bg-indigo-500': '#6366F1', 'bg-rose-500': '#F43F5E', 'bg-cyan-500': '#06B6D4',
+};
 
 const registrationSpecializations = [
   'Youth Employment',
@@ -161,6 +63,7 @@ const apiBase = import.meta.env.VITE_API_URL || '/api';
 
 const Experts = () => {
   const { t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [countryFilter, setCountryFilter] = useState('all');
   const [specFilter, setSpecFilter] = useState('all');
@@ -183,48 +86,89 @@ const Experts = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Fetch experts from API
-  const { data: apiExperts, isLoading, isError } = useQuery({
-    queryKey: ['experts', { search: search || undefined }],
-    queryFn: () => api.experts.list({ search: search || undefined }),
+  // Fetch the whole directory once; search and filters run client side so
+  // the filter lists stay stable while typing.
+  const { data: apiExperts, isLoading, isError, refetch } = useQuery({
+    queryKey: ['experts'],
+    queryFn: () => api.experts.list(),
   });
 
-  // Merge API data with mock fallback
-  const allExperts = useMemo(() => {
-    const apiData = (apiExperts as any)?.data || apiExperts;
-    if (Array.isArray(apiData) && apiData.length > 0) {
-      return apiData.map((e: any, i: number) => ({
-        id: e.id || i,
-        name: e.name,
-        initials: e.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
-        title: e.title,
-        organization: e.organization || '',
-        country: e.country?.name || e.country || '',
-        specializations: e.specializations || [],
-        languages: e.languages || [],
-        color: avatarColors[i % avatarColors.length],
-      }));
-    }
-    return experts;
+  // Registration needs every country (not just those with experts) and the
+  // API expects a country id.
+  const { data: countriesData } = useQuery({
+    queryKey: ['experts', 'countries-list'],
+    queryFn: () => api.countries.list(),
+    staleTime: 1000 * 60 * 10,
+  });
+  const registrationCountries = useMemo(() => {
+    const raw = (countriesData as any)?.data ?? countriesData;
+    const list: { id: string; name: string }[] = Array.isArray(raw) ? raw : [];
+    return [...list].sort((a, b) => a.name.localeCompare(b.name));
+  }, [countriesData]);
+
+  const allExperts: Expert[] = useMemo(() => {
+    const apiData = (apiExperts as any)?.data ?? apiExperts;
+    if (!Array.isArray(apiData)) return [];
+    return apiData.map((e: any, i: number) => ({
+      id: String(e.id),
+      name: e.name,
+      initials: e.name
+        .replace(/^(Dr|Prof|Mr|Ms|Mrs)\.?\s+/i, '')
+        .split(/\s+/)
+        .map((n: string) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase(),
+      title: e.title,
+      organization: e.organization || '',
+      country: e.country?.name || '',
+      specializations: e.specializations || [],
+      languages: e.languages || [],
+      bio: e.bio || '',
+      color: avatarColors[i % avatarColors.length],
+    }));
   }, [apiExperts]);
 
-  const allCountries = useMemo(() => [...new Set(allExperts.map((e: any) => e.country))].sort() as string[], [allExperts]);
-  const allSpecializations = useMemo(() => [...new Set(allExperts.flatMap((e: any) => e.specializations))].sort() as string[], [allExperts]);
-  const allLanguages = useMemo(() => [...new Set(allExperts.flatMap((e: any) => e.languages))].sort() as string[], [allExperts]);
+  const allCountries = useMemo(() => [...new Set(allExperts.map((e) => e.country).filter(Boolean))].sort(), [allExperts]);
+  const allSpecializations = useMemo(() => [...new Set(allExperts.flatMap((e) => e.specializations))].sort(), [allExperts]);
+  const allLanguages = useMemo(() => [...new Set(allExperts.flatMap((e) => e.languages))].sort(), [allExperts]);
 
   const filtered = useMemo(() => {
-    return allExperts.filter((e: any) => {
+    const q = search.trim().toLowerCase();
+    return allExperts.filter((e) => {
       const matchSearch =
-        !search ||
-        e.name.toLowerCase().includes(search.toLowerCase()) ||
-        (e.organization || '').toLowerCase().includes(search.toLowerCase()) ||
-        e.specializations.some((s: string) => s.toLowerCase().includes(search.toLowerCase()));
+        !q ||
+        e.name.toLowerCase().includes(q) ||
+        e.organization.toLowerCase().includes(q) ||
+        e.title.toLowerCase().includes(q) ||
+        e.country.toLowerCase().includes(q) ||
+        e.specializations.some((s) => s.toLowerCase().includes(q));
       const matchCountry = countryFilter === 'all' || e.country === countryFilter;
       const matchSpec = specFilter === 'all' || e.specializations.includes(specFilter);
       const matchLang = langFilter === 'all' || e.languages.includes(langFilter);
       return matchSearch && matchCountry && matchSpec && matchLang;
     });
   }, [allExperts, search, countryFilter, specFilter, langFilter]);
+
+  // Deep link from unified search: /experts?expert=<id> opens that profile.
+  const deepLinkId = searchParams.get('expert');
+  useEffect(() => {
+    if (!deepLinkId || allExperts.length === 0) return;
+    const match = allExperts.find((e) => e.id === deepLinkId);
+    if (match) {
+      setSelectedExpert(match);
+      setProfileDialogOpen(true);
+    }
+  }, [deepLinkId, allExperts]);
+
+  const handleProfileOpenChange = (open: boolean) => {
+    setProfileDialogOpen(open);
+    if (!open && deepLinkId) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('expert');
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   const toggleSpec = (spec: string) => {
     setSelectedSpecs((prev) =>
@@ -279,7 +223,7 @@ const Experts = () => {
         email: regEmail.trim(),
         title: regTitle.trim(),
         organization: regOrg.trim(),
-        country: regCountry,
+        countryId: regCountry,
         specializations: selectedSpecs,
         languages: regLanguages.split(',').map((l) => l.trim()).filter(Boolean),
         bio: regBio.trim(),
@@ -292,7 +236,11 @@ const Experts = () => {
       });
 
       if (!res.ok) {
-        throw new Error(`Registration failed (${res.status})`);
+        const body = await res.json().catch(() => null);
+        if (res.status === 409) throw new Error('An expert with this email is already registered.');
+        if (res.status === 429) throw new Error('Too many registrations from this connection. Please try again later.');
+        const msg = Array.isArray(body?.message) ? body.message.join(', ') : body?.message;
+        throw new Error(msg || `Registration failed (${res.status})`);
       }
 
       toast.success(
@@ -326,12 +274,16 @@ const Experts = () => {
               <p className="text-sm sm:text-base text-[#A89070]">
                 {t('experts.subtitle')}
               </p>
+              <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] text-gray-500">
+                <Info className="h-3 w-3 flex-shrink-0" />
+                {t('experts.sampleNote')}
+              </p>
             </div>
             <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { resetForm(); } }}>
               <DialogTrigger asChild>
                 <Button className="gap-2 self-start">
                   <UserPlus className="h-4 w-4" />
-                  Register as Expert
+                  {t('experts.register')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto bg-black/95 border-gray-800">
@@ -394,9 +346,9 @@ const Experts = () => {
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>
                       <SelectContent>
-                        {allCountries.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
+                        {registrationCountries.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -490,7 +442,7 @@ const Experts = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: s.accent }}>
-                      {isLoading ? '—' : s.value}
+                      {isLoading || isError ? '—' : s.value}
                     </p>
                     <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold mt-1">{s.label}</p>
                   </div>
@@ -506,7 +458,7 @@ const Experts = () => {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, organization, or expertise…"
+                placeholder={t('experts.searchPlaceholder')}
                 className="pl-9 h-9 text-xs bg-white/[0.03] border-gray-800"
               />
               {search && (
@@ -587,13 +539,12 @@ const Experts = () => {
 
           {/* Results count */}
           <p className="text-xs text-gray-500 mb-4">
-            {isLoading ? 'Loading experts…' : (
+            {isLoading ? 'Loading experts…' : isError ? null : (
               <>
                 <span className="text-gray-300 font-semibold tabular-nums">{filtered.length}</span> of{' '}
                 <span className="text-gray-300 font-semibold tabular-nums">{allExperts.length}</span> experts
               </>
             )}
-            {isError && <Badge variant="secondary" className="ml-2 text-[10px]">Offline</Badge>}
           </p>
 
           {/* Expert grid */}
@@ -603,11 +554,27 @@ const Experts = () => {
                 <Skeleton key={i} className="h-56 rounded-2xl bg-white/[0.03]" />
               ))}
             </div>
+          ) : isError ? (
+            <div className="text-center py-16 rounded-2xl border border-dashed border-gray-800 bg-white/[0.02]">
+              <CloudOff className="h-10 w-10 text-gray-500 mx-auto mb-3" />
+              <p className="text-base font-medium text-gray-300">{t('experts.errorTitle')}</p>
+              <p className="text-xs text-gray-500 mt-1">{t('experts.errorBody')}</p>
+              <Button variant="outline" size="sm" className="mt-4 gap-1.5" onClick={() => refetch()}>
+                <RefreshCw className="h-3.5 w-3.5" />
+                {t('experts.retry')}
+              </Button>
+            </div>
+          ) : allExperts.length === 0 ? (
+            <div className="text-center py-16 rounded-2xl border border-dashed border-gray-800 bg-white/[0.02]">
+              <Users className="h-10 w-10 text-gray-500 mx-auto mb-3" />
+              <p className="text-base font-medium text-gray-300">{t('experts.emptyTitle')}</p>
+              <p className="text-xs text-gray-500 mt-1">{t('experts.emptyBody')}</p>
+            </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-16 rounded-2xl border border-dashed border-gray-800 bg-white/[0.02]">
               <Users className="h-10 w-10 text-gray-500 mx-auto mb-3" />
-              <p className="text-base font-medium text-gray-300">No experts found</p>
-              <p className="text-xs text-gray-500 mt-1">Try adjusting your search or filters.</p>
+              <p className="text-base font-medium text-gray-300">{t('experts.noMatchTitle')}</p>
+              <p className="text-xs text-gray-500 mt-1">{t('experts.noMatchBody')}</p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -620,7 +587,7 @@ const Experts = () => {
                   {/* Top accent stripe — colored per expert */}
                   <div
                     className="h-1 w-full"
-                    style={{ background: `linear-gradient(90deg, ${expert.color.replace('bg-', '#').replace('pan-green-500', '22C55E').replace('pan-blue-500', '3B82F6').replace('pan-gold-500', 'F59E0B').replace('pan-red-500', 'EF4444').replace('purple-500', 'A855F7').replace('teal-500', '14B8A6')}aa, transparent)` }}
+                    style={{ background: `linear-gradient(90deg, ${accentHex[expert.color] ?? '#D4A017'}aa, transparent)` }}
                   />
                   <div className="p-5">
                     <div className="flex items-start gap-3 mb-3">
@@ -686,7 +653,7 @@ const Experts = () => {
       </div>
 
       {/* View Profile Dialog */}
-      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+      <Dialog open={profileDialogOpen} onOpenChange={handleProfileOpenChange}>
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto bg-black/95 border-gray-800">
           {selectedExpert && (
             <>
@@ -758,7 +725,7 @@ const Experts = () => {
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-gray-300">Bio</p>
                   <p className="text-sm text-gray-400 leading-relaxed">
-                    {selectedExpert.name} is a {selectedExpert.title.toLowerCase()} at {selectedExpert.organization}, based in {selectedExpert.country}. Their areas of expertise include {selectedExpert.specializations.join(', ').replace(/, ([^,]*)$/, ' and $1')}.
+                    {selectedExpert.bio || <>{selectedExpert.name} is a {selectedExpert.title.toLowerCase()} at {selectedExpert.organization}, based in {selectedExpert.country}. Their areas of expertise include {selectedExpert.specializations.join(', ').replace(/, ([^,]*)$/, ' and $1')}.</>}
                   </p>
                 </div>
               </div>

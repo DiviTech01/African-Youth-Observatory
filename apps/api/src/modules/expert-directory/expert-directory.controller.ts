@@ -18,7 +18,7 @@ export class ExpertDirectoryController {
   @ApiOperation({
     summary: 'Search and list experts',
     description:
-      'Returns paginated expert list with optional filtering by name, country, region, specialization, language, and verification status.',
+      'Returns paginated list of verified experts with optional filtering by name, country, region, specialization, and language.',
   })
   search(@Query() dto: ExpertSearchDto) {
     return this.expertService.search(dto);
@@ -44,6 +44,18 @@ export class ExpertDirectoryController {
   getSpecializations() {
     const { SPECIALIZATIONS } = require('./expert-directory.service');
     return { specializations: SPECIALIZATIONS };
+  }
+
+  @Get('pending')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'List registrations awaiting approval (admin)',
+    description: 'Returns PENDING, unverified expert registrations with contact details for review.',
+  })
+  listPending() {
+    return this.expertService.listPending();
   }
 
   @Get(':id')
