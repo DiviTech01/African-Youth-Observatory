@@ -15,16 +15,16 @@ const ACCEPTED_MIME = new Set([
 ]);
 
 /**
- * PKPB reports are withdrawn from every public read path unless
- * PKPB_PUBLIC=true. The 2026-09 audit found 114 published reports making
- * uncited "Promise Broken" findings against named governments and named heads
- * of state, so they stay offline until each is re-issued with per-claim
- * sources and a legal read. Uploads still work, so editors can stage corrected
- * versions. This gate is server-side on purpose: installed mobile builds call
- * these endpoints directly and cannot be patched from the web app.
+ * PKPB reports are public by default. They were withdrawn after the 2026-09
+ * audit (uncited "Promise Broken" findings against named governments); legal
+ * cleared publication again on 2026-10-19. PKPB_PUBLIC is kept as a kill
+ * switch: only an explicit PKPB_PUBLIC=false takes them off every public read
+ * path again (list, ?type=PKPB_REPORT, /:id, /download, by-country, AI chat
+ * snapshot). Uploads work either way. The gate is server-side on purpose:
+ * installed mobile builds call these endpoints directly.
  */
 export function isPkpbPublic(): boolean {
-  return process.env.PKPB_PUBLIC?.trim().toLowerCase() === 'true';
+  return process.env.PKPB_PUBLIC?.trim().toLowerCase() !== 'false';
 }
 
 @Injectable()
@@ -185,7 +185,7 @@ export class DocumentsService {
     const country = await this.resolveCountry(countryRef);
     if (!country) throw new NotFoundException(`Country not found: ${countryRef}`);
 
-    // Withdrawn: answer with the empty shape rather than 404 so installed
+    // Kill switch on: answer with the empty shape rather than 404 so installed
     // mobile builds fall into their existing "coming soon" state, not an error.
     if (!isPkpbPublic()) {
       return { country, document: null, htmlDocument: null, pdfDocument: null };
@@ -257,7 +257,10 @@ export class DocumentsService {
   private static readonly COUNTRY_ALIASES: Record<string, string> = {
     'drc': 'COD', 'rdc': 'COD', 'dr congo': 'COD', 'drcongo': 'COD',
     'congo kinshasa': 'COD', 'congo drc': 'COD',
+    'democratic republic of the congo': 'COD', 'democratic republic of congo': 'COD',
     'congo brazzaville': 'COG',
+    'republic of the congo': 'COG', 'republic of congo': 'COG',
+    'central african republic': 'CAF', 'the gambia': 'GMB',
     'car': 'CAF', 'rca': 'CAF',
     'cameroun': 'CMR',
     'sao tome': 'STP', 'sao tome and principe': 'STP', 'stp': 'STP',

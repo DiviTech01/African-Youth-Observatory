@@ -27,8 +27,9 @@ function findCountry(ref: string) {
 
 /**
  * /dashboard/profile/:slug — full country data profile with charts/tabs.
- * Reached from the Countries grid, the Youth Index, and the redirects that
- * replaced the withdrawn PKPB country pages. Accepts slug, name or ISO3.
+ * Reached from the Youth Index (strip or rankings table) and shared links.
+ * The Promise Kept · Promise Broken report lives at /dashboard/pkpb/:countryRef.
+ * Accepts slug, name, ISO3 or a common alias (DRC, Ivory Coast, ...).
  */
 const CountryDataProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
