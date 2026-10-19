@@ -89,7 +89,7 @@ const BreakdownRadar = ({ c, height = 320 }: { c: any; height?: number }) => (
 const YouthIndex = () => {
   const { t } = useLanguage();
   const { preferences } = useUserPreferences();
-  const [selectedYear, setSelectedYear] = useState("2024");
+  const [selectedYear, setSelectedYear] = useState("2025");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>('rank');
@@ -255,6 +255,7 @@ const YouthIndex = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="2025">2025</SelectItem>
                   <SelectItem value="2024">2024</SelectItem>
                   <SelectItem value="2023">2023</SelectItem>
                   <SelectItem value="2022">2022</SelectItem>

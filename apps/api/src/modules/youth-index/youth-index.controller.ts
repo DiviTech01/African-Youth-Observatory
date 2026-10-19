@@ -19,30 +19,30 @@ export class YouthIndexController {
   @Public()
   @Get('rankings')
   @ApiOperation({ summary: 'Get all countries ranked by youth index' })
-  getRankings(@Query() query: YouthIndexQueryDto) {
-    return this.youthIndexService.getRankings(query.year ?? 2024);
+  async getRankings(@Query() query: YouthIndexQueryDto) {
+    return this.youthIndexService.getRankings(query.year ?? (await this.youthIndexService.latestYear()));
   }
 
   @Public()
   @Get('top/:n')
   @ApiOperation({ summary: 'Get top N performing countries' })
   @ApiParam({ name: 'n', description: 'Number of top countries to return' })
-  getTopPerformers(
+  async getTopPerformers(
     @Param('n') n: number,
     @Query() query: YouthIndexQueryDto,
   ) {
-    return this.youthIndexService.getTopPerformers(+n, query.year ?? 2024);
+    return this.youthIndexService.getTopPerformers(+n, query.year ?? (await this.youthIndexService.latestYear()));
   }
 
   @Public()
   @Get('most-improved/:n')
   @ApiOperation({ summary: 'Get N most improved countries by rank change' })
   @ApiParam({ name: 'n', description: 'Number of countries to return' })
-  getMostImproved(
+  async getMostImproved(
     @Param('n') n: number,
     @Query() query: YouthIndexQueryDto,
   ) {
-    return this.youthIndexService.getMostImproved(+n, query.year ?? 2024);
+    return this.youthIndexService.getMostImproved(+n, query.year ?? (await this.youthIndexService.latestYear()));
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -58,7 +58,7 @@ export class YouthIndexController {
   @Roles('ADMIN')
   @Post('compute-all')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Compute Youth Index for all years 2000-2024 (admin only)' })
+  @ApiOperation({ summary: 'Compute Youth Index for every year that has data (admin only)' })
   computeAll() {
     return this.calculator.computeAll();
   }

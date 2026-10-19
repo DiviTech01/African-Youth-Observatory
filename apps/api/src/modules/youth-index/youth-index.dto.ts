@@ -3,11 +3,15 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 export class YouthIndexQueryDto {
-  @ApiPropertyOptional({ default: 2024 })
+  // No initializer on purpose: the global ValidationPipe runs with
+  // transform:true, so a default here would always win and the controller
+  // could never tell "omitted" from an explicit year. Omitted means "latest
+  // computed year" (YouthIndexService.latestYear).
+  @ApiPropertyOptional({ description: 'Defaults to the latest year with computed scores' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  year?: number = 2024;
+  year?: number;
 }
 
 export class TopPerformersDto {
@@ -18,11 +22,11 @@ export class TopPerformersDto {
   @Min(1)
   limit?: number = 10;
 
-  @ApiPropertyOptional({ default: 2024 })
+  @ApiPropertyOptional({ description: 'Defaults to the latest year with computed scores' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  year?: number = 2024;
+  year?: number;
 }
 
 export class ComputeYearDto {

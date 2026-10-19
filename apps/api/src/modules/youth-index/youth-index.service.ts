@@ -57,6 +57,23 @@ export class YouthIndexService {
     private cache: CacheService,
   ) {}
 
+  /**
+   * The most recent year that has computed index scores. Used when a caller
+   * does not name a year, so the default follows the data instead of a
+   * hard-coded year that silently goes stale (it sat at 2024 while 2025 scores
+   * existed, and web and mobile disagreed about which year was "current").
+   */
+  async latestYear(): Promise<number> {
+    const cacheKey = 'youth-index:latest-year';
+    const cached = this.cache.get<number>(cacheKey);
+    if (cached) return cached;
+
+    const agg = await this.prisma.youthIndexScore.aggregate({ _max: { year: true } });
+    const year = agg._max.year ?? new Date().getFullYear() - 1;
+    this.cache.set(cacheKey, year, 300);
+    return year;
+  }
+
   async getRankings(year: number) {
     const cacheKey = `youth-index:rankings:${year}`;
     const cached = this.cache.get(cacheKey);
