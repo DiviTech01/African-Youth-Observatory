@@ -39,7 +39,10 @@ const AyimsFlow: React.FC<AyimsFlowProps> = ({ file, onDone }) => {
   // and only forward a real country id to the API when one is selected.
   const AUTO = '__auto__';
   const [overrideCountryId, setOverrideCountryId] = useState<string>(AUTO);
-  const [source, setSource] = useState('AYIMS / AU Commission');
+  // No default: a pre-filled 'AYIMS / AU Commission' ended up on 96% of all
+  // rows as an attribution nobody chose (audit C7). The API rejects a blank one.
+  const [source, setSource] = useState('');
+  const sourceOk = source.trim().length >= 3;
   const [notes, setNotes] = useState('');
   const [uploading, setUploading] = useState(false);
   const [parseProgress, setParseProgress] = useState<UploadProgress | null>(null);
@@ -66,7 +69,7 @@ const AyimsFlow: React.FC<AyimsFlowProps> = ({ file, onDone }) => {
       const fd = new FormData();
       fd.append('file', file);
       if (overrideCountryId && overrideCountryId !== AUTO) fd.append('countryId', overrideCountryId);
-      if (source) fd.append('source', source);
+      fd.append('source', source.trim());
       if (notes) fd.append('notes', notes);
       const res = await xhrUpload<any>({
         url: `${DATA_API}/ayims-template`,
@@ -192,10 +195,10 @@ const AyimsFlow: React.FC<AyimsFlowProps> = ({ file, onDone }) => {
             <div className="space-y-1.5">
               <Label>Source attribution *</Label>
               <p className="text-[11px] text-gray-500">
-                Where this data comes from. Used as the citation on every chart and table that shows
-                these values. Default is fine for AYIMS templates.
+                Where this data comes from: the agency, survey or dataset and its release. Used as the
+                citation on every chart and table that shows these values. Required.
               </p>
-              <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="e.g. AYIMS / AU Commission" />
+              <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="e.g. Ghana Statistical Service, AYIMS 2025 return" required aria-required="true" />
             </div>
 
             <div className="space-y-1.5">
@@ -228,7 +231,7 @@ const AyimsFlow: React.FC<AyimsFlowProps> = ({ file, onDone }) => {
               </div>
             )}
 
-            <Button onClick={handleParse} disabled={uploading || !source.trim()} className="gap-2">
+            <Button onClick={handleParse} disabled={uploading || !sourceOk} className="gap-2">
               {uploading ? <Clock className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
               {uploading ? (parseProcessing ? 'Parsing…' : 'Uploading…') : 'Parse template'}
             </Button>

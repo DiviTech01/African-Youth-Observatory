@@ -234,16 +234,18 @@ export const dataApi = {
 // slug; the normalizer below also populates legacy flat fields (educationScore
 // etc.) so pages not yet migrated to the 7-theme shape keep working.
 
+// A missing dimension stays null ("insufficient data"). It used to default to
+// 50 here, re-imputing on the client the very value the API stopped sending.
 function normalizeYouthIndex(r: any): YouthIndex {
-  const d: Record<string, number> =
+  const d: Record<string, number | null> =
     (r && r.dimensions && typeof r.dimensions === 'object') ? r.dimensions : {};
-  const demography      = d['youth-demography-participation'] ?? 50;
-  const education       = d['education']        ?? r?.educationScore  ?? 50;
-  const employment      = d['employment']       ?? r?.employmentScore ?? 50;
-  const health          = d['health']           ?? r?.healthScore     ?? 50;
-  const entrepreneurship = d['entrepreneurship'] ?? r?.innovationScore ?? 50;
-  const peaceSecurity   = d['peace-security']   ?? 50;
-  const accessToJustice = d['access-to-justice'] ?? 50;
+  const demography      = d['youth-demography-participation'] ?? null;
+  const education       = d['education']        ?? r?.educationScore  ?? null;
+  const employment      = d['employment']       ?? r?.employmentScore ?? null;
+  const health          = d['health']           ?? r?.healthScore     ?? null;
+  const entrepreneurship = d['entrepreneurship'] ?? r?.innovationScore ?? null;
+  const peaceSecurity   = d['peace-security']   ?? null;
+  const accessToJustice = d['access-to-justice'] ?? null;
   return {
     ...r,
     indexScore: r?.indexScore ?? r?.overallScore ?? 0,

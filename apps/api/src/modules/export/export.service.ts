@@ -1,8 +1,9 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { ExportQueryDto } from './export.dto';
 import { formatRegion } from '../../common/utils/format';
+import { displayAgeBand, scaleOf } from '../../shared/indicator-meta';
 
 const EXPORT_THEME_LABELS: Record<string, string> = {
   'youth-demography-participation': 'Youth Demography & Participation',
@@ -14,6 +15,20 @@ const EXPORT_THEME_LABELS: Record<string, string> = {
   'access-to-justice': 'Access to Justice',
 };
 const EXPORT_THEME_ORDER = Object.keys(EXPORT_THEME_LABELS);
+
+/**
+ * Result of an export query. `truncated` is true when the caller's row cap cut
+ * the result short; `total` is how many rows matched. Anonymous exports used
+ * to stop at 100 rows silently -- and, ordered by country name, always the same
+ * alphabetical first 100 -- so a reader could not tell they had a fragment
+ * (audit H8).
+ */
+export interface ExportResult {
+  rows: ExportRow[];
+  total: number;
+  truncated: boolean;
+  limit: number;
+}
 
 interface ExportRow {
   country: string;
@@ -38,29 +53,15 @@ export class ExportService {
     private cache: CacheService,
   ) {}
 
-  /**
-   * Check export rate limit and row limit based on user role.
-   */
-  checkLimits(role: string | null, rowCount: number) {
-    if (!role) {
-      // Public / unauthenticated
-      if (rowCount > 100) {
-        throw new ForbiddenException(
-          'Unauthenticated exports are limited to 100 rows. Please sign in for larger exports.',
-        );
-      }
-    } else if (role === 'REGISTERED') {
-      if (rowCount > 10000) {
-        throw new ForbiddenException('Registered users can export up to 10,000 rows.');
-      }
-    }
-    // ADMIN, RESEARCHER, INSTITUTIONAL, CONTRIBUTOR: unlimited
-  }
+  // Row caps are applied by the controller (100 anonymous / 10,000 registered /
+  // 50,000 otherwise). The old checkLimits() threw when rows exceeded the cap,
+  // which could never happen because fetchData() had already capped them: the
+  // limit was silent. fetchData() now reports truncation instead.
 
   /**
    * Fetch data rows based on export filters.
    */
-  async fetchData(query: ExportQueryDto, maxRows?: number): Promise<ExportRow[]> {
+  async fetchData(query: ExportQueryDto, maxRows?: number): Promise<ExportResult> {
     const where: Record<string, unknown> = { gender: 'TOTAL' };
 
     if (query.countryId) where.countryId = query.countryId;
@@ -78,23 +79,37 @@ export class ExportService {
       if (query.yearEnd) (where.year as Record<string, number>).lte = query.yearEnd;
     }
 
-    const values = await this.prisma.indicatorValue.findMany({
-      where,
-      include: {
-        country: { select: { name: true, isoCode3: true, region: true } },
-        indicator: {
-          select: {
-            name: true,
-            unit: true,
-            theme: { select: { name: true } },
+    const limit = maxRows || 50000;
+    const [values, total] = await Promise.all([
+      this.prisma.indicatorValue.findMany({
+        where,
+        include: {
+          country: { select: { name: true, isoCode3: true, region: true } },
+          indicator: {
+            select: {
+              name: true,
+              slug: true,
+              unit: true,
+              theme: { select: { name: true } },
+            },
           },
         },
-      },
-      orderBy: [{ country: { name: 'asc' } }, { year: 'desc' }],
-      take: maxRows || 50000,
-    });
+        // Fully deterministic: the same query always returns the same rows in
+        // the same order, so a truncated export is a stable, documented prefix.
+        orderBy: [
+          { country: { name: 'asc' } },
+          { indicator: { name: 'asc' } },
+          { year: 'desc' },
+          { gender: 'asc' },
+          { ageGroup: 'asc' },
+          { id: 'asc' },
+        ],
+        take: limit,
+      }),
+      this.prisma.indicatorValue.count({ where }),
+    ]);
 
-    return values.map((v) => ({
+    const rows = values.map((v) => ({
       country: v.country.name,
       isoCode: v.country.isoCode3,
       region: formatRegion(v.country.region),
@@ -102,13 +117,23 @@ export class ExportService {
       theme: v.indicator.theme.name,
       year: v.year,
       value: v.value,
-      unit: v.indicator.unit,
+      // Values stored in thousands say so: "82936 NUMBER" read as 82,936 people.
+      unit: scaleOf(v.indicator.slug) === 1000 ? `${v.indicator.unit} (thousands)` : v.indicator.unit,
       gender: v.gender,
-      ageGroup: v.ageGroup,
+      // National-level indicators have no age dimension: label them "all" (H10).
+      ageGroup: displayAgeBand(v.indicator.slug, v.ageGroup),
       source: v.source,
       confidence: v.confidence,
       isEstimate: v.isEstimate,
     }));
+    return { rows, total, truncated: total > rows.length, limit };
+  }
+
+  /** One-line, human-readable truncation notice (null when complete). */
+  truncationNotice(result: ExportResult): string | null {
+    if (!result.truncated) return null;
+    return `TRUNCATED: this file holds the first ${result.rows.length} of ${result.total} matching rows ` +
+      `(sorted by country, indicator, year). Sign in to export up to 10,000 rows.`;
   }
 
   /**
@@ -129,7 +154,9 @@ export class ExportService {
   /**
    * Generate CSV string.
    */
-  generateCsv(rows: ExportRow[], query: ExportQueryDto): string {
+  generateCsv(result: ExportResult, query: ExportQueryDto): string {
+    const { rows } = result;
+    const notice = this.truncationNotice(result);
     const now = new Date().toISOString();
     const filters = this.describeFilters(query);
     const filterDesc = Object.entries(filters).map(([k, v]) => `${k}=${v}`).join(', ') || 'none';
@@ -137,8 +164,10 @@ export class ExportService {
     // Header metadata as comments
     const meta = [
       '# African Youth Observatory — Data Export',
+      ...(notice ? [`# ${notice}`] : []),
       `# Generated: ${now}`,
       `# Filters: ${filterDesc}`,
+      `# Rows: ${rows.length} of ${result.total}${result.truncated ? ' (truncated)' : ''}`,
       '# Source: africanyouthobservatory.org',
       '# License: CC BY 4.0',
       '',
@@ -193,7 +222,8 @@ export class ExportService {
   /**
    * Generate JSON export.
    */
-  generateJson(rows: ExportRow[], query: ExportQueryDto): string {
+  generateJson(result: ExportResult, query: ExportQueryDto): string {
+    const { rows } = result;
     const now = new Date().toISOString();
     const output = {
       metadata: {
@@ -201,6 +231,9 @@ export class ExportService {
         exportDate: now,
         filters: this.describeFilters(query),
         recordCount: rows.length,
+        totalCount: result.total,
+        truncated: result.truncated,
+        ...(result.truncated ? { notice: this.truncationNotice(result) } : {}),
         source: 'africanyouthobservatory.org',
         license: 'CC BY 4.0',
       },
@@ -212,7 +245,9 @@ export class ExportService {
   /**
    * Generate SpreadsheetML XML (opens in Excel without any npm dependency).
    */
-  generateExcel(rows: ExportRow[], query: ExportQueryDto): string {
+  generateExcel(result: ExportResult, query: ExportQueryDto): string {
+    const { rows } = result;
+    const notice = this.truncationNotice(result);
     const now = new Date().toISOString();
     const filters = this.describeFilters(query);
 
@@ -252,7 +287,10 @@ export class ExportService {
     const metaRows = [
       ['Platform', 'African Youth Observatory'],
       ['Export Date', now],
+      ...(notice ? [['Notice', notice]] : []),
       ['Record Count', String(rows.length)],
+      ['Total Matching Rows', String(result.total)],
+      ['Truncated', result.truncated ? 'Yes' : 'No'],
       ['Source', 'africanyouthobservatory.org'],
       ['License', 'CC BY 4.0'],
       ...Object.entries(filters).map(([k, v]) => [`Filter: ${k}`, v]),
@@ -313,11 +351,27 @@ export class ExportService {
     const indicators = await this.prisma.indicatorValue.findMany({
       where: { countryId, gender: 'TOTAL' },
       include: {
-        indicator: { select: { name: true, unit: true } },
+        indicator: { select: { name: true, slug: true, unit: true } },
       },
-      orderBy: { year: 'desc' },
+      orderBy: [{ year: 'desc' }, { indicator: { name: 'asc' } }],
       take: 20,
     });
+
+    // One youth-population figure: the latest youth-population-15-35 series
+    // value (stored in thousands, so scaled here), with its year and source.
+    // The Country table's youthPopulation is a static seed (77,000,000 for
+    // Nigeria against 82.9M in the series) and is only the fallback.
+    const youthPopRow = await this.prisma.indicatorValue.findFirst({
+      where: { countryId, gender: 'TOTAL', indicator: { slug: 'youth-population-15-35' } },
+      orderBy: { year: 'desc' },
+      select: { value: true, year: true, source: true },
+    });
+    const youthPopulationText = youthPopRow
+      ? `${formatMagnitude(youthPopRow.value * scaleOf('youth-population-15-35'))} (${youthPopRow.year}, ${escHtml(youthPopRow.source)})`
+      : Number(country.youthPopulation).toLocaleString();
+    const scoredCount = youthIndex
+      ? await this.prisma.youthIndexScore.count({ where: { year: youthIndex.year } })
+      : 0;
 
     const now = new Date().toISOString().split('T')[0];
 
@@ -355,7 +409,7 @@ export class ExportService {
     <tr><th>Region</th><td>${country.region.replace(/_/g, ' ')}</td></tr>
     <tr><th>ISO Code</th><td>${country.isoCode3}</td></tr>
     <tr><th>Population</th><td>${Number(country.population).toLocaleString()}</td></tr>
-    <tr><th>Youth Population</th><td>${Number(country.youthPopulation).toLocaleString()}</td></tr>
+    <tr><th>Youth Population</th><td>${youthPopulationText}</td></tr>
     <tr><th>Languages</th><td>${country.languages.join(', ')}</td></tr>
   </table>
 
@@ -363,15 +417,17 @@ export class ExportService {
     youthIndex
       ? `<h2>Youth Index Score (${youthIndex.year})</h2>
   <p>Overall Score: <span class="score">${youthIndex.overallScore.toFixed(2)}</span> / 100</p>
-  <p>Rank: <strong>#${youthIndex.rank}</strong> of 54 &nbsp; | &nbsp; Tier: <span class="tier tier-${youthIndex.tier}">${youthIndex.tier.replace(/_/g, ' ')}</span></p>
+  <p>Rank: <strong>#${youthIndex.rank}</strong> of ${scoredCount} scored countries &nbsp; | &nbsp; Tier: <span class="tier tier-${youthIndex.tier}">${youthIndex.tier.replace(/_/g, ' ')}</span></p>
   <table>
     <tr><th>Dimension</th><th>Score</th></tr>
     ${EXPORT_THEME_ORDER.map((slug) => {
       const d = (youthIndex.dimensionScores && typeof youthIndex.dimensionScores === 'object')
-        ? (youthIndex.dimensionScores as Record<string, number>)
+        ? (youthIndex.dimensionScores as Record<string, any>)
         : {};
-      const score = typeof d[slug] === 'number' ? d[slug] : 50;
-      return `<tr><td>${EXPORT_THEME_LABELS[slug]}</td><td>${score.toFixed(2)}</td></tr>`;
+      // A missing or imputed dimension is "insufficient data" -- never a 50.
+      const source = d._meta?.coverage?.[slug]?.source;
+      const measured = typeof d[slug] === 'number' && !['regional-average', 'default', 'insufficient'].includes(source);
+      return `<tr><td>${EXPORT_THEME_LABELS[slug]}</td><td>${measured ? (d[slug] as number).toFixed(2) : 'Insufficient data'}</td></tr>`;
     }).join('\n    ')}
   </table>`
       : '<h2>Youth Index Score</h2><p>No index data available yet. Run compute-all to generate.</p>'
@@ -383,7 +439,9 @@ export class ExportService {
     ${indicators
       .map(
         (v) =>
-          `<tr><td>${escHtml(v.indicator.name)}</td><td>${v.value.toFixed(2)}</td><td>${v.indicator.unit}</td><td>${v.year}</td></tr>`,
+          // Values stored in thousands render at full magnitude ("82.94 million",
+          // never "82936.00 NUMBER" -- audit CONS-04).
+          `<tr><td>${escHtml(v.indicator.name)}</td><td>${scaleOf(v.indicator.slug) > 1 ? formatMagnitude(v.value * scaleOf(v.indicator.slug)) : v.value.toFixed(2)}</td><td>${v.indicator.unit}</td><td>${v.year}</td></tr>`,
       )
       .join('\n    ')}
   </table>
@@ -396,6 +454,13 @@ export class ExportService {
 
     return html;
   }
+}
+
+/** 82936000 -> "82.94 million"; small numbers keep grouping separators. */
+function formatMagnitude(n: number): string {
+  if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(2)} billion`;
+  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(2)} million`;
+  return Math.round(n).toLocaleString('en-US');
 }
 
 function escHtml(s: string): string {

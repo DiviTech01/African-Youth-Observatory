@@ -19,6 +19,20 @@ interface ColumnMapping {
   transform?: 'none' | 'multiply_1000' | 'divide_100' | 'invert';
 }
 
+/**
+ * Provenance is mandatory (audit C7). The source used to default to the string
+ * 'AYIMS / AU Commission' -- first as the UI default, then as a server fallback
+ * -- so 96% of rows carried a label nobody chose. An upload without a real,
+ * named source is now rejected before parsing.
+ */
+function requireSource(source: string | undefined | null): string {
+  const s = (source ?? '').trim();
+  if (s.length < 3) {
+    throw new BadRequestException('A data source is required (e.g. "ILOSTAT, 2024 release" or "Ministry of Youth, Ghana"). Name where these numbers come from.');
+  }
+  return s;
+}
+
 interface UploadConfig {
   sheetName?: string;
   headerRow?: number;
@@ -31,7 +45,7 @@ interface UploadConfig {
   year?: number;
 }
 
-interface CommitProgress {
+export interface CommitProgress {
   current: number;
   total: number;
   percent: number;
@@ -39,7 +53,7 @@ interface CommitProgress {
   etaMs: number | null;
 }
 
-interface UploadJob {
+export interface UploadJob {
   id: string;
   userId: string;
   fileName: string;
@@ -160,7 +174,7 @@ function inferCountryFromMetadata(
 
 // ── Policy database row spec (parsed from CSV/XLSX) ──────────────────────────
 
-interface ParsedPolicyRecord {
+export interface ParsedPolicyRecord {
   countryId: string;
   countryName: string;
   policyType: string;
@@ -212,7 +226,7 @@ const POLICY_JOB_PREFIX = 'pol_';
 const policyJobStore = new Map<string, PolicyUploadJob>();
 const JOB_TTL = 24 * 60 * 60 * 1000;
 
-interface PolicyUploadJob {
+export interface PolicyUploadJob {
   id: string;
   userId: string;
   fileName: string;
@@ -259,6 +273,7 @@ export class DataUploadService {
 
   async uploadFile(file: Express.Multer.File, userId: string, config: UploadConfig): Promise<UploadJob> {
     cleanExpiredJobs();
+    config = { ...config, source: requireSource(config?.source) };
 
     if (!file) throw new BadRequestException('No file provided');
     if (file.size > 10 * 1024 * 1024) throw new BadRequestException('File exceeds 10MB limit');
@@ -377,8 +392,9 @@ export class DataUploadService {
 
         const year = mapping.year || config.year || new Date().getFullYear();
         const gender = (mapping.gender || 'TOTAL') as import('@prisma/client').GenderType;
-        // Default to AU 15-35 — matches the schema default and the platform's canonical youth band.
-        const ageGroup = mapping.ageGroup || '15-35';
+        // Default to the indicator's existing canonical band (so a new upload
+        // lands in the band readers use), else AU 15-35 for a new indicator.
+        const ageGroup = mapping.ageGroup || await this.prisma.canonicalAgeGroup(indicator.id);
 
         parsedValues!.push({
           countryId: dbCountry.id,
@@ -550,6 +566,9 @@ export class DataUploadService {
       errorMessage: errCount > 0 ? `${errCount} batch errors during commit` : null,
     });
 
+    // A commit can introduce a new indicator or band: re-read the canonical
+    // age-band map on the next IndicatorValue read.
+    this.prisma.invalidateAgeBands();
     return job.result;
   }
 
@@ -629,6 +648,7 @@ export class DataUploadService {
 
     if (!file) throw new BadRequestException('No file provided');
     if (file.size > 10 * 1024 * 1024) throw new BadRequestException('File exceeds 10MB limit');
+    const source = requireSource(overrides.source);
 
     const ext = file.originalname.split('.').pop()?.toLowerCase();
     if (!['xlsx', 'xls'].includes(ext || '')) {
@@ -758,7 +778,8 @@ export class DataUploadService {
         // is PERCENTAGE *and* the indicator isn't a known gross-ratio metric.
         const ALLOW_OVER_100 = new Set([
           'primary-enrollment-rate',
-          'secondary-school-net-enrollment-rate',
+          // NOT secondary-school-net-enrollment-rate: a NET rate cannot exceed
+          // 100% by definition (Algeria/South Africa 101-114 got in this way).
           'tertiary-education-gross-enrollment-rate',
           'youth-share-of-population',
           'youth-rural-share',
@@ -778,7 +799,8 @@ export class DataUploadService {
         }
 
         const gender = (spec.gender || 'TOTAL') as import('@prisma/client').GenderType;
-        const ageGroup = spec.ageGroup || '15-35';
+        // Template band if it names one, else the indicator's canonical band.
+        const ageGroup = spec.ageGroup || await this.prisma.canonicalAgeGroup(indicator.id);
 
         parsedValues.push({
           countryId: resolvedCountry.id,
@@ -787,7 +809,7 @@ export class DataUploadService {
           value: num,
           gender,
           ageGroup,
-          source: overrides.source || 'AYIMS / AU Commission',
+          source,
         });
         indicatorCounts.set(spec.slug!, (indicatorCounts.get(spec.slug!) || 0) + 1);
 
@@ -817,7 +839,7 @@ export class DataUploadService {
         countryColumn: '__ayims_template__',
         countryFormat: 'name',
         mappings: [],
-        source: overrides.source || 'AYIMS / AU Commission',
+        source,
         notes: overrides.notes,
       },
       summary: {

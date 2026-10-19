@@ -204,7 +204,7 @@ function DataFlow({ file, onDone }: { file: File; onDone: () => void }) {
   const [commitResult, setCommitResult] = useState<any>(null);
 
   const handleUpload = async () => {
-    if (!source) return;
+    if (source.trim().length < 3) return;
     setUploading(true);
     setPreview(null);
     setCommitResult(null);
@@ -281,7 +281,7 @@ function DataFlow({ file, onDone }: { file: File; onDone: () => void }) {
                   Cited under every chart that uses these values. Use the data publisher (e.g. World Bank,
                   UNESCO UIS, INE Angola).
                 </p>
-                <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="e.g. AYIMS / AU Commission" />
+                <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="e.g. ILOSTAT, 2024 release" required aria-required="true" />
               </div>
               <div className="space-y-1.5">
                 <Label>Country column name</Label>
@@ -334,7 +334,7 @@ function DataFlow({ file, onDone }: { file: File; onDone: () => void }) {
                 <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Q4 2025 refresh — World Bank WDI vintage Dec-2025" />
               </div>
             </div>
-            <Button onClick={handleUpload} disabled={!source || uploading} className="gap-2">
+            <Button onClick={handleUpload} disabled={source.trim().length < 3 || uploading} className="gap-2">
               {uploading ? <Clock className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
               {uploading ? 'Parsing…' : 'Preview import'}
             </Button>

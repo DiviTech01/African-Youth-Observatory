@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, IsArray, IsEnum, ValidateNested, Min, Max } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsArray, IsEnum, ValidateNested, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -25,7 +25,8 @@ export class UploadConfigDto {
   @Type(() => ColumnMappingDto)
   mappings: ColumnMappingDto[];
 
-  @ApiProperty() @IsString() source: string;
+  // Required and non-empty: provenance is never defaulted (audit C7).
+  @ApiProperty() @IsString() @IsNotEmpty() source: string;
   @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() year?: number;
 }

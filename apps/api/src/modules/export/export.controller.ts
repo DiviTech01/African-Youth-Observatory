@@ -5,6 +5,19 @@ import { Response } from 'express';
 import { ExportService } from './export.service';
 import { ExportQueryDto } from './export.dto';
 import { Public } from '../auth/decorators/public.decorator';
+import type { ExportResult } from './export.service';
+
+/**
+ * Row caps per role. Anonymous exports are capped at 100 rows; the cap is no
+ * longer silent: the file itself carries a truncation notice (CSV comment, JSON
+ * metadata, Excel metadata sheet) and these headers say so for API callers.
+ */
+function setTruncationHeaders(res: Response, result: ExportResult) {
+  res.setHeader('X-Export-Truncated', String(result.truncated));
+  res.setHeader('X-Export-Total', String(result.total));
+  res.setHeader('X-Export-Returned', String(result.rows.length));
+  res.setHeader('Access-Control-Expose-Headers', 'X-Export-Truncated, X-Export-Total, X-Export-Returned, Content-Disposition');
+}
 
 @ApiTags('export')
 @Controller('export')
@@ -23,10 +36,10 @@ export class ExportController {
     const role = req.user?.role || null;
     const maxRows = !role ? 100 : role === 'REGISTERED' ? 10000 : 50000;
 
-    const rows = await this.exportService.fetchData(query, maxRows);
-    this.exportService.checkLimits(role, rows.length);
+    const result = await this.exportService.fetchData(query, maxRows);
+    setTruncationHeaders(res, result);
 
-    const csv = this.exportService.generateCsv(rows, query);
+    const csv = this.exportService.generateCsv(result, query);
     const filename = query.filename || `ayd-export-${Date.now()}`;
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -45,10 +58,10 @@ export class ExportController {
     const role = req.user?.role || null;
     const maxRows = !role ? 100 : role === 'REGISTERED' ? 10000 : 50000;
 
-    const rows = await this.exportService.fetchData(query, maxRows);
-    this.exportService.checkLimits(role, rows.length);
+    const result = await this.exportService.fetchData(query, maxRows);
+    setTruncationHeaders(res, result);
 
-    const json = this.exportService.generateJson(rows, query);
+    const json = this.exportService.generateJson(result, query);
     const filename = query.filename || `ayd-export-${Date.now()}`;
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -67,10 +80,10 @@ export class ExportController {
     const role = req.user?.role || null;
     const maxRows = !role ? 100 : role === 'REGISTERED' ? 10000 : 50000;
 
-    const rows = await this.exportService.fetchData(query, maxRows);
-    this.exportService.checkLimits(role, rows.length);
+    const result = await this.exportService.fetchData(query, maxRows);
+    setTruncationHeaders(res, result);
 
-    const xml = this.exportService.generateExcel(rows, query);
+    const xml = this.exportService.generateExcel(result, query);
     const filename = query.filename || `ayd-export-${Date.now()}`;
 
     res.setHeader(

@@ -109,10 +109,15 @@ function useChartData(
   // The AYIMS template stores each indicator under a fixed band (15-35 for
   // most youth metrics, 18-35 for adult-justice/mortality, 18-30 for
   // trafficking/IDPs, or empty for country-level policy markers).
+  // The API's ageGroupUsed wins when it says 'all': national-level indicators
+  // (budgets, ranks, physician density...) are stored under 15-35 by the
+  // upload default but have no age dimension, so "Ages 15-35" would misstate
+  // them (audit H10).
   const distinctAgeGroups = Array.from(new Set(rawRows.map((r: any) => r.ageGroup ?? '').filter(Boolean) as string[]));
+  const isNational = (timeseriesQ.data as any)?.ageGroupUsed === 'all';
   let ageBandLabel: string | null = null;
   if (rawRows.length > 0) {
-    if (distinctAgeGroups.length === 0) {
+    if (isNational || distinctAgeGroups.length === 0 || distinctAgeGroups[0] === 'all') {
       ageBandLabel = 'National value (no youth disaggregation)';
     } else if (distinctAgeGroups.length === 1) {
       ageBandLabel = `Ages ${distinctAgeGroups[0]}`;
@@ -601,7 +606,11 @@ const DataChart = ({
         <div className="w-1 h-full min-h-[20px] rounded-full bg-gradient-to-b from-emerald-500/40 to-transparent flex-shrink-0 mt-0.5" />
         <p className="text-[11px] text-gray-500 leading-relaxed">
           {hasSelection
-            ? `${indicator} for ${country !== 'All Countries' ? country : 'all 54 African countries (continental average)'}, ${yearRange[0]}–${yearRange[1]}. Source: ${(indicatorRow as any)?.source || 'African Youth Index Measurement System (AYIMS)'} via the AYO database. Values are pulled live from /api/data/timeseries — no estimates or synthesised numbers.`
+            // No "no estimates or synthesised numbers" claim: some years were
+            // gap-filled by the uploader and are not yet flagged (audit C7).
+            // The source shown is the indicator catalogue's; individual values
+            // may cite a different one.
+            ? `${indicator} for ${country !== 'All Countries' ? country : 'all 54 African countries (continental average)'}, ${yearRange[0]}–${yearRange[1]}. Indicator source: ${(indicatorRow as any)?.source || 'not recorded'}. Values are pulled live from the AYO database; some years may be interpolated by the data provider and are not yet marked as estimates.`
             : 'Select data filters to view source attribution and methodology notes.'}
         </p>
       </div>

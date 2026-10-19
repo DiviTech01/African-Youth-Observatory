@@ -36,8 +36,10 @@ export class PlatformService {
       this.prisma.indicator.count(),
       this.prisma.indicatorValue.count({ where: ageGroupFilter }),
       this.prisma.theme.count(),
+      // Cap at the current year: target/projection rows (2030, 2050) are not
+      // observed data and made "latest data year" read 2050.
       this.prisma.indicatorValue.aggregate({
-        where: ageGroupFilter,
+        where: { ...ageGroupFilter, year: { lte: new Date().getFullYear() } },
         _min: { year: true },
         _max: { year: true },
       }),

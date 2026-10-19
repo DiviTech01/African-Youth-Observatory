@@ -1,12 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { PulseIndicator } from '@/components/PulseIndicator';
+import { api } from '@/lib/api-client';
 
 interface TickerItem {
-  country: string;
-  metric: string;
+  label: string;
   value: string;
-  delta: string;
-  positive: boolean;
 }
 
 interface LiveDataTickerProps {
@@ -14,40 +13,86 @@ interface LiveDataTickerProps {
   speed?: number;
 }
 
-const TICKER_DATA: TickerItem[] = [
-  { country: 'Nigeria', metric: 'Youth unemployment', value: '23.4%', delta: '-0.3%', positive: true },
-  { country: 'Kenya', metric: 'Literacy rate', value: '87.2%', delta: '+1.1%', positive: true },
-  { country: 'Rwanda', metric: 'STEM enrollment', value: '18.3%', delta: '+2.4%', positive: true },
-  { country: 'South Africa', metric: 'Youth employment', value: '46.1%', delta: '-1.8%', positive: false },
-  { country: 'Ghana', metric: 'Secondary completion', value: '72.6%', delta: '+0.9%', positive: true },
-  { country: 'Ethiopia', metric: 'Digital access', value: '34.7%', delta: '+3.2%', positive: true },
-  { country: 'Tanzania', metric: 'Vocational training', value: '21.5%', delta: '+1.6%', positive: true },
-  { country: 'Egypt', metric: 'Youth participation', value: '31.8%', delta: '-0.5%', positive: false },
-  { country: 'Senegal', metric: 'Entrepreneurship rate', value: '14.2%', delta: '+2.1%', positive: true },
-  { country: 'Morocco', metric: 'University enrollment', value: '39.4%', delta: '+1.3%', positive: true },
-  { country: 'Uganda', metric: 'Primary completion', value: '68.9%', delta: '+0.7%', positive: true },
-  { country: 'Côte d\'Ivoire', metric: 'Youth poverty rate', value: '41.3%', delta: '-2.1%', positive: true },
-];
+const THEME_LABELS: Record<string, string> = {
+  'youth-demography-participation': 'Demography & Participation',
+  'education': 'Education',
+  'employment': 'Employment',
+  'health': 'Health',
+  'entrepreneurship': 'Entrepreneurship',
+  'peace-security': 'Peace & Security',
+  'access-to-justice': 'Access to Justice',
+};
 
+// Every item comes from the API (platform stats + Youth Index rankings),
+// mirroring the mobile ticker. The old hard-coded country figures were
+// invented and contradicted the database, on every page.
 export const LiveDataTicker: React.FC<LiveDataTickerProps> = ({ speed = 30 }) => {
+  const statsQ = useQuery({
+    queryKey: ['platform-stats'],
+    queryFn: () => api.platform.stats(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const rankingsQ = useQuery({
+    queryKey: ['youth-index-rankings', 'ticker'],
+    queryFn: () => api.youthIndex.rankings(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const items: TickerItem[] = useMemo(() => {
+    const out: TickerItem[] = [];
+    const p = statsQ.data;
+    if (p) {
+      out.push({ label: 'Countries', value: String(p.totalCountries) });
+      out.push({ label: 'Indicators', value: String(p.totalIndicators) });
+      out.push({ label: 'Data points', value: (p.totalDataPoints ?? 0).toLocaleString() });
+      if (p.dataYearRange?.latest) out.push({ label: 'Latest year', value: String(p.dataYearRange.latest) });
+      if (p.dataCompleteness) out.push({ label: 'Coverage', value: `${Math.round(p.dataCompleteness * 100)}%` });
+    }
+    const raw = rankingsQ.data as any;
+    const rankings: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+    const scored = rankings.filter((r) => typeof r.overallScore === 'number');
+    if (scored.length > 0) {
+      const top = [...scored].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999))[0];
+      const name = top.countryName ?? top.country?.name ?? '';
+      out.push({ label: 'Top Youth Index', value: `${top.flagEmoji ?? ''} ${name} · ${top.overallScore.toFixed(1)}`.trim() });
+      const avg = scored.reduce((s, r) => s + r.overallScore, 0) / scored.length;
+      out.push({ label: 'Continental avg', value: avg.toFixed(1) });
+
+      const sums: Record<string, number> = {};
+      const counts: Record<string, number> = {};
+      for (const r of scored) {
+        for (const [slug, score] of Object.entries((r.dimensions || {}) as Record<string, number | null>)) {
+          if (typeof score !== 'number') continue; // insufficient data
+          sums[slug] = (sums[slug] ?? 0) + score;
+          counts[slug] = (counts[slug] ?? 0) + 1;
+        }
+      }
+      const avgs = Object.entries(sums)
+        .map(([slug, sum]) => ({ slug, avg: sum / (counts[slug] || 1) }))
+        .sort((a, b) => b.avg - a.avg);
+      if (avgs.length > 0) {
+        const best = avgs[0];
+        const worst = avgs[avgs.length - 1];
+        out.push({ label: 'Strongest', value: `${THEME_LABELS[best.slug] ?? best.slug} · ${best.avg.toFixed(1)}` });
+        out.push({ label: 'Weakest', value: `${THEME_LABELS[worst.slug] ?? worst.slug} · ${worst.avg.toFixed(1)}` });
+      }
+    }
+    return out;
+  }, [statsQ.data, rankingsQ.data]);
+
   const renderItems = (key: string) =>
-    TICKER_DATA.map((item, i) => (
+    items.map((item, i) => (
       <span key={`${key}-${i}`} className="inline-flex items-center whitespace-nowrap px-4">
-        <span className="font-semibold text-foreground">{item.country}:</span>
-        <span className="ml-1 text-muted-foreground">{item.metric}</span>
+        <span className="font-semibold text-foreground">{item.label}:</span>
         <span className="ml-1 font-medium text-foreground">{item.value}</span>
-        <span
-          className={`ml-1 text-xs font-medium ${
-            item.positive ? 'text-green-500' : 'text-red-500'
-          }`}
-        >
-          ({item.delta})
-        </span>
-        {i < TICKER_DATA.length - 1 && (
+        {i < items.length - 1 && (
           <span className="ml-4 text-muted-foreground/40">|</span>
         )}
       </span>
     ));
+
+  // Nothing to show until real data arrives: no placeholder figures.
+  if (items.length === 0) return null;
 
   return (
     <div className="relative h-9 overflow-hidden border-b bg-muted/30 text-xs flex items-center">

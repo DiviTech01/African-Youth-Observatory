@@ -44,8 +44,14 @@ const getTierBadge = (score: number) => {
   return <Badge className="ml-2 bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30 hover:bg-red-500/25">Low</Badge>;
 };
 
+// A dimension is null when the API has too little data to score it
+// ("insufficient data"). It renders as an em-dash, never as 0 or 50.
+const fmtDim = (v: number | null | undefined) => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : '—');
+
 // Shared radar + per-dimension grid. Rendered both in the hover preview popover
-// and in the click-to-keep dialog so the two stay perfectly in sync.
+// and in the click-to-keep dialog so the two stay perfectly in sync. Only
+// measured dimensions are plotted: an unscored axis drawn at 0 would read as
+// "worst possible".
 const BreakdownRadar = ({ c, height = 320 }: { c: any; height?: number }) => (
   <>
     <ResponsiveContainer width="100%" height={height}>
@@ -58,7 +64,7 @@ const BreakdownRadar = ({ c, height = 320 }: { c: any; height?: number }) => (
           { dimension: 'Entrepreneurship', value: c.entrepreneurship, fullMark: 100 },
           { dimension: 'Peace',           value: c.peaceSecurity,    fullMark: 100 },
           { dimension: 'Justice',         value: c.accessToJustice,  fullMark: 100 },
-        ]}
+        ].filter((d) => typeof d.value === 'number')}
         cx="50%" cy="50%" outerRadius="75%"
       >
         <PolarGrid strokeDasharray="3 3" />
@@ -78,7 +84,7 @@ const BreakdownRadar = ({ c, height = 320 }: { c: any; height?: number }) => (
         <div key={dim.key}>
           <p className="text-[10px] text-gray-400 uppercase tracking-wider">{dim.label}</p>
           <p className={`font-bold text-sm ${dim.color}`}>
-            {Math.round((c as any)[dim.key] ?? 0)}
+            {fmtDim((c as any)[dim.key])}
           </p>
         </div>
       ))}
@@ -171,13 +177,14 @@ const YouthIndex = () => {
           region: r.region || 'Other',
           score: r.indexScore ?? r.overallScore,
           change: r.rankChange || 0,
-          demography:       d['youth-demography-participation'] ?? r.civicScore     ?? 0,
-          education:        d['education']        ?? r.educationScore  ?? 0,
-          employment:       d['employment']       ?? r.employmentScore ?? 0,
-          health:           d['health']           ?? r.healthScore     ?? 0,
-          entrepreneurship: d['entrepreneurship'] ?? r.innovationScore ?? 0,
-          peaceSecurity:    d['peace-security']   ?? 0,
-          accessToJustice:  d['access-to-justice'] ?? 0,
+          // null = insufficient data; kept null so it never sorts or renders as 0.
+          demography:       d['youth-demography-participation'] ?? r.civicScore     ?? null,
+          education:        d['education']        ?? r.educationScore  ?? null,
+          employment:       d['employment']       ?? r.employmentScore ?? null,
+          health:           d['health']           ?? r.healthScore     ?? null,
+          entrepreneurship: d['entrepreneurship'] ?? r.innovationScore ?? null,
+          peaceSecurity:    d['peace-security']   ?? null,
+          accessToJustice:  d['access-to-justice'] ?? null,
           tier: r.tier,
         };
       });
@@ -185,6 +192,13 @@ const YouthIndex = () => {
     // No mock fallback. If the API returns nothing, the empty-state below
     // explains why — don't silently substitute fabricated numbers.
     return [];
+  }, [apiRankings]);
+
+  // Countries the API could not score for this year (below the coverage
+  // floor). Listed, not ranked -- they used to get an imputed score.
+  const notRanked: any[] = useMemo(() => {
+    const list = (apiRankings as any)?.meta?.insufficientData;
+    return Array.isArray(list) ? list : [];
   }, [apiRankings]);
 
   const handleSort = (field: SortField) => {
@@ -216,6 +230,8 @@ const YouthIndex = () => {
       if (typeof aVal === 'string' && typeof bVal === 'string') {
         return aVal.localeCompare(bVal) * modifier;
       }
+      // Unscored dimensions sort last in either direction.
+      if (aVal == null || bVal == null) return aVal == null ? (bVal == null ? 0 : 1) : -1;
       return ((aVal as number) - (bVal as number)) * modifier;
     });
   }, [filteredData, sortField, sortDirection]);
@@ -324,19 +340,19 @@ const YouthIndex = () => {
                       <div className="grid grid-cols-4 gap-1 mt-3 text-center">
                         <div>
                           <p className="text-[9px] text-gray-400">Edu</p>
-                          <p className="font-semibold text-xs">{top.education}</p>
+                          <p className="font-semibold text-xs">{fmtDim(top.education)}</p>
                         </div>
                         <div>
                           <p className="text-[9px] text-gray-400">Emp</p>
-                          <p className="font-semibold text-xs">{top.employment}</p>
+                          <p className="font-semibold text-xs">{fmtDim(top.employment)}</p>
                         </div>
                         <div>
                           <p className="text-[9px] text-gray-400">Hlth</p>
-                          <p className="font-semibold text-xs">{top.health}</p>
+                          <p className="font-semibold text-xs">{fmtDim(top.health)}</p>
                         </div>
                         <div>
-                          <p className="text-[9px] text-gray-400">Civic</p>
-                          <p className="font-semibold text-xs">{top.civic}</p>
+                          <p className="text-[9px] text-gray-400">Demo</p>
+                          <p className="font-semibold text-xs">{fmtDim(top.demography)}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -578,13 +594,13 @@ const YouthIndex = () => {
                             </span>
                           </span>
                         </td>
-                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{Math.round(item.demography ?? 0)}</td>
-                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{Math.round(item.education ?? 0)}</td>
-                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{Math.round(item.employment ?? 0)}</td>
-                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{Math.round(item.health ?? 0)}</td>
-                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{Math.round(item.entrepreneurship ?? 0)}</td>
-                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{Math.round(item.peaceSecurity ?? 0)}</td>
-                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{Math.round(item.accessToJustice ?? 0)}</td>
+                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{fmtDim(item.demography)}</td>
+                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{fmtDim(item.education)}</td>
+                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{fmtDim(item.employment)}</td>
+                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{fmtDim(item.health)}</td>
+                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{fmtDim(item.entrepreneurship)}</td>
+                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{fmtDim(item.peaceSecurity)}</td>
+                        <td className="py-3 px-2 text-center text-sm cursor-pointer" onClick={() => setBreakdownCountry(item)} {...hoverProps(item)}>{fmtDim(item.accessToJustice)}</td>
                       </tr>
                       );
                     })}
@@ -611,6 +627,28 @@ const YouthIndex = () => {
             </CardContent>
           </Card>
 
+          {/* Not ranked: below the coverage floor for this year */}
+          {notRanked.length > 0 && (
+            <div className="mt-8 p-4 bg-white/[0.03] border border-gray-800 rounded-2xl">
+              <h3 className="font-bold mb-1">{t('youthIndex.notRankedTitle')} ({notRanked.length})</h3>
+              <p className="text-sm text-gray-400 mb-3">{t('youthIndex.notRankedNote')}</p>
+              <div className="flex flex-wrap gap-2">
+                {notRanked.map((c: any) => (
+                  <button
+                    key={c.countryId ?? c.countryName}
+                    type="button"
+                    onClick={() => goToProfile(c.countryName)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gray-800 text-xs text-gray-300 hover:border-[#D4A017]/50 hover:text-white transition-colors"
+                    title={t('youthIndex.insufficientData')}
+                  >
+                    <CountryFlag country={c.countryName} size="sm" />
+                    {c.countryName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Methodology Note */}
           <div className="mt-8 p-4 bg-white/[0.03] border border-gray-800 rounded-2xl">
             <Content as="h3" id="youth_index.about.title" fallback="About the African Youth Index" className="font-bold mb-2" />
@@ -618,7 +656,7 @@ const YouthIndex = () => {
               <Content
                 as="span"
                 id="youth_index.about.body"
-                fallback="The African Youth Index is a composite indicator that ranks all 54 African Union member states by youth development outcomes. Scores range from 0–100 and are computed each year across seven weighted thematic dimensions: Youth Demography & Participation (20%), Education (15%), Employment (15%), Health (15%), Entrepreneurship (15%), Peace & Security (10%), and Access to Justice (10%). Indicator values are min–max normalized per year, then combined with these weights into the overall score. Missing indicators have their weight redistributed within the same theme; missing themes fall back to the regional average."
+                fallback="The African Youth Index is a composite indicator that ranks African Union member states by youth development outcomes. Scores range from 0–100 and are computed each year across seven weighted thematic dimensions: Youth Demography & Participation (20%), Education (15%), Employment (15%), Health (15%), Entrepreneurship (15%), Peace & Security (10%), and Access to Justice (10%). Indicator values are min–max normalized per year (headcounts per 100,000 youth), then combined with these weights. A dimension is scored only when at least half of its indicator weight has data; otherwise it is shown as insufficient data, never estimated. A country is ranked only when at least half of the index weight is measured; countries below that are listed as not ranked."
               />
               <a href="/resources/methodology" className="text-primary hover:underline ml-1">
                 <Content as="span" id="youth_index.about.methodology_link" fallback="View full methodology" />

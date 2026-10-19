@@ -1,6 +1,8 @@
 // API Client utility for AYO Platform
 // Wraps fetch with typed responses, error handling, and base URL configuration
 import { getSupabaseAccessToken } from '@/lib/supabase-token';
+import { toast } from 'sonner';
+import { TRANSLATIONS, type Language } from '@/i18n/locales';
 
 // Resolve the API base URL:
 //   1. If VITE_API_URL is an absolute URL (https://…), use it verbatim. Lets
@@ -78,13 +80,16 @@ export interface YouthIndexScore {
   overallScore: number;
   rank: number;
   previousRank?: number;
+  // null = not scored: the dimension fell below the coverage floor
   dimensions: {
-    education: number;
-    employment: number;
-    health: number;
-    civic: number;
-    innovation: number;
+    education: number | null;
+    employment: number | null;
+    health: number | null;
+    civic: number | null;
+    innovation: number | null;
   };
+  insufficientDimensions?: string[];
+  indexCoverage?: number | null;
   tier: 'high' | 'medium' | 'low';
   year: number;
 }
@@ -98,7 +103,7 @@ export interface PolicyMonitorEntry {
   policyName?: string;
   policyYear?: number;
   complianceScore: number;
-  wpayCompliance: boolean;
+  afcftaProtocolStatus: 'UNKNOWN' | 'NOT_SIGNED' | 'SIGNED' | 'RATIFIED';
   agenda2063Score: number;
 }
 
@@ -182,6 +187,84 @@ export class ApiError extends Error {
 
 // ─── Fetch Wrapper ───────────────────────────────────────────────────────────
 
+// Without a timeout a hung request spins forever. The default leaves room for
+// a Render cold start (~50s measured); AI generation and file renders get much
+// longer because they legitimately take minutes.
+const DEFAULT_TIMEOUT_MS = 45_000;
+const LONG_TIMEOUT_MS = 180_000;
+const LONG_RUNNING = [/^\/insight-reports\/generate/, /\/download/, /^\/nlq\//, /^\/ai-chat\//, /^\/export\//];
+function timeoutFor(endpoint: string): number {
+  return LONG_RUNNING.some((re) => re.test(endpoint)) ? LONG_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+}
+
+// "Waking up the server" notice: shown when a request is slow before the API
+// has answered anything in this page session (a Render cold start), via the
+// app's existing sonner Toaster. Copy comes from the static i18n catalog,
+// read outside React from the same localStorage key LanguageContext uses.
+const WAKING_AFTER_MS = 4_000;
+const WAKING_TOAST_ID = 'api-server-waking';
+let serverHasAnswered = false;
+let wakingShown = false;
+
+function t(key: string): string {
+  let lang: Language = 'en';
+  try {
+    const stored = localStorage.getItem('ayd_language') as Language | null;
+    if (stored && stored in TRANSLATIONS) lang = stored;
+  } catch {
+    /* storage blocked — English */
+  }
+  return TRANSLATIONS[lang][key] ?? TRANSLATIONS.en[key] ?? key;
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  // Respect a caller's own signal (e.g. react-query cancellation) too.
+  const callerSignal = init.signal;
+  const onCallerAbort = () => controller.abort();
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort();
+    else callerSignal.addEventListener('abort', onCallerAbort, { once: true });
+  }
+  const wakingTimer = serverHasAnswered
+    ? null
+    : setTimeout(() => {
+        if (serverHasAnswered || wakingShown) return;
+        wakingShown = true;
+        toast.loading(t('common.serverWaking'), {
+          id: WAKING_TOAST_ID,
+          description: t('common.serverWakingDetail'),
+          duration: Infinity,
+        });
+      }, WAKING_AFTER_MS);
+
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    serverHasAnswered = true;
+    return response;
+  } catch (err) {
+    // Only our own timeout becomes an ApiError; a caller's abort propagates
+    // unchanged so cancellation logic still recognises it.
+    if (timedOut) {
+      throw new ApiError(408, 'Request Timeout', { message: t('common.requestTimeout') });
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    if (wakingTimer) clearTimeout(wakingTimer);
+    callerSignal?.removeEventListener('abort', onCallerAbort);
+    if (wakingShown && (serverHasAnswered || timedOut)) {
+      wakingShown = false;
+      toast.dismiss(WAKING_TOAST_ID);
+    }
+  }
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -199,10 +282,7 @@ async function request<T>(
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const response = await fetchWithTimeout(url, { ...options, headers }, timeoutFor(endpoint));
 
   if (!response.ok) {
     const body = await response.json().catch(() => null);

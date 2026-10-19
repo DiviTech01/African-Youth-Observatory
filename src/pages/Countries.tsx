@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Search, ChevronRight, Globe, MapPin, Star, FileText } from 'lucide-react';
 import CountryFlag from '@/components/CountryFlag';
 import { getCountryMeta } from '@/lib/country-flags';
-import { SparklineChart } from '@/components/SparklineChart';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { api } from '@/lib/api-client';
@@ -17,9 +16,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Content } from '@/components/cms';
 import ScrollReveal from '@/components/ScrollReveal';
 
-// Slugify a country name for the URL: "South Africa" → "south-africa".
-// CountryDataProfile also accepts names and ISO3, so this just needs to be
-// readable in the URL bar.
+// Slugify a country name for the URL: "South Africa" → "south-africa". The
+// PKPB country resolver on the API accepts id, ISO3, ISO2, name, or slug,
+// so this is the friendliest form for the URL bar.
 const toCountrySlug = (name: string) =>
   name.toLowerCase().replace(/['.]/g, '').replace(/\s+/g, '-');
 
@@ -40,22 +39,7 @@ const regionColors: Record<string, string> = {
   "Southern Africa": "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30",
 };
 
-const regionSparklineColors: Record<string, string> = {
-  "North Africa": "#3b82f6",
-  "West Africa": "#10b981",
-  "Central Africa": "#f59e0b",
-  "East Africa": "#a855f7",
-  "Southern Africa": "#f43f5e",
-};
-
 const allRegions = ["All", "North Africa", "West Africa", "Central Africa", "East Africa", "Southern Africa"];
-
-// Deterministic pseudo-random data points per country for sparkline
-function getSparklineData(country: string): number[] {
-  let seed = 0;
-  for (let i = 0; i < country.length; i++) seed += country.charCodeAt(i);
-  return Array.from({ length: 8 }, (_, i) => 20 + ((seed * (i + 1) * 7) % 80));
-}
 
 const Countries = () => {
   const { t } = useLanguage();
@@ -141,7 +125,7 @@ const Countries = () => {
                 </h1>
               </div>
               <p className="text-sm sm:text-base text-[#A89070]">
-                Youth data profiles for all 54 African nations.
+                Promise Kept · Promise Broken — youth empowerment audit across all 54 African nations.
               </p>
             </div>
 
@@ -202,7 +186,6 @@ const Countries = () => {
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-3 md:gap-4">
                   {filteredCountries.map(({ country, region }: any, idx: number) => {
-                    const sparklineData = getSparklineData(country);
                     const isMyCountry = preferences.myCountry && country.toLowerCase() === preferences.myCountry.toLowerCase();
                     // Stagger fade-in caps at 12 so a 54-country grid still
                     // finishes its entrance quickly even on first paint.
@@ -213,9 +196,14 @@ const Countries = () => {
                         className={`hover-lift cursor-pointer group rounded-2xl border border-gray-800 bg-white/[0.03] hover:border-gray-600 transition-colors ${isMyCountry ? 'ring-2 ring-[#D4A017] border-[#D4A017]/50' : ''}`}
                         onClick={() => {
                           trackCountryView(country);
-                          // PKPB reports are withdrawn pending sourcing + legal
-                          // review, so a country opens its data profile.
-                          navigate(`/dashboard/profile/${toCountrySlug(country)}`);
+                          // Single source of truth: route to the PKPB country
+                          // page. When a contributor has uploaded an HTML/PDF
+                          // report it renders that file in a sandboxed iframe
+                          // (preserving the original design + branding 1:1, with
+                          // a Download button that streams the original file);
+                          // when none is uploaded it falls back to the parametric
+                          // CountryReportCard with real DB data.
+                          navigate(`/dashboard/pkpb/${toCountrySlug(country)}`);
                         }}
                       >
                         <CardContent className="p-2.5 sm:p-4 flex flex-col gap-1.5 sm:gap-2.5">
@@ -248,16 +236,6 @@ const Countries = () => {
                             >
                               {region}
                             </Badge>
-                          </div>
-
-                          {/* Sparkline chart */}
-                          <div className="mt-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                            <SparklineChart
-                              data={sparklineData}
-                              color={regionSparklineColors[region] || '#888'}
-                              width={100}
-                              height={28}
-                            />
                           </div>
 
                           <div className="flex items-center justify-between mt-1">

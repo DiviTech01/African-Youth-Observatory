@@ -823,7 +823,7 @@ interface PolicyComponents {
   aycRatification?: number;
   nationalYouthPolicy?: number;
   policyCurrency?: number;
-  wpayCompliance?: number;
+  afcftaProtocol?: number | null; // null = not yet assessed (excluded from score)
   policyStatus?: number;
   youthIndexPerformance?: number;
   dataAvailability?: number;
@@ -835,7 +835,8 @@ interface PolicyRankingEntry {
   policyName?: string | null;
   aycRatified?: boolean;
   aycRatifiedYear?: number | null;
-  wpayCompliant?: boolean;
+  afcftaProtocolStatus?: 'UNKNOWN' | 'NOT_SIGNED' | 'SIGNED' | 'RATIFIED';
+  afcftaProtocolSourceUrl?: string | null;
   yearAdopted?: number | null;
   yearRevised?: number | null;
   status?: string | null;
@@ -848,12 +849,19 @@ const POLICY_COMPONENT_LABELS: [keyof PolicyComponents, string][] = [
   ['aycRatification', 'AYC ratification'],
   ['nationalYouthPolicy', 'National youth policy'],
   ['policyCurrency', 'Policy currency'],
-  ['wpayCompliance', 'WPAY compliance'],
+  ['afcftaProtocol', 'AfCFTA Women & Youth Protocol'],
   ['policyStatus', 'Policy status'],
   ['youthIndexPerformance', 'Youth Index performance'],
   ['dataAvailability', 'Data availability'],
   ['aycPolicyIndex', 'AYC policy index'],
 ];
+
+const AFCFTA_STATUS_LABELS: Record<NonNullable<PolicyRankingEntry['afcftaProtocolStatus']>, string> = {
+  UNKNOWN: 'Not yet assessed',
+  NOT_SIGNED: 'Not signed',
+  SIGNED: 'Signed',
+  RATIFIED: 'Ratified',
+};
 
 const policyTierClass = (tier?: string | null) => {
   switch ((tier ?? '').toUpperCase()) {
@@ -978,9 +986,9 @@ function PolicyTab({ country }: { country: string }) {
                 </Badge>
               </li>
               <li className="flex justify-between gap-3 items-center">
-                <span className="text-muted-foreground">WPAY compliant:</span>
-                <Badge variant={entry.wpayCompliant ? 'secondary' : 'outline'}>
-                  {entry.wpayCompliant ? 'Yes' : 'No'}
+                <span className="text-muted-foreground">AfCFTA Women &amp; Youth Protocol:</span>
+                <Badge variant={entry.afcftaProtocolStatus === 'RATIFIED' || entry.afcftaProtocolStatus === 'SIGNED' ? 'secondary' : 'outline'}>
+                  {AFCFTA_STATUS_LABELS[entry.afcftaProtocolStatus ?? 'UNKNOWN']}
                 </Badge>
               </li>
             </ul>
@@ -997,7 +1005,7 @@ function PolicyTab({ country }: { country: string }) {
                   <div key={key}>
                     <div className="flex justify-between text-xs mb-1">
                       <span className="text-muted-foreground">{label}</span>
-                      <span className="font-medium tabular-nums">{typeof v === 'number' ? `${Math.round(v)}` : DASH}</span>
+                      <span className="font-medium tabular-nums">{typeof v === 'number' ? `${Math.round(v)}` : key === 'afcftaProtocol' ? 'Not yet assessed' : DASH}</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                       <div

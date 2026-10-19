@@ -58,7 +58,7 @@ entries.push(
     section: 'about',
     contentType: 'RICH_TEXT',
     defaultContent:
-      'The African Youth Index is a composite indicator that ranks all 54 African Union member states by youth development outcomes. Scores range from 0–100 and are computed each year across seven weighted thematic dimensions: Youth Demography & Participation (20%), Education (15%), Employment (15%), Health (15%), Entrepreneurship (15%), Peace & Security (10%), and Access to Justice (10%). Indicator values are min–max normalized per year, then combined with these weights into the overall score. Missing indicators have their weight redistributed within the same theme; missing themes fall back to the regional average.',
+      'The African Youth Index is a composite indicator that ranks African Union member states by youth development outcomes. Scores range from 0–100 and are computed each year across seven weighted thematic dimensions: Youth Demography & Participation (20%), Education (15%), Employment (15%), Health (15%), Entrepreneurship (15%), Peace & Security (10%), and Access to Justice (10%). Indicator values are min–max normalized per year (headcounts per 100,000 youth), then combined with these weights. A dimension is scored only when at least half of its indicator weight has data; otherwise it is shown as insufficient data, never estimated. A country is ranked only when at least half of the index weight is measured; countries below that are listed as not ranked.',
   },
   { key: 'youth_index.about.methodology_link', page: YI, section: 'about', contentType: 'TEXT', defaultContent: 'View full methodology' },
 );

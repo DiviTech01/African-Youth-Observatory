@@ -135,8 +135,6 @@ export class CountryReportsService {
     const banked = num('youth-bank-account-ownership');
     if (banked != null) real.bankedPct = round(banked, 1);
 
-    const idCoverage = num('total-population'); // placeholder; we don't have a digital-id slug yet
-
     const hiv = meanGender('hiv-prevalence-rate-youth');
     if (hiv != null) real.hivYouthSharePct = round(hiv, 2);
 

@@ -136,7 +136,7 @@ const QuickStatsWidget: React.FC<{ data: any }> = ({ data }) => (
       <div className="text-xs text-muted-foreground">Countries</div>
     </div>
     <div className="text-center p-3 bg-muted rounded-lg">
-      <div className="text-2xl font-bold text-green-600">{data.averageScore}</div>
+      <div className="text-2xl font-bold text-green-600">{data.averageScore ?? '—'}</div>
       <div className="text-xs text-muted-foreground">Avg Score</div>
     </div>
     <div className="text-center p-3 bg-muted rounded-lg">
@@ -196,12 +196,12 @@ const RegionalComparisonWidget: React.FC<{ data: any[] }> = ({ data }) => (
       <div key={region.region} className="space-y-1">
         <div className="flex justify-between items-center text-sm">
           <span className="font-medium">{region.region}</span>
-          <span className="text-muted-foreground">{region.avgScore}</span>
+          <span className="text-muted-foreground">{region.avgScore ?? '—'}</span>
         </div>
         <div className="w-full bg-muted rounded-full h-2.5">
           <div 
             className="bg-primary h-2.5 rounded-full transition-all"
-            style={{ width: `${region.avgScore}%` }}
+            style={{ width: `${region.avgScore ?? 0}%` }}
           />
         </div>
       </div>
@@ -224,7 +224,7 @@ const RankingsWidget: React.FC<{ data: any[] }> = ({ data }) => (
             <div>
               <div className="font-medium text-sm">{item.countryName}</div>
               <div className="text-xs text-muted-foreground">
-                EDU: {item.educationScore} | HLT: {item.healthScore} | EMP: {item.employmentScore}
+                EDU: {item.educationScore ?? '—'} | HLT: {item.healthScore ?? '—'} | EMP: {item.employmentScore ?? '—'}
               </div>
             </div>
           </div>
@@ -254,7 +254,7 @@ const CountrySpotlightWidget: React.FC<{ data: any }> = ({ data }) => {
           <div className="text-xs text-muted-foreground">of {data.totalCountries}</div>
         </div>
         <div className="text-center p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-          <div className="text-2xl font-bold text-green-600">{data.overallScore.toFixed(1)}</div>
+          <div className="text-2xl font-bold text-green-600">{data.overallScore == null ? '—' : data.overallScore.toFixed(1)}</div>
           <div className="text-xs text-muted-foreground">Youth Index</div>
         </div>
       </div>
@@ -270,9 +270,9 @@ const CountrySpotlightWidget: React.FC<{ data: any }> = ({ data }) => {
           <div key={dim.label} className="flex items-center gap-2">
             <span className="text-xs w-20">{dim.label}</span>
             <div className="flex-1 bg-muted rounded-full h-2">
-              <div className={cn("h-2 rounded-full", dim.color)} style={{ width: `${dim.score}%` }} />
+              <div className={cn("h-2 rounded-full", dim.color)} style={{ width: `${dim.score ?? 0}%` }} />
             </div>
-            <span className="text-xs w-10 text-right">{dim.score}</span>
+            <span className="text-xs w-10 text-right">{dim.score == null ? '—' : Math.round(dim.score)}</span>
           </div>
         ))}
       </div>
@@ -287,7 +287,7 @@ const TrendAnalysisWidget: React.FC<{ data: any[] }> = ({ data }) => (
         <div key={item.year} className="flex-1 flex flex-col items-center gap-1">
           <div 
             className="w-full bg-primary rounded-t transition-all"
-            style={{ height: `${item.averageScore * 1.5}px` }}
+            style={{ height: `${(item.averageScore ?? 0) * 1.5}px` }}
           />
           <span className="text-xs text-muted-foreground">{item.year}</span>
         </div>
@@ -296,7 +296,7 @@ const TrendAnalysisWidget: React.FC<{ data: any[] }> = ({ data }) => (
     <div className="flex items-center justify-center gap-2 text-sm">
       <TrendingUp className="h-4 w-4 text-green-500" />
       <span className="text-muted-foreground">
-        {data.length > 1 && (
+        {data.length > 1 && data[0].averageScore != null && data[data.length - 1].averageScore != null && (
           <>
             {((data[data.length - 1].averageScore - data[0].averageScore)).toFixed(1)} point change
           </>
@@ -358,9 +358,9 @@ const DataTableWidget: React.FC<{ data: any[] }> = ({ data }) => (
             <td className="p-2">{row.countryName}</td>
             <td className="p-2 text-muted-foreground text-xs">{row.region}</td>
             <td className="p-2 text-right font-bold">{row.overallScore.toFixed(1)}</td>
-            <td className="p-2 text-right text-muted-foreground">{row.educationScore}</td>
-            <td className="p-2 text-right text-muted-foreground">{row.healthScore}</td>
-            <td className="p-2 text-right text-muted-foreground">{row.employmentScore}</td>
+            <td className="p-2 text-right text-muted-foreground">{row.educationScore ?? '—'}</td>
+            <td className="p-2 text-right text-muted-foreground">{row.healthScore ?? '—'}</td>
+            <td className="p-2 text-right text-muted-foreground">{row.employmentScore ?? '—'}</td>
           </tr>
         ))}
       </tbody>
@@ -452,11 +452,12 @@ function useDashboardRealData(): DashboardRealData | null {
             countryId: r.countryId ?? r.country?.id,
             year,
             indexScore: r.overallScore ?? r.indexScore ?? r.score ?? 0,
-            educationScore: r.educationScore ?? r.dimensions?.education ?? 0,
-            healthScore: r.healthScore ?? r.dimensions?.health ?? 0,
-            employmentScore: r.employmentScore ?? r.dimensions?.employment ?? 0,
-            civicScore: r.civicScore ?? r.dimensions?.civic ?? 0,
-            innovationScore: r.innovationScore ?? r.dimensions?.innovation ?? 0,
+            // null = insufficient data (the API no longer imputes 50s); never 0.
+            educationScore: r.educationScore ?? r.dimensions?.education ?? null,
+            healthScore: r.healthScore ?? r.dimensions?.health ?? null,
+            employmentScore: r.employmentScore ?? r.dimensions?.employment ?? null,
+            civicScore: r.civicScore ?? r.dimensions?.['youth-demography-participation'] ?? null,
+            innovationScore: r.innovationScore ?? r.dimensions?.entrepreneurship ?? null,
           }));
         }),
       );

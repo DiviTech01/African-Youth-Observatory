@@ -259,7 +259,7 @@ export const CMS_TRANSLATIONS: Record<NonEnglish, Record<string, string>> = {
     'youth_index.your_country_badge': 'Votre pays',
     'youth_index.score_tooltip': 'Composite pondéré de toutes les dimensions',
     'youth_index.about.title': 'À propos de l’Indice de la Jeunesse Africaine',
-    'youth_index.about.body': 'L’AYI est un indicateur composite qui classe les pays africains selon les résultats du développement de la jeunesse. Les scores vont de 0 à 100, calculés sur quatre dimensions : Éducation (25 %), Emploi (30 %), Santé (25 %) et Engagement civique (20 %). Les classements sont mis à jour chaque année.',
+    'youth_index.about.body': 'L’Indice de la jeunesse africaine est un indicateur composite qui classe les États membres de l’Union africaine selon les résultats du développement de la jeunesse. Les scores vont de 0 à 100 et sont calculés chaque année sur sept dimensions pondérées : Démographie et participation des jeunes (20 %), Éducation (15 %), Emploi (15 %), Santé (15 %), Entrepreneuriat (15 %), Paix et sécurité (10 %) et Accès à la justice (10 %). Les valeurs sont normalisées min–max par année (effectifs pour 100 000 jeunes), puis combinées selon ces poids. Une dimension n’est notée que si au moins la moitié du poids de ses indicateurs dispose de données ; sinon elle est affichée comme données insuffisantes, jamais estimée. Un pays n’est classé que si au moins la moitié du poids de l’indice est mesurée ; les autres sont listés comme non classés.',
     'youth_index.about.methodology_link': 'Voir la méthodologie complète',
 
     // ── Explore ─────────────────────────────────────────────────────────────
@@ -632,7 +632,7 @@ export const CMS_TRANSLATIONS: Record<NonEnglish, Record<string, string>> = {
     'youth_index.your_country_badge': 'بلدك',
     'youth_index.score_tooltip': 'مركّب مرجّح لجميع الأبعاد',
     'youth_index.about.title': 'حول مؤشر الشباب الأفريقي',
-    'youth_index.about.body': 'AYI مؤشر مركّب يصنّف الدول الأفريقية بناءً على نتائج تنمية الشباب. تتراوح الدرجات من 0 إلى 100، وتُحسب عبر أربعة أبعاد: التعليم (25%) والتوظيف (30%) والصحة (25%) والمشاركة المدنية (20%). تُحدَّث التصنيفات سنويًا.',
+    'youth_index.about.body': 'مؤشر الشباب الأفريقي مؤشر مركّب يصنّف الدول الأعضاء في الاتحاد الأفريقي بناءً على نتائج تنمية الشباب. تتراوح الدرجات من 0 إلى 100 وتُحسب سنويًا عبر سبعة أبعاد مرجّحة: ديموغرافيا الشباب ومشاركتهم (20%) والتعليم (15%) والتوظيف (15%) والصحة (15%) وريادة الأعمال (15%) والسلام والأمن (10%) والوصول إلى العدالة (10%). تُطبَّع القيم بطريقة الحد الأدنى–الأقصى لكل سنة (الأعداد لكل 100,000 شاب) ثم تُجمع وفق هذه الأوزان. لا يُقيَّم البعد إلا إذا توفرت بيانات لنصف وزن مؤشراته على الأقل، وإلا يُعرض كبيانات غير كافية ولا يُقدَّر أبدًا. ولا تُصنَّف الدولة إلا إذا قيس نصف وزن المؤشر على الأقل، وتُدرج الدول الأخرى كغير مصنّفة.',
     'youth_index.about.methodology_link': 'عرض المنهجية الكاملة',
 
     // ── Explore ─────────────────────────────────────────────────────────────
@@ -1005,7 +1005,7 @@ export const CMS_TRANSLATIONS: Record<NonEnglish, Record<string, string>> = {
     'youth_index.your_country_badge': 'O seu país',
     'youth_index.score_tooltip': 'Compósito ponderado de todas as dimensões',
     'youth_index.about.title': 'Sobre o Índice da Juventude Africana',
-    'youth_index.about.body': 'O AYI é um indicador compósito que classifica os países africanos com base nos resultados de desenvolvimento da juventude. As pontuações vão de 0 a 100, calculadas em quatro dimensões: Educação (25%), Emprego (30%), Saúde (25%) e Participação cívica (20%). As classificações são atualizadas anualmente.',
+    'youth_index.about.body': 'O Índice da Juventude Africana é um indicador compósito que classifica os Estados-membros da União Africana com base nos resultados de desenvolvimento da juventude. As pontuações vão de 0 a 100 e são calculadas anualmente em sete dimensões ponderadas: Demografia e participação juvenil (20%), Educação (15%), Emprego (15%), Saúde (15%), Empreendedorismo (15%), Paz e segurança (10%) e Acesso à justiça (10%). Os valores são normalizados por mínimo–máximo em cada ano (contagens por 100 000 jovens) e combinados com estes pesos. Uma dimensão só é pontuada quando pelo menos metade do peso dos seus indicadores tem dados; caso contrário, aparece como dados insuficientes, nunca estimada. Um país só é classificado quando pelo menos metade do peso do índice é medida; os restantes são listados como não classificados.',
     'youth_index.about.methodology_link': 'Ver metodologia completa',
 
     // ── Explore ─────────────────────────────────────────────────────────────
@@ -1378,7 +1378,7 @@ export const CMS_TRANSLATIONS: Record<NonEnglish, Record<string, string>> = {
     'youth_index.your_country_badge': 'Nchi yako',
     'youth_index.score_tooltip': 'Mchanganyiko uliopimwa wa vipimo vyote',
     'youth_index.about.title': 'Kuhusu Fahirisi ya Vijana wa Afrika',
-    'youth_index.about.body': 'AYI ni kiashiria cha mchanganyiko kinachopanga nchi za Afrika kulingana na matokeo ya maendeleo ya vijana. Alama huanzia 0 hadi 100, zinazokokotolewa katika vipimo vinne: Elimu (25%), Ajira (30%), Afya (25%) na Ushiriki wa kiraia (20%). Upangaji husasishwa kila mwaka.',
+    'youth_index.about.body': 'Kielezo cha Vijana wa Afrika ni kiashiria cha mchanganyiko kinachopanga nchi wanachama wa Umoja wa Afrika kulingana na matokeo ya maendeleo ya vijana. Alama huanzia 0 hadi 100 na hukokotolewa kila mwaka katika vipimo saba vyenye uzito: Demografia na ushiriki wa vijana (20%), Elimu (15%), Ajira (15%), Afya (15%), Ujasiriamali (15%), Amani na usalama (10%) na Upatikanaji wa haki (10%). Thamani husawazishwa kwa kiwango cha chini–juu kila mwaka (idadi kwa kila vijana 100,000) kisha huunganishwa kwa uzito huu. Kipimo hupewa alama tu pale angalau nusu ya uzito wa viashiria vyake ina data; vinginevyo huonyeshwa kama data haitoshi, kamwe hakikisiwi. Nchi hupangwa tu pale angalau nusu ya uzito wa kielezo imepimwa; nyingine huorodheshwa kama hazijapangwa.',
     'youth_index.about.methodology_link': 'Tazama mbinu kamili',
 
     // ── Explore ─────────────────────────────────────────────────────────────

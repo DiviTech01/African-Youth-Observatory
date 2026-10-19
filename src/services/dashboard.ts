@@ -621,11 +621,12 @@ export interface DashboardRealData {
     countryId: string;
     year: number;
     indexScore: number;
-    educationScore: number;
-    healthScore: number;
-    employmentScore: number;
-    civicScore: number;
-    innovationScore: number;
+    // null = "insufficient data" for that dimension; never a score.
+    educationScore: number | null;
+    healthScore: number | null;
+    employmentScore: number | null;
+    civicScore: number | null;
+    innovationScore: number | null;
   }>;
   /** Real countries from `/api/countries` (cuid id, region, flagEmoji…). */
   countries: Array<{
@@ -638,6 +639,12 @@ export interface DashboardRealData {
   themes: Array<{ id: string; name: string; slug?: string; color?: string }>;
   /** Real indicators from `/api/indicators`. */
   indicators: Array<{ id: string; name: string; themeId: string }>;
+}
+
+/** Mean of the measured values; null when none were measured (never 0 / 50). */
+function meanOf(vals: Array<number | null | undefined>): number | null {
+  const v = vals.filter((x): x is number => typeof x === 'number' && Number.isFinite(x));
+  return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null;
 }
 
 // Generate data for a widget based on its type and config.
@@ -717,12 +724,9 @@ export function getWidgetData(
       data = regions.map(region => {
         const regionCountries = countriesList.filter(c => c.region === region);
         const regionData = yearData.filter(d => regionCountries.some(c => c.id === d.countryId));
-        const avgScore = regionData.length > 0 
-          ? regionData.reduce((sum, d) => sum + d.indexScore, 0) / regionData.length 
-          : 0;
         return {
           region,
-          avgScore: Math.round(avgScore * 10) / 10,
+          avgScore: meanOf(regionData.map((d) => d.indexScore)),
           countryCount: regionCountries.length,
           dataPoints: regionData.length,
         };
@@ -731,17 +735,12 @@ export function getWidgetData(
       break;
       
     case 'quick-stats':
-      const avgScore = yearData.reduce((sum, d) => sum + d.indexScore, 0) / yearData.length;
-      const avgEducation = yearData.reduce((sum, d) => sum + d.educationScore, 0) / yearData.length;
-      const avgHealth = yearData.reduce((sum, d) => sum + d.healthScore, 0) / yearData.length;
-      const avgEmployment = yearData.reduce((sum, d) => sum + d.employmentScore, 0) / yearData.length;
-      
       data = {
         totalCountries: countriesList.length,
-        averageScore: Math.round(avgScore * 10) / 10,
-        averageEducation: Math.round(avgEducation * 10) / 10,
-        averageHealth: Math.round(avgHealth * 10) / 10,
-        averageEmployment: Math.round(avgEmployment * 10) / 10,
+        averageScore: meanOf(yearData.map((d) => d.indexScore)),
+        averageEducation: meanOf(yearData.map((d) => d.educationScore)),
+        averageHealth: meanOf(yearData.map((d) => d.healthScore)),
+        averageEmployment: meanOf(yearData.map((d) => d.employmentScore)),
         totalIndicators: indicators.length,
         totalThemes: themesList.length,
         dataYear: year,
@@ -766,10 +765,9 @@ export function getWidgetData(
       const years = widget.config.compareYears || [2020, 2021, 2022, 2023, 2024];
       data = years.map(y => {
         const yData = youthIndexData.filter(d => d.year === y);
-        const avg = yData.reduce((sum, d) => sum + d.indexScore, 0) / yData.length;
         return {
           year: y,
-          averageScore: Math.round(avg * 10) / 10,
+          averageScore: meanOf(yData.map((d) => d.indexScore)),
           dataPoints: yData.length,
         };
       });
@@ -786,12 +784,13 @@ export function getWidgetData(
         country,
         rank,
         totalCountries: sortedByScore.length,
-        overallScore: countryData?.indexScore || 0,
-        educationScore: countryData?.educationScore || 0,
-        healthScore: countryData?.healthScore || 0,
-        employmentScore: countryData?.employmentScore || 0,
-        civicScore: countryData?.civicScore || 0,
-        innovationScore: countryData?.innovationScore || 0,
+        // A country with no score (below the coverage floor) shows "—", not 0.
+        overallScore: countryData?.indexScore ?? null,
+        educationScore: countryData?.educationScore ?? null,
+        healthScore: countryData?.healthScore ?? null,
+        employmentScore: countryData?.employmentScore ?? null,
+        civicScore: countryData?.civicScore ?? null,
+        innovationScore: countryData?.innovationScore ?? null,
       };
       dataPoints = 1;
       break;

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
 import { formatRegion, parseRegion } from '../../common/utils/format';
-import { DEFAULT_AGE_GROUP } from '../../shared/constants';
+import { displayAgeBand } from '../../shared/indicator-meta';
 import {
   DataValuesQueryDto,
   TimeSeriesQueryDto,
@@ -41,9 +41,10 @@ export class DataService {
     if (countryIds?.length) where.countryId = { in: countryIds };
     if (indicatorId) where.indicatorId = indicatorId;
     if (gender) where.gender = gender;
-    // Default to AU 15-35 unless the caller explicitly passes a different ageGroup,
-    // so we never silently mix age bands in aggregates.
-    where.ageGroup = ageGroup ?? DEFAULT_AGE_GROUP;
+    // Without an explicit ageGroup the Prisma middleware reads each indicator's
+    // canonical band (one band per indicator, so bands never mix). A blanket
+    // 15-35 here hid every 18-30 / 18-35 / national series (audit C5).
+    if (ageGroup) where.ageGroup = ageGroup;
     if (themeId) where.indicator = { themeId };
     if (region) where.country = { region: parseRegion(region) };
 
@@ -108,16 +109,16 @@ export class DataService {
     if (yearStart) yearWhere.gte = yearStart;
     if (yearEnd) yearWhere.lte = yearEnd;
 
-    // Strict pass first: the platform default (AU 15-35 youth band, TOTAL gender,
-    // or whatever the caller asked for). This is the right shape for properly
-    // age-disaggregated indicators (literacy, unemployment, contraceptive
-    // prevalence, etc.) and keeps cross-country comparability intact.
+    // Strict pass first: the indicator's canonical age band (applied by the
+    // Prisma middleware when no ageGroup is given -- 15-35 for most, 18-30 /
+    // 18-35 / national for the rest), TOTAL gender, or whatever the caller
+    // asked for. One band per indicator keeps cross-country comparability.
     const strictWhere: Record<string, unknown> = {
       countryId,
       indicatorId,
       gender: gender || 'TOTAL',
-      ageGroup: ageGroup ?? DEFAULT_AGE_GROUP,
     };
+    if (ageGroup) strictWhere.ageGroup = ageGroup;
     if (Object.keys(yearWhere).length) strictWhere.year = yearWhere;
 
     let values = await this.prisma.indicatorValue.findMany({
@@ -126,14 +127,12 @@ export class DataService {
       select: { year: true, value: true, gender: true, ageGroup: true },
     });
 
-    // Fallback: many AYC policy markers and other country-level indicators
-    // (national policy attributes, WB ranks, etc.) are uploaded without a
-    // youth age band — the cell is country-wide, not "15-35 youth only".
-    // The strict filter above silently rejects them. If we found nothing,
-    // and the caller didn't explicitly pin an age group, re-query WITHOUT
-    // the ageGroup default. We have to pass `_skipAgeGroupDefault: true`
-    // to bypass the platform-wide Prisma middleware that auto-injects
-    // ageGroup="15-35" on every IndicatorValue read.
+    // Fallback: the canonical band now covers indicators stored without a
+    // youth band (AYC policy markers, national figures), so this pass only
+    // matters if one indicator ever ends up with rows in two bands and this
+    // country's rows are all in the non-canonical one. If we found nothing,
+    // and the caller didn't explicitly pin an age group, re-query WITHOUT any
+    // age filter (`_skipAgeGroupDefault: true` bypasses the middleware).
     let usedFallback = false;
     if (values.length === 0 && !ageGroup) {
       const lenientWhere: Record<string, unknown> = {
@@ -170,8 +169,8 @@ export class DataService {
         countryId,
         indicatorId,
         gender: { in: ['MALE', 'FEMALE'] },
-        ageGroup: ageGroup ?? DEFAULT_AGE_GROUP,
       };
+      if (ageGroup) splitWhere.ageGroup = ageGroup;
       if (Object.keys(yearWhere).length) splitWhere.year = yearWhere;
 
       values = await this.prisma.indicatorValue.findMany({
@@ -202,15 +201,22 @@ export class DataService {
 
     const indicator = await this.prisma.indicator.findUnique({
       where: { id: indicatorId },
-      select: { id: true, name: true, unit: true, source: true },
+      select: { id: true, name: true, slug: true, unit: true, source: true },
     });
+
+    // The band the returned rows were actually stored under (one band per
+    // indicator), or 'all' when the lenient pass mixed bands. National-level
+    // indicators (budgets, ranks, physician density...) report 'all' whatever
+    // band the upload stamped on them: they have no age dimension (audit H10).
+    const storedBands = [...new Set(values.map((v) => v.ageGroup))];
+    const storedBand = storedBands.length === 1 ? storedBands[0] : values.length ? 'all' : (ageGroup ?? null);
 
     return {
       indicator,
       // Surface the age-band that was actually used so the UI can label
       // country-level indicators differently (e.g., "national value" rather
-      // than "youth 15-35"). Default unchanged for back-compat.
-      ageGroupUsed: usedFallback ? 'all' : (ageGroup ?? DEFAULT_AGE_GROUP),
+      // than "youth 15-35").
+      ageGroupUsed: usedFallback ? 'all' : displayAgeBand(indicator?.slug, storedBand),
       // 'split' means no combined figure exists for this country/indicator and
       // the payload carries separate male and female series. The UI MUST label
       // them; presenting one gender as the headline rate would misstate it.
@@ -234,7 +240,7 @@ export class DataService {
     let year: number;
     if (!query.year || query.year === 'latest') {
       const latest = await this.prisma.indicatorValue.aggregate({
-        where: { indicatorId, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP },
+        where: { indicatorId, gender: 'TOTAL' },
         _max: { year: true },
       });
       year = latest._max.year || 2023;
@@ -248,9 +254,10 @@ export class DataService {
       orderBy: { name: 'asc' },
     });
 
-    // Get values for the indicator + year (15-35 only — keeps map values consistent across countries).
+    // Values for the indicator + year in its canonical band (middleware) — one
+    // band per indicator keeps map values consistent across countries.
     const values = await this.prisma.indicatorValue.findMany({
-      where: { indicatorId, year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP },
+      where: { indicatorId, year, gender: 'TOTAL' },
       select: { countryId: true, value: true },
     });
 
@@ -285,7 +292,6 @@ export class DataService {
       countryId: { in: countryIds },
       year,
       gender: 'TOTAL',
-      ageGroup: DEFAULT_AGE_GROUP,
     };
 
     // Support single or multiple indicators
@@ -356,7 +362,7 @@ export class DataService {
     const cached = this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const where: Record<string, unknown> = { year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP };
+    const where: Record<string, unknown> = { year, gender: 'TOTAL' };
     if (indicatorId) where.indicatorId = indicatorId;
 
     const values = await this.prisma.indicatorValue.findMany({
@@ -404,7 +410,7 @@ export class DataService {
     const { indicatorId, year = 2023, limit = 10, sort = 'desc' } = query;
 
     const values = await this.prisma.indicatorValue.findMany({
-      where: { indicatorId, year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP },
+      where: { indicatorId, year, gender: 'TOTAL' },
       include: {
         country: { select: { name: true, isoCode3: true, flagEmoji: true } },
         indicator: { select: { name: true, unit: true } },
@@ -419,8 +425,12 @@ export class DataService {
       unit: values[0]?.indicator.unit,
       year,
       sort,
+      // `position`, not `rank`: the row's place in a value-sorted top-N list
+      // (reversed when sort=asc), not a ranking. Under the bare key `rank` it
+      // read as a second, contradictory country rank next to the Youth Index
+      // rank (audit C3).
       data: values.map((v, i) => ({
-        rank: i + 1,
+        position: i + 1,
         countryName: v.country.name,
         isoCode3: v.country.isoCode3,
         flagEmoji: v.country.flagEmoji,
@@ -432,7 +442,7 @@ export class DataService {
   async getRegionalSummary(query: RegionalSummaryQueryDto) {
     const { themeId, year = 2023 } = query;
 
-    const where: Record<string, unknown> = { year, gender: 'TOTAL', ageGroup: DEFAULT_AGE_GROUP };
+    const where: Record<string, unknown> = { year, gender: 'TOTAL' };
     if (themeId) where.indicator = { themeId };
 
     const values = await this.prisma.indicatorValue.findMany({
