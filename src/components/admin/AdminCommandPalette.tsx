@@ -109,6 +109,7 @@ export const AdminCommandPalette: React.FC = () => {
     { label: 'Newsletter & Broadcasts', icon: Mail, onSelect: () => go('/admin/newsletter'), hint: 'Briefings, subscribers, send' },
     { label: 'Content Manager (CMS)', icon: FileText, onSelect: () => go('/admin/cms'), hint: 'Edit site copy' },
     { label: 'Reports & Files', icon: FileText, onSelect: () => go('/admin/reports'), hint: 'PDFs, briefs, downloads' },
+    { label: 'Country Policies', icon: ShieldCheck, onSelect: () => go('/admin/policies'), hint: 'AYC, AfCFTA protocol status, scores' },
     { label: 'Upload Data', icon: Upload, onSelect: () => go('/dashboard/data-upload'), hint: 'Bulk import indicators' },
   ];
 

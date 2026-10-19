@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../common/cache.service';
-import { ComplianceScorerService, ComplianceInput } from './compliance-scorer.service';
-import { PolicyRankingsDto } from './policy-monitor.dto';
+import { ComplianceScorerService, ComplianceInput, AfcftaProtocolStatus } from './compliance-scorer.service';
+import { PolicyRankingsDto, UpdateCountryPolicyDto } from './policy-monitor.dto';
 import { formatRegion, parseRegion } from '../../common/utils/format';
 
 @Injectable()
@@ -65,7 +65,7 @@ export class PolicyMonitorService {
         hasNationalPolicy: policy.yearAdopted !== null,
         yearAdopted: policy.yearAdopted,
         yearRevised: policy.yearRevised,
-        wpayCompliant: policy.wpayCompliant,
+        afcftaProtocolStatus: policy.afcftaProtocolStatus,
         policyStatus: policy.status,
         youthIndexScore: youthScoreMap.get(policy.countryId) ?? null,
         dataAvailability: dataAvailability.get(policy.countryId) ?? 0,
@@ -85,7 +85,10 @@ export class PolicyMonitorService {
         policyName: policy.policyName,
         aycRatified: policy.aycRatified,
         aycRatifiedYear: policy.aycRatifiedYear,
-        wpayCompliant: policy.wpayCompliant,
+        afcftaProtocolStatus: policy.afcftaProtocolStatus,
+        afcftaProtocolNote: policy.afcftaProtocolNote,
+        afcftaProtocolSourceUrl: policy.afcftaProtocolSourceUrl,
+        afcftaProtocolAssessed: result.afcftaProtocolAssessed,
         yearAdopted: policy.yearAdopted,
         yearRevised: policy.yearRevised,
         status: policy.status,
@@ -119,9 +122,7 @@ export class PolicyMonitorService {
         aycRatificationRate: ranked.length > 0
           ? Math.round((ranked.filter((r) => r.aycRatified).length / ranked.length) * 10000) / 100
           : 0,
-        wpayComplianceRate: ranked.length > 0
-          ? Math.round((ranked.filter((r) => r.wpayCompliant).length / ranked.length) * 10000) / 100
-          : 0,
+        ...this.afcftaStats(ranked.map((r) => r.afcftaProtocolStatus)),
         tierDistribution: {
           EXEMPLARY: ranked.filter((r) => r.tier === 'EXEMPLARY').length,
           STRONG: ranked.filter((r) => r.tier === 'STRONG').length,
@@ -189,7 +190,7 @@ export class PolicyMonitorService {
       hasNationalPolicy: policy.yearAdopted !== null,
       yearAdopted: policy.yearAdopted,
       yearRevised: policy.yearRevised,
-      wpayCompliant: policy.wpayCompliant,
+      afcftaProtocolStatus: policy.afcftaProtocolStatus,
       policyStatus: policy.status,
       youthIndexScore: youthScore?.overallScore ?? null,
       dataAvailability,
@@ -215,13 +216,16 @@ export class PolicyMonitorService {
         yearRevised: policy.yearRevised,
         aycRatified: policy.aycRatified,
         aycRatifiedYear: policy.aycRatifiedYear,
-        wpayCompliant: policy.wpayCompliant,
+        afcftaProtocolStatus: policy.afcftaProtocolStatus,
+        afcftaProtocolNote: policy.afcftaProtocolNote,
+        afcftaProtocolSourceUrl: policy.afcftaProtocolSourceUrl,
         status: policy.status,
       },
       compliance: {
         overallScore: complianceResult.overallScore,
         tier: complianceResult.tier,
         components: complianceResult.components,
+        afcftaProtocolAssessed: complianceResult.afcftaProtocolAssessed,
         recommendations: complianceResult.recommendations,
       },
       context: {
@@ -266,7 +270,7 @@ export class PolicyMonitorService {
         hasNationalPolicy: policy.yearAdopted !== null,
         yearAdopted: policy.yearAdopted,
         yearRevised: policy.yearRevised,
-        wpayCompliant: policy.wpayCompliant,
+        afcftaProtocolStatus: policy.afcftaProtocolStatus,
         policyStatus: policy.status,
         youthIndexScore: youthScoreMap.get(policy.countryId) ?? null,
         dataAvailability: dataAvailability.get(policy.countryId) ?? 0,
@@ -310,7 +314,6 @@ export class PolicyMonitorService {
 
     const totalCountries = policies.length;
     const aycRatified = policies.filter((p) => p.aycRatified).length;
-    const wpayCompliant = policies.filter((p) => p.wpayCompliant).length;
     const hasPolicy = policies.filter((p) => p.yearAdopted !== null).length;
     const activePolicy = policies.filter((p) => p.status === 'active').length;
 
@@ -318,7 +321,7 @@ export class PolicyMonitorService {
     const regionStats = new Map<string, {
       total: number;
       ratified: number;
-      wpay: number;
+      afcfta: AfcftaProtocolStatus[];
       hasPolicy: number;
       avgScore: number;
       scoreCount: number;
@@ -327,12 +330,12 @@ export class PolicyMonitorService {
     for (const policy of policies) {
       const region = policy.country.region;
       if (!regionStats.has(region)) {
-        regionStats.set(region, { total: 0, ratified: 0, wpay: 0, hasPolicy: 0, avgScore: 0, scoreCount: 0 });
+        regionStats.set(region, { total: 0, ratified: 0, afcfta: [], hasPolicy: 0, avgScore: 0, scoreCount: 0 });
       }
       const stats = regionStats.get(region)!;
       stats.total++;
       if (policy.aycRatified) stats.ratified++;
-      if (policy.wpayCompliant) stats.wpay++;
+      stats.afcfta.push(policy.afcftaProtocolStatus);
       if (policy.yearAdopted) stats.hasPolicy++;
       if (policy.complianceScore !== null) {
         stats.avgScore += policy.complianceScore;
@@ -347,10 +350,7 @@ export class PolicyMonitorService {
       aycRatificationRate: stats.total > 0
         ? Math.round((stats.ratified / stats.total) * 10000) / 100
         : 0,
-      wpayCompliant: stats.wpay,
-      wpayComplianceRate: stats.total > 0
-        ? Math.round((stats.wpay / stats.total) * 10000) / 100
-        : 0,
+      ...this.afcftaStats(stats.afcfta),
       hasNationalPolicy: stats.hasPolicy,
       averageComplianceScore: stats.scoreCount > 0
         ? Math.round((stats.avgScore / stats.scoreCount) * 100) / 100
@@ -373,10 +373,7 @@ export class PolicyMonitorService {
         aycRatificationRate: totalCountries > 0
           ? Math.round((aycRatified / totalCountries) * 10000) / 100
           : 0,
-        wpayCompliant,
-        wpayComplianceRate: totalCountries > 0
-          ? Math.round((wpayCompliant / totalCountries) * 10000) / 100
-          : 0,
+        ...this.afcftaStats(policies.map((p) => p.afcftaProtocolStatus)),
         hasNationalPolicy: hasPolicy,
         activePolicies: activePolicy,
       },
@@ -386,6 +383,49 @@ export class PolicyMonitorService {
 
     this.cache.set(cacheKey, result, 600);
     return result;
+  }
+
+  /**
+   * Admin: update the AfCFTA Women & Youth Protocol status (plus provenance)
+   * for a country. Applied to every CountryPolicy row of the country so the
+   * status stays consistent, then that country's compliance is recomputed.
+   */
+  async updateCountryPolicy(countryId: string, dto: UpdateCountryPolicyDto) {
+    const data: Record<string, unknown> = {};
+    if (dto.afcftaProtocolStatus !== undefined) data.afcftaProtocolStatus = dto.afcftaProtocolStatus;
+    // Empty strings clear the provenance fields.
+    if (dto.afcftaProtocolNote !== undefined) data.afcftaProtocolNote = dto.afcftaProtocolNote?.trim() || null;
+    if (dto.afcftaProtocolSourceUrl !== undefined) data.afcftaProtocolSourceUrl = dto.afcftaProtocolSourceUrl?.trim() || null;
+
+    const { count } = await this.prisma.countryPolicy.updateMany({ where: { countryId }, data });
+    if (count === 0) {
+      throw new NotFoundException(`No policy data found for country ${countryId}`);
+    }
+
+    // Recompute also clears the policy: cache.
+    await this.computeCompliance(countryId);
+    return this.getCountryDetail(countryId);
+  }
+
+  /**
+   * Helper: AfCFTA Women & Youth Protocol counts and rates (share of all
+   * countries, 0–100). `afcftaSigned` counts signed-but-not-yet-ratified only;
+   * UNKNOWN rows are "not yet assessed" and are never treated as not signed.
+   */
+  private afcftaStats(statuses: AfcftaProtocolStatus[]) {
+    const total = statuses.length;
+    const ratified = statuses.filter((s) => s === 'RATIFIED').length;
+    const signed = statuses.filter((s) => s === 'SIGNED').length;
+    const notSigned = statuses.filter((s) => s === 'NOT_SIGNED').length;
+    const rate = (n: number) => (total > 0 ? Math.round((n / total) * 10000) / 100 : 0);
+    return {
+      afcftaRatified: ratified,
+      afcftaSigned: signed,
+      afcftaNotSigned: notSigned,
+      afcftaAssessedCount: ratified + signed + notSigned,
+      afcftaRatifiedRate: rate(ratified),
+      afcftaSignedRate: rate(signed),
+    };
   }
 
   /**

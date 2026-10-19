@@ -85,7 +85,7 @@ Verify services are running:
 ## 8. Policy Monitor
 
 - [ ] `/policy-monitor` shows compliance ranking table
-- [ ] Summary cards show ratified count, avg score, WPAY alignment
+- [ ] Summary cards show ratified count, avg score, AfCFTA Women & Youth Protocol status
 - [ ] Table rows show country flags and compliance scores
 - [ ] Color coding works (green >70%, amber 50-70%, red <50%)
 - [ ] Expandable rows show detail (if applicable)

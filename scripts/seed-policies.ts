@@ -19,7 +19,9 @@ interface PolicySeedEntry {
   yearRevised: number | null;
   aycRatified: boolean;
   aycRatifiedYear: number | null;
-  wpayCompliant: boolean;
+  // AfCFTA Women & Youth Protocol status; omit (or UNKNOWN) unless sourced.
+  afcftaProtocolStatus?: 'UNKNOWN' | 'NOT_SIGNED' | 'SIGNED' | 'RATIFIED';
+  afcftaProtocolSourceUrl?: string | null;
   status: string;
 }
 
@@ -59,7 +61,8 @@ async function main() {
         yearRevised: entry.yearRevised,
         aycRatified: entry.aycRatified,
         aycRatifiedYear: entry.aycRatifiedYear,
-        wpayCompliant: entry.wpayCompliant,
+        // afcftaProtocol* is deliberately not overwritten on update so a
+        // re-seed never clobbers statuses an admin has entered.
         status: entry.status,
       },
       create: {
@@ -71,7 +74,8 @@ async function main() {
         yearRevised: entry.yearRevised,
         aycRatified: entry.aycRatified,
         aycRatifiedYear: entry.aycRatifiedYear,
-        wpayCompliant: entry.wpayCompliant,
+        afcftaProtocolStatus: entry.afcftaProtocolStatus ?? 'UNKNOWN',
+        afcftaProtocolSourceUrl: entry.afcftaProtocolSourceUrl ?? null,
         status: entry.status,
       },
     });

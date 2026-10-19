@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Param, Query, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Query, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PolicyMonitorService } from './policy-monitor.service';
-import { PolicyRankingsDto, PolicyComputeDto } from './policy-monitor.dto';
+import { PolicyRankingsDto, PolicyComputeDto, UpdateCountryPolicyDto } from './policy-monitor.dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -28,7 +28,7 @@ export class PolicyMonitorController {
   @ApiOperation({
     summary: 'Get continental policy compliance summary',
     description:
-      'Returns aggregate statistics: AYC ratification rates, WPAY compliance, regional breakdowns, and recent ratifications.',
+      'Returns aggregate statistics: AYC ratification rates, AfCFTA Women & Youth Protocol status, regional breakdowns, and recent ratifications.',
   })
   getSummary() {
     return this.policyMonitorService.getSummary();
@@ -43,6 +43,19 @@ export class PolicyMonitorController {
   })
   getCountryDetail(@Param('countryId') countryId: string) {
     return this.policyMonitorService.getCountryDetail(countryId);
+  }
+
+  @Patch(':countryId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Update a country policy record',
+    description:
+      'Sets the AfCFTA Women & Youth Protocol status (UNKNOWN / NOT_SIGNED / SIGNED / RATIFIED) plus optional note and source URL, then recomputes the country compliance score. Admin only.',
+  })
+  updateCountryPolicy(@Param('countryId') countryId: string, @Body() dto: UpdateCountryPolicyDto) {
+    return this.policyMonitorService.updateCountryPolicy(countryId, dto);
   }
 
   @Post('compute')

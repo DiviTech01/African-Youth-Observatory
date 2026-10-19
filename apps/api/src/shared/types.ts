@@ -132,7 +132,9 @@ export interface CountryPolicy {
   yearRevised?: number;
   aycRatified: boolean;
   aycRatifiedYear?: number;
-  wpayCompliant: boolean;
+  afcftaProtocolStatus: AfcftaProtocolStatus;
+  afcftaProtocolNote?: string | null;
+  afcftaProtocolSourceUrl?: string | null;
   complianceScore?: number;
   status: string;
 }
@@ -557,6 +559,8 @@ export interface CountryNarrative {
 
 // ---- Policy Monitor Types ----
 
+export type AfcftaProtocolStatus = 'UNKNOWN' | 'NOT_SIGNED' | 'SIGNED' | 'RATIFIED';
+
 export type ComplianceTier =
   | 'EXEMPLARY'
   | 'STRONG'
@@ -568,7 +572,8 @@ export interface ComplianceComponents {
   aycRatification: number;
   nationalYouthPolicy: number;
   policyCurrency: number;
-  wpayCompliance: number;
+  /** null = AfCFTA protocol status UNKNOWN (not yet assessed, excluded from the score) */
+  afcftaProtocol: number | null;
   policyStatus: number;
   youthIndexPerformance: number;
   dataAvailability: number;
@@ -584,7 +589,10 @@ export interface PolicyRankingEntry {
   policyName: string;
   aycRatified: boolean;
   aycRatifiedYear: number | null;
-  wpayCompliant: boolean;
+  afcftaProtocolStatus: AfcftaProtocolStatus;
+  afcftaProtocolNote: string | null;
+  afcftaProtocolSourceUrl: string | null;
+  afcftaProtocolAssessed: boolean;
   yearAdopted: number | null;
   yearRevised: number | null;
   status: string;
@@ -600,7 +608,12 @@ export interface PolicyRankingsResponse {
     totalCountries: number;
     averageScore: number;
     aycRatificationRate: number;
-    wpayComplianceRate: number;
+    afcftaRatified: number;
+    afcftaSigned: number;
+    afcftaNotSigned: number;
+    afcftaAssessedCount: number;
+    afcftaRatifiedRate: number;
+    afcftaSignedRate: number;
     tierDistribution: Record<ComplianceTier, number>;
     region: string;
   };
@@ -621,13 +634,16 @@ export interface PolicyCountryDetail {
     yearRevised: number | null;
     aycRatified: boolean;
     aycRatifiedYear: number | null;
-    wpayCompliant: boolean;
+    afcftaProtocolStatus: AfcftaProtocolStatus;
+    afcftaProtocolNote: string | null;
+    afcftaProtocolSourceUrl: string | null;
     status: string;
   };
   compliance: {
     overallScore: number;
     tier: ComplianceTier;
     components: ComplianceComponents;
+    afcftaProtocolAssessed: boolean;
     recommendations: string[];
   };
   context: {
@@ -643,8 +659,12 @@ export interface PolicySummaryResponse {
     totalCountries: number;
     aycRatified: number;
     aycRatificationRate: number;
-    wpayCompliant: number;
-    wpayComplianceRate: number;
+    afcftaRatified: number;
+    afcftaSigned: number;
+    afcftaNotSigned: number;
+    afcftaAssessedCount: number;
+    afcftaRatifiedRate: number;
+    afcftaSignedRate: number;
     hasNationalPolicy: number;
     activePolicies: number;
   };
@@ -653,8 +673,12 @@ export interface PolicySummaryResponse {
     totalCountries: number;
     aycRatified: number;
     aycRatificationRate: number;
-    wpayCompliant: number;
-    wpayComplianceRate: number;
+    afcftaRatified: number;
+    afcftaSigned: number;
+    afcftaNotSigned: number;
+    afcftaAssessedCount: number;
+    afcftaRatifiedRate: number;
+    afcftaSignedRate: number;
     hasNationalPolicy: number;
     averageComplianceScore: number | null;
   }[];

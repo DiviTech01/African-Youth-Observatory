@@ -7,7 +7,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2013,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -18,7 +18,7 @@
     "yearRevised": 2020,
     "aycRatified": true,
     "aycRatifiedYear": 2013,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -29,7 +29,7 @@
     "yearRevised": null,
     "aycRatified": false,
     "aycRatifiedYear": null,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "draft"
   },
   {
@@ -40,7 +40,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2008,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -51,7 +51,7 @@
     "yearRevised": 2019,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -62,7 +62,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2011,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -73,7 +73,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2007,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -84,7 +84,7 @@
     "yearRevised": 2019,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -95,7 +95,7 @@
     "yearRevised": 2015,
     "aycRatified": true,
     "aycRatifiedYear": 2010,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -106,7 +106,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2011,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -117,7 +117,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2012,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -128,7 +128,7 @@
     "yearRevised": 2019,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -139,7 +139,7 @@
     "yearRevised": 2022,
     "aycRatified": true,
     "aycRatifiedYear": 2008,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -150,7 +150,7 @@
     "yearRevised": 2016,
     "aycRatified": true,
     "aycRatifiedYear": 2010,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -161,7 +161,7 @@
     "yearRevised": null,
     "aycRatified": false,
     "aycRatifiedYear": null,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "inactive"
   },
   {
@@ -172,7 +172,7 @@
     "yearRevised": 2019,
     "aycRatified": true,
     "aycRatifiedYear": 2012,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -183,7 +183,7 @@
     "yearRevised": 2020,
     "aycRatified": true,
     "aycRatifiedYear": 2008,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -194,7 +194,7 @@
     "yearRevised": 2017,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -205,7 +205,7 @@
     "yearRevised": 2019,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -216,7 +216,7 @@
     "yearRevised": 2015,
     "aycRatified": true,
     "aycRatifiedYear": 2010,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -227,7 +227,7 @@
     "yearRevised": 2020,
     "aycRatified": true,
     "aycRatifiedYear": 2012,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -238,7 +238,7 @@
     "yearRevised": 2014,
     "aycRatified": true,
     "aycRatifiedYear": 2008,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -249,7 +249,7 @@
     "yearRevised": 2016,
     "aycRatified": true,
     "aycRatifiedYear": 2010,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -260,7 +260,7 @@
     "yearRevised": null,
     "aycRatified": false,
     "aycRatifiedYear": null,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "inactive"
   },
   {
@@ -271,7 +271,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2011,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -282,7 +282,7 @@
     "yearRevised": 2018,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -293,7 +293,7 @@
     "yearRevised": 2016,
     "aycRatified": true,
     "aycRatifiedYear": 2010,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -304,7 +304,7 @@
     "yearRevised": null,
     "aycRatified": false,
     "aycRatifiedYear": null,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "draft"
   },
   {
@@ -315,7 +315,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2007,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -326,7 +326,7 @@
     "yearRevised": null,
     "aycRatified": false,
     "aycRatifiedYear": null,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -337,7 +337,7 @@
     "yearRevised": 2016,
     "aycRatified": true,
     "aycRatifiedYear": 2012,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -348,7 +348,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2013,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -359,7 +359,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2010,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -370,7 +370,7 @@
     "yearRevised": null,
     "aycRatified": false,
     "aycRatifiedYear": null,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "draft"
   },
   {
@@ -381,7 +381,7 @@
     "yearRevised": 2019,
     "aycRatified": true,
     "aycRatifiedYear": 2006,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -392,7 +392,7 @@
     "yearRevised": 2019,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -403,7 +403,7 @@
     "yearRevised": 2016,
     "aycRatified": true,
     "aycRatifiedYear": 2011,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -414,7 +414,7 @@
     "yearRevised": 2020,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -425,7 +425,7 @@
     "yearRevised": 2015,
     "aycRatified": true,
     "aycRatifiedYear": 2007,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -436,7 +436,7 @@
     "yearRevised": 2018,
     "aycRatified": true,
     "aycRatifiedYear": 2011,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -447,7 +447,7 @@
     "yearRevised": null,
     "aycRatified": false,
     "aycRatifiedYear": null,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -458,7 +458,7 @@
     "yearRevised": null,
     "aycRatified": false,
     "aycRatifiedYear": null,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -469,7 +469,7 @@
     "yearRevised": 2016,
     "aycRatified": true,
     "aycRatifiedYear": 2012,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -480,7 +480,7 @@
     "yearRevised": 2016,
     "aycRatified": true,
     "aycRatifiedYear": 2008,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -491,7 +491,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2012,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -502,7 +502,7 @@
     "yearRevised": 2019,
     "aycRatified": true,
     "aycRatifiedYear": 2010,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -513,7 +513,7 @@
     "yearRevised": null,
     "aycRatified": true,
     "aycRatifiedYear": 2012,
-    "wpayCompliant": false,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -524,7 +524,7 @@
     "yearRevised": 2017,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -535,7 +535,7 @@
     "yearRevised": 2021,
     "aycRatified": true,
     "aycRatifiedYear": 2010,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -546,7 +546,7 @@
     "yearRevised": 2020,
     "aycRatified": true,
     "aycRatifiedYear": 2008,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -557,7 +557,7 @@
     "yearRevised": 2020,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -568,7 +568,7 @@
     "yearRevised": 2020,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -579,7 +579,7 @@
     "yearRevised": 2015,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   },
   {
@@ -590,7 +590,7 @@
     "yearRevised": 2020,
     "aycRatified": true,
     "aycRatifiedYear": 2009,
-    "wpayCompliant": true,
+    "afcftaProtocolStatus": "UNKNOWN",
     "status": "active"
   }
 ]

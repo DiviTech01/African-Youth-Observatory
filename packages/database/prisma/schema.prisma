@@ -164,13 +164,28 @@ model CountryPolicy {
   yearRevised     Int?
   aycRatified     Boolean @default(false)
   aycRatifiedYear Int?
+  /// deprecated 2026-10-19, replaced by afcftaProtocolStatus, not read anywhere
   wpayCompliant   Boolean @default(false)
   complianceScore Float?
   status          String  @default("active")
 
+  // Protocol to the Agreement Establishing the AfCFTA on Women and Youth in
+  // Trade (AU Assembly, Feb 2024). UNKNOWN = not yet assessed; the compliance
+  // scorer drops the component (and renormalises) rather than scoring 0.
+  afcftaProtocolStatus    AfcftaProtocolStatus @default(UNKNOWN)
+  afcftaProtocolNote      String?
+  afcftaProtocolSourceUrl String?
+
   country Country @relation(fields: [countryId], references: [id])
 
   @@index([countryId])
+}
+
+enum AfcftaProtocolStatus {
+  UNKNOWN
+  NOT_SIGNED
+  SIGNED
+  RATIFIED
 }
 
 // ============ EXPERTS ============
@@ -539,4 +554,37 @@ enum NewsletterAudience {
   SUBSCRIBERS // people who signed up via the newsletter form
   USERS       // every registered platform user (User table)
   BOTH        // union of the above, deduped by email
+}
+
+// ============ MOBILE PUSH ============
+
+// Expo push tokens registered by the mobile app (POST /notifications/register).
+// userId is a loose User id (no FK) because registration is public: a device
+// can register before anyone signs in, and deleting a user must not fail on it.
+model PushToken {
+  id         String   @id @default(cuid())
+  token      String   @unique              // "ExponentPushToken[...]"
+  platform   String                         // "android" | "ios" | "web"
+  userId     String?
+  categories Json?                          // per-category opt-ins from the app, e.g. { "dataUpdates": true }
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ============ AI SPEND ============
+
+// Shared daily AI spend ledger, one row per UTC day. Replaces the in-process
+// counter so a restart or a second Render instance cannot reset the ceiling.
+// Written only with atomic increments (AiBudgetService).
+model AiSpendDay {
+  day          String   @id                 // "2026-10-19" (UTC)
+  usd          Float    @default(0)         // estimated spend
+  chatCalls    Int      @default(0)
+  reportCalls  Int      @default(0)
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  rejected     Int      @default(0)         // calls refused by a ceiling
+  updatedAt    DateTime @updatedAt
 }

@@ -16,299 +16,20 @@ import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { api } from '@/lib/api-client';
 
+// AfCFTA Protocol on Women and Youth in Trade. UNKNOWN = not yet assessed.
+type AfcftaStatus = 'UNKNOWN' | 'NOT_SIGNED' | 'SIGNED' | 'RATIFIED';
+
 interface PolicyData {
   country: string;
   aycRatified: boolean;
   nationalYouthPolicy: boolean;
   policyYear: number | null;
   complianceScore: number;
-  wpay: boolean;
+  afcftaStatus: AfcftaStatus;
   aycArticles: { article: string; status: 'compliant' | 'partial' | 'non-compliant' }[];
   timelineEvents: { year: number; event: string }[];
 }
 
-const policyData: PolicyData[] = [
-  {
-    country: 'Rwanda',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2020,
-    complianceScore: 82,
-    wpay: true,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'compliant' },
-      { article: 'Art. 15 – Employment', status: 'partial' },
-      { article: 'Art. 16 – Health', status: 'compliant' },
-    ],
-    timelineEvents: [
-      { year: 2007, event: 'First National Youth Policy' },
-      { year: 2015, event: 'AYC Ratification' },
-      { year: 2020, event: 'Revised Youth Policy adopted' },
-    ],
-  },
-  {
-    country: 'Kenya',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2019,
-    complianceScore: 75,
-    wpay: true,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'compliant' },
-      { article: 'Art. 15 – Employment', status: 'partial' },
-      { article: 'Art. 16 – Health', status: 'partial' },
-    ],
-    timelineEvents: [
-      { year: 2006, event: 'National Youth Policy launched' },
-      { year: 2014, event: 'AYC Ratified' },
-      { year: 2019, event: 'Updated Youth Policy' },
-    ],
-  },
-  {
-    country: 'South Africa',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2020,
-    complianceScore: 78,
-    wpay: true,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'compliant' },
-      { article: 'Art. 15 – Employment', status: 'partial' },
-      { article: 'Art. 16 – Health', status: 'compliant' },
-    ],
-    timelineEvents: [
-      { year: 2009, event: 'National Youth Policy adopted' },
-      { year: 2016, event: 'AYC Ratification' },
-      { year: 2020, event: 'Integrated Youth Dev. Strategy' },
-    ],
-  },
-  {
-    country: 'Ghana',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2022,
-    complianceScore: 71,
-    wpay: false,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'partial' },
-      { article: 'Art. 15 – Employment', status: 'partial' },
-      { article: 'Art. 16 – Health', status: 'partial' },
-    ],
-    timelineEvents: [
-      { year: 2010, event: 'National Youth Policy' },
-      { year: 2017, event: 'AYC Ratified' },
-      { year: 2022, event: 'Revised Youth Policy' },
-    ],
-  },
-  {
-    country: 'Nigeria',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2019,
-    complianceScore: 58,
-    wpay: false,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'partial' },
-      { article: 'Art. 10 – Education & Skills', status: 'partial' },
-      { article: 'Art. 15 – Employment', status: 'non-compliant' },
-      { article: 'Art. 16 – Health', status: 'partial' },
-    ],
-    timelineEvents: [
-      { year: 2009, event: 'Second National Youth Policy' },
-      { year: 2014, event: 'AYC Ratification' },
-      { year: 2019, event: 'Revised Youth Policy' },
-    ],
-  },
-  {
-    country: 'Senegal',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2018,
-    complianceScore: 66,
-    wpay: true,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'partial' },
-      { article: 'Art. 15 – Employment', status: 'partial' },
-      { article: 'Art. 16 – Health', status: 'compliant' },
-    ],
-    timelineEvents: [
-      { year: 2006, event: 'Youth Policy Framework' },
-      { year: 2013, event: 'AYC Ratified' },
-      { year: 2018, event: 'Updated Youth Policy' },
-    ],
-  },
-  {
-    country: 'Ethiopia',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2017,
-    complianceScore: 53,
-    wpay: false,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'partial' },
-      { article: 'Art. 10 – Education & Skills', status: 'partial' },
-      { article: 'Art. 15 – Employment', status: 'non-compliant' },
-      { article: 'Art. 16 – Health', status: 'partial' },
-    ],
-    timelineEvents: [
-      { year: 2004, event: 'National Youth Policy' },
-      { year: 2012, event: 'AYC Ratified' },
-      { year: 2017, event: 'Revised Youth Policy' },
-    ],
-  },
-  {
-    country: 'Tanzania',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2021,
-    complianceScore: 64,
-    wpay: false,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'partial' },
-      { article: 'Art. 15 – Employment', status: 'partial' },
-      { article: 'Art. 16 – Health', status: 'partial' },
-    ],
-    timelineEvents: [
-      { year: 2007, event: 'Youth Development Policy' },
-      { year: 2016, event: 'AYC Ratified' },
-      { year: 2021, event: 'Revised Youth Policy' },
-    ],
-  },
-  {
-    country: 'Morocco',
-    aycRatified: false,
-    nationalYouthPolicy: true,
-    policyYear: 2021,
-    complianceScore: 48,
-    wpay: false,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'partial' },
-      { article: 'Art. 10 – Education & Skills', status: 'partial' },
-      { article: 'Art. 15 – Employment', status: 'non-compliant' },
-      { article: 'Art. 16 – Health', status: 'partial' },
-    ],
-    timelineEvents: [
-      { year: 2014, event: 'National Youth Strategy' },
-      { year: 2021, event: 'Updated Youth Strategy' },
-    ],
-  },
-  {
-    country: 'Egypt',
-    aycRatified: false,
-    nationalYouthPolicy: true,
-    policyYear: 2016,
-    complianceScore: 42,
-    wpay: false,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'non-compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'partial' },
-      { article: 'Art. 15 – Employment', status: 'non-compliant' },
-      { article: 'Art. 16 – Health', status: 'partial' },
-    ],
-    timelineEvents: [
-      { year: 2009, event: 'Youth Program launched' },
-      { year: 2016, event: 'Youth Strategy 2016–2030' },
-    ],
-  },
-  {
-    country: 'Botswana',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2021,
-    complianceScore: 74,
-    wpay: true,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'compliant' },
-      { article: 'Art. 15 – Employment', status: 'partial' },
-      { article: 'Art. 16 – Health', status: 'compliant' },
-    ],
-    timelineEvents: [
-      { year: 2010, event: 'Revised National Youth Policy' },
-      { year: 2015, event: 'AYC Ratified' },
-      { year: 2021, event: 'Updated Youth Policy' },
-    ],
-  },
-  {
-    country: 'Mauritius',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2023,
-    complianceScore: 86,
-    wpay: true,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'compliant' },
-      { article: 'Art. 15 – Employment', status: 'compliant' },
-      { article: 'Art. 16 – Health', status: 'compliant' },
-    ],
-    timelineEvents: [
-      { year: 2005, event: 'First Youth Policy' },
-      { year: 2013, event: 'AYC Ratified' },
-      { year: 2023, event: 'New Youth Policy launched' },
-    ],
-  },
-  {
-    country: 'Cameroon',
-    aycRatified: true,
-    nationalYouthPolicy: false,
-    policyYear: null,
-    complianceScore: 38,
-    wpay: false,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'non-compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'non-compliant' },
-      { article: 'Art. 15 – Employment', status: 'non-compliant' },
-      { article: 'Art. 16 – Health', status: 'partial' },
-    ],
-    timelineEvents: [
-      { year: 2012, event: 'AYC Ratified' },
-      { year: 2015, event: 'Draft Youth Policy (not adopted)' },
-    ],
-  },
-  {
-    country: 'Uganda',
-    aycRatified: true,
-    nationalYouthPolicy: true,
-    policyYear: 2020,
-    complianceScore: 62,
-    wpay: false,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'partial' },
-      { article: 'Art. 15 – Employment', status: 'non-compliant' },
-      { article: 'Art. 16 – Health', status: 'partial' },
-    ],
-    timelineEvents: [
-      { year: 2001, event: 'National Youth Policy' },
-      { year: 2016, event: 'AYC Ratified' },
-      { year: 2020, event: 'Revised National Youth Policy' },
-    ],
-  },
-  {
-    country: 'DRC',
-    aycRatified: false,
-    nationalYouthPolicy: false,
-    policyYear: null,
-    complianceScore: 22,
-    wpay: false,
-    aycArticles: [
-      { article: 'Art. 2 – Non-discrimination', status: 'non-compliant' },
-      { article: 'Art. 10 – Education & Skills', status: 'non-compliant' },
-      { article: 'Art. 15 – Employment', status: 'non-compliant' },
-      { article: 'Art. 16 – Health', status: 'non-compliant' },
-    ],
-    timelineEvents: [
-      { year: 2009, event: 'Youth Ministry established' },
-    ],
-  },
-];
 
 type Tier = 'high' | 'medium' | 'low';
 
@@ -373,7 +94,7 @@ const PolicyMonitor = () => {
   const [sortBy, setSortBy] = useState<'score-desc' | 'score-asc' | 'name'>('score-desc');
 
   // Fetch real rankings from API
-  const { data: apiRankings } = useQuery({
+  const { data: apiRankings, isLoading: rankingsLoading, isError: rankingsError } = useQuery({
     queryKey: ['policy-rankings'],
     queryFn: () => api.policyMonitor.rankings(),
   });
@@ -387,12 +108,14 @@ const PolicyMonitor = () => {
         nationalYouthPolicy: r.yearAdopted !== null,
         policyYear: r.yearAdopted || null,
         complianceScore: r.complianceScore ?? 0,
-        wpay: r.wpayCompliant ?? false,
+        afcftaStatus: (r.afcftaProtocolStatus ?? 'UNKNOWN') as AfcftaStatus,
         aycArticles: [],
         timelineEvents: [],
       })) as PolicyData[];
     }
-    return policyData;
+    // No sample fallback: a credibility page must never show invented
+    // country figures while the API is slow or down.
+    return [] as PolicyData[];
   }, [apiRankings]);
 
   const toggleExpand = (country: string) => {
@@ -405,7 +128,12 @@ const PolicyMonitor = () => {
     activePolicyData.length > 0
       ? Math.round(activePolicyData.reduce((sum, d) => sum + d.complianceScore, 0) / activePolicyData.length)
       : 0;
-  const wpayCount = activePolicyData.filter((d) => d.wpay).length;
+  const afcftaRatifiedCount = activePolicyData.filter((d) => d.afcftaStatus === 'RATIFIED').length;
+  const afcftaSignedCount = activePolicyData.filter((d) => d.afcftaStatus === 'SIGNED').length;
+  const afcftaUnknownCount = activePolicyData.filter((d) => d.afcftaStatus === 'UNKNOWN').length;
+  const afcftaSub = afcftaUnknownCount === activePolicyData.length
+    ? t('policy.afcftaNotAssessed')
+    : t('policy.afcftaSubCounts', { signed: afcftaSignedCount, unknown: afcftaUnknownCount });
 
   // Tier breakdown for the distribution visualization
   const distribution = useMemo(() => {
@@ -475,7 +203,7 @@ const PolicyMonitor = () => {
               { icon: FileCheck2, label: 'AYC Ratified', value: ratifiedCount, of: activePolicyData.length, accent: '#22C55E', sub: 'Charter signed & ratified' },
               { icon: BookCheck, label: 'National Youth Policy', value: withPolicyCount, of: activePolicyData.length, accent: '#3B82F6', sub: 'In-force national framework' },
               { icon: Trophy, label: 'Avg. Compliance', value: avgScore, of: 100, accent: avgScore > 70 ? '#22C55E' : avgScore >= 50 ? '#F59E0B' : '#EF4444', sub: 'Across tracked countries', isPercent: true },
-              { icon: Star, label: 'WPAY Aligned', value: wpayCount, of: activePolicyData.length, accent: '#A855F7', sub: 'World Programme of Action for Youth' },
+              { icon: Star, label: t('policy.afcftaLabel'), value: afcftaRatifiedCount, of: activePolicyData.length, accent: '#A855F7', sub: afcftaSub },
             ].map((s) => {
               const Icon = s.icon;
               const pct = (s.value / Math.max(s.of, 1)) * 100;
@@ -615,7 +343,13 @@ const PolicyMonitor = () => {
           {visiblePolicyData.length === 0 ? (
             <div className="text-center py-16 rounded-2xl border border-dashed border-gray-800 bg-white/[0.02]">
               <AlertTriangle className="h-8 w-8 text-gray-500 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No countries match your filter.</p>
+              <p className="text-sm text-gray-400">
+                {rankingsLoading
+                  ? 'Loading country policies…'
+                  : rankingsError
+                    ? 'Couldn’t load policy data. Please try again shortly.'
+                    : 'No countries match your filter.'}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -663,8 +397,11 @@ const PolicyMonitor = () => {
                                 {item.policyYear}
                               </span>
                             )}
-                            {item.wpay && (
-                              <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/30 text-[9px] px-1.5 py-0 h-4 uppercase tracking-wider">WPAY</Badge>
+                            {item.afcftaStatus === 'RATIFIED' && (
+                              <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/30 text-[9px] px-1.5 py-0 h-4 uppercase tracking-wider">{t('policy.afcftaRatifiedShort')}</Badge>
+                            )}
+                            {item.afcftaStatus === 'SIGNED' && (
+                              <Badge variant="outline" className="text-blue-400 border-blue-500/30 text-[9px] px-1.5 py-0 h-4 uppercase tracking-wider">{t('policy.afcftaSignedShort')}</Badge>
                             )}
                           </div>
                         </div>
@@ -730,8 +467,7 @@ const PolicyMonitor = () => {
               <h3 className="font-semibold text-sm text-white">Scoring methodology</h3>
             </div>
             <p className="text-xs text-gray-400 leading-relaxed flex-1">
-              Compliance scores are computed from alignment with African Youth Charter (AYC) articles,
-              World Programme of Action for Youth (WPAY) indicators, and the currency of a national youth policy.
+              {t('policy.methodologyBody')}
             </p>
             <div className="flex flex-wrap gap-3 text-[10px]">
               {(['high','medium','low'] as Tier[]).map((t) => {
