@@ -159,7 +159,7 @@ function buildMenu() {
               type: 'info',
               title: 'About',
               message: APP_NAME,
-              detail: `Version ${app.getVersion()}\n\nPACSDA — Pan-African Centre for Statistics and Data Analytics\n\nAfrica's youth data intelligence platform.`,
+              detail: `Version ${app.getVersion()}\n\nPACSDA — Pan African Centre for Social Development and Accountability\n\nAfrica's youth data intelligence platform.`,
             });
           },
         },

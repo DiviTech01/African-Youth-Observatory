@@ -15,7 +15,7 @@ export const contactEntries: CmsRegistryEntry[] = [
   // Organization card
   { key: 'contact.org.card_title', page: PAGE, section: 'org_card', contentType: 'TEXT', defaultContent: 'Organization' },
   { key: 'contact.org.primary_name', page: PAGE, section: 'org_card', contentType: 'TEXT', defaultContent: 'PACSDA' },
-  { key: 'contact.org.primary_desc', page: PAGE, section: 'org_card', contentType: 'TEXT', defaultContent: 'Pan-African Centre for Statistics and Data Analytics' },
+  { key: 'contact.org.primary_desc', page: PAGE, section: 'org_card', contentType: 'TEXT', defaultContent: 'Pan African Centre for Social Development and Accountability' },
   { key: 'contact.org.partner_label', page: PAGE, section: 'org_card', contentType: 'TEXT', defaultContent: 'Implementing Partner:' },
   { key: 'contact.org.partner_name', page: PAGE, section: 'org_card', contentType: 'TEXT', defaultContent: 'ZeroUp Next' },
 

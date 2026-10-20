@@ -30,13 +30,12 @@ export const LEGAL_CONTACT = {
   general: 'info@africanyouthobservatory.org',
   privacy: 'privacy@africanyouthobservatory.org',
   data: 'data@africanyouthobservatory.org',
-  // TODO(owner): replace with the exact legal name on PACSDA's registration
-  // certificate. The site currently carries two different expansions — "Pan
-  // African Centre for Social Development and Accountability" (FAQ) and
-  // "Pan-African Centre for Statistics and Data Analytics" (Contact page) — and a
-  // controller named wrongly in a privacy policy is a compliance defect, as well
-  // as a mismatch a grant assessor or bank would query.
-  operator: 'African Youth Observatory (AYO), a PACSDA initiative',
+  // Registered name confirmed by the owner (2026-10-20) and on pacsda.org:
+  // incorporated in Nigeria, CAC Reg. No. 85203. Keep every expansion of
+  // PACSDA on the site identical to this — the privacy policy names it as the
+  // controller.
+  operator:
+    'African Youth Observatory (AYO), an initiative of PACSDA (Pan African Centre for Social Development and Accountability)',
 } as const;
 
 /**
@@ -44,4 +43,4 @@ export const LEGAL_CONTACT = {
  * substantive change to the documents — users are entitled to know when the
  * terms they agreed to last moved.
  */
-export const LEGAL_LAST_UPDATED = '2026-09-19';
+export const LEGAL_LAST_UPDATED = '2026-10-20';

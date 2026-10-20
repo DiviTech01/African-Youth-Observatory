@@ -84,7 +84,7 @@ const Contact = () => {
                 </CardHeader>
                 <CardContent className="text-sm">
                   <Content as="p" id="contact.org.primary_name" fallback="PACSDA" className="font-medium" />
-                  <Content as="p" id="contact.org.primary_desc" fallback="Pan-African Centre for Statistics and Data Analytics" className="text-gray-400" />
+                  <Content as="p" id="contact.org.primary_desc" fallback="Pan African Centre for Social Development and Accountability" className="text-gray-400" />
                   <Content as="p" id="contact.org.partner_label" fallback="Implementing Partner:" className="text-gray-400 mt-2" />
                   <Content as="p" id="contact.org.partner_name" fallback="ZeroUp Next" className="font-medium" />
                 </CardContent>
