@@ -214,6 +214,7 @@ const Methodology = () => {
                   id="methodology.ayi.calculation"
                   fallback={
                     <>
+                      <li>Where an indicator has only separate figures for young women and young men, use their simple average</li>
                       <li>Normalize all indicators to 0-100 scale using min-max normalization</li>
                       <li>Calculate dimension scores as weighted average of constituent indicators</li>
                       <li>Compute overall AYI as weighted sum of dimension scores</li>

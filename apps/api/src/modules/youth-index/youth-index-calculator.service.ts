@@ -9,8 +9,12 @@
  *
  * INPUT:
  *   TOTAL-gender values for the year, read from each indicator's canonical age
- *   band (PrismaService middleware). Headcount indicators flagged `perCapita`
- *   are converted to a rate per 100,000 youth first.
+ *   band (PrismaService middleware). Where a country has no TOTAL value but has
+ *   both a MALE and a FEMALE value, their unweighted mean is used instead and
+ *   the indicator is listed under _meta.mfAveraged (approved by the owner
+ *   2026-10-20; several headline series were uploaded only by sex). One sex
+ *   alone is never used. Headcount indicators flagged `perCapita` are
+ *   converted to a rate per 100,000 youth first.
  *
  * NORMALIZATION:
  *   Min-max per indicator across countries for the same year, onto [5, 100].
@@ -82,13 +86,43 @@ export interface CountryYearScore {
   indexCoverage: number;
   /** Null when the country is below MIN_INDEX_COVERAGE. */
   overallScore: number | null;
+  /** Index indicators scored from the women/men mean (no TOTAL value). */
+  mfAveraged: string[];
 }
 
 export interface ScoreYearInput {
   countries: { id: string; name: string; region: string }[];
   themeWeight: Map<string, number>;
   slugToId: Map<string, string>;
-  values: { countryId: string; indicatorId: string; value: number }[];
+  values: { countryId: string; indicatorId: string; value: number; basis?: ValueBasis }[];
+}
+
+/** 'mf-average': no TOTAL row, so the mean of the MALE and FEMALE rows. */
+export type ValueBasis = 'total' | 'mf-average';
+
+/**
+ * One value per (country, indicator): TOTAL when present, otherwise the mean
+ * of MALE and FEMALE when both are present, otherwise nothing.
+ */
+export function combineGenders(
+  rows: { countryId: string; indicatorId: string; gender: string; value: number }[],
+): ScoreYearInput['values'] {
+  const cells = new Map<string, { countryId: string; indicatorId: string; TOTAL?: number; MALE?: number; FEMALE?: number }>();
+  for (const r of rows) {
+    if (!Number.isFinite(r.value)) continue;
+    const key = `${r.countryId}|${r.indicatorId}`;
+    let c = cells.get(key);
+    if (!c) cells.set(key, (c = { countryId: r.countryId, indicatorId: r.indicatorId }));
+    if (r.gender === 'TOTAL' || r.gender === 'MALE' || r.gender === 'FEMALE') c[r.gender] = r.value;
+  }
+  const out: ScoreYearInput['values'] = [];
+  for (const c of cells.values()) {
+    if (c.TOTAL !== undefined) out.push({ countryId: c.countryId, indicatorId: c.indicatorId, value: c.TOTAL, basis: 'total' });
+    else if (c.MALE !== undefined && c.FEMALE !== undefined) {
+      out.push({ countryId: c.countryId, indicatorId: c.indicatorId, value: (c.MALE + c.FEMALE) / 2, basis: 'mf-average' });
+    }
+  }
+  return out;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -102,10 +136,12 @@ export function scoreYear(input: ScoreYearInput): { scored: CountryYearScore[]; 
 
   // indicatorId -> countryId -> raw value
   const raw = new Map<string, Map<string, number>>();
+  const averaged = new Set<string>(); // `${indicatorId}|${countryId}` scored from the M/F mean
   for (const v of values) {
     let m = raw.get(v.indicatorId);
     if (!m) raw.set(v.indicatorId, (m = new Map()));
     m.set(v.countryId, v.value);
+    if (v.basis === 'mf-average') averaged.add(`${v.indicatorId}|${v.countryId}`);
   }
 
   const popId = slugToId.get(YOUTH_POPULATION_SLUG);
@@ -163,6 +199,7 @@ export function scoreYear(input: ScoreYearInput): { scored: CountryYearScore[]; 
     const coverage: Record<string, DimensionCoverage> = {};
     let weightedOverall = 0;
     let scoredThemeWeight = 0;
+    const mfAveraged: string[] = [];
 
     for (const [themeSlug, subs] of Object.entries(SUB_WEIGHTS)) {
       const definedWeight = subs.reduce((a, s) => a + s.weight, 0);
@@ -182,6 +219,7 @@ export function scoreYear(input: ScoreYearInput): { scored: CountryYearScore[]; 
         weightedSum += normalized * sub.weight;
         usedWeight += sub.weight;
         contributing += 1;
+        if (averaged.has(`${indId}|${country.id}`)) mfAveraged.push(sub.slug);
       }
       const weightShare = definedWeight > 0 ? usedWeight / definedWeight : 0;
       const enough = contributing >= MIN_DIMENSION_INDICATORS && weightShare >= MIN_DIMENSION_COVERAGE - 1e-9;
@@ -212,6 +250,7 @@ export function scoreYear(input: ScoreYearInput): { scored: CountryYearScore[]; 
       coverage,
       indexCoverage: round2(indexCoverage),
       overallScore,
+      mfAveraged,
     };
   });
 
@@ -247,8 +286,11 @@ export class YouthIndexCalculatorService {
     private cache: CacheService,
   ) {}
 
-  /** Load everything scoreYear needs for one year. Read-only. */
-  async loadYearInput(year: number): Promise<ScoreYearInput> {
+  /**
+   * Load everything scoreYear needs for one year. Read-only. `excludeIds` drops
+   * IndicatorValue rows before the genders are combined (recompute dry run).
+   */
+  async loadYearInput(year: number, opts: { excludeIds?: Set<string> } = {}): Promise<ScoreYearInput> {
     const countries = await this.prisma.country.findMany({
       select: { id: true, name: true, region: true },
     });
@@ -269,16 +311,17 @@ export class YouthIndexCalculatorService {
 
     // No ageGroup: the Prisma middleware reads each indicator's canonical band,
     // so the 18-30 / 18-35 series (Peace & Security, Justice) are included.
-    const values = await this.prisma.indicatorValue.findMany({
+    const rows = await this.prisma.indicatorValue.findMany({
       where: {
         year,
-        gender: 'TOTAL',
+        gender: { in: ['TOTAL', 'MALE', 'FEMALE'] },
         indicatorId: { in: indicators.map((i) => i.id) },
       },
-      select: { countryId: true, indicatorId: true, value: true },
+      select: { id: true, countryId: true, indicatorId: true, gender: true, value: true },
     });
+    const kept = opts.excludeIds ? rows.filter((r) => !opts.excludeIds!.has(r.id)) : rows;
 
-    return { countries, themeWeight, slugToId, values };
+    return { countries, themeWeight, slugToId, values: combineGenders(kept) };
   }
 
   async computeForYear(year: number, opts: { dryRun?: boolean } = {}): Promise<ComputeYearResult> {
@@ -317,7 +360,12 @@ export class YouthIndexCalculatorService {
           // a schema migration. Readers must skip keys starting with '_'.
           dimensionScores: {
             ...cs.dimensions,
-            _meta: { coverage: cs.coverage, indexCoverage: cs.indexCoverage, method: INDEX_METHOD },
+            _meta: {
+              coverage: cs.coverage,
+              indexCoverage: cs.indexCoverage,
+              method: INDEX_METHOD,
+              ...(cs.mfAveraged.length ? { mfAveraged: cs.mfAveraged } : {}),
+            },
           } as any,
           rank,
           previousRank: prevRank,
@@ -378,14 +426,14 @@ export class YouthIndexCalculatorService {
   }
 
   /**
-   * Years that have TOTAL data for at least one index indicator (in its
-   * canonical band). Restricted to index indicators so the AYC policy markers'
+   * Years that have data for at least one index indicator (in its canonical
+   * band) -- TOTAL, or MALE/FEMALE which combineGenders may average. Restricted to index indicators so the AYC policy markers'
    * adoption years (1995 ... 2050) are not mistaken for index years.
    */
   async yearsWithData(): Promise<number[]> {
     const rows = await this.prisma.indicatorValue.groupBy({
       by: ['year'],
-      where: { gender: 'TOTAL', indicator: { slug: { in: ALL_INDEX_INDICATOR_SLUGS } } },
+      where: { gender: { in: ['TOTAL', 'MALE', 'FEMALE'] }, indicator: { slug: { in: ALL_INDEX_INDICATOR_SLUGS } } },
       _count: { _all: true },
       orderBy: { year: 'asc' },
     });

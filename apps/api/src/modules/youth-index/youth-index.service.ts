@@ -20,7 +20,8 @@ const THEME_KEYS = [
 const METHODOLOGY =
   'Min-max normalization with weighted dimensional scoring (7 themes). ' +
   'Dimensions below the coverage floor are null (insufficient data), never imputed; ' +
-  'countries below the floor are not ranked.';
+  'countries below the floor are not ranked. Where an indicator has no combined (TOTAL) value but has both ' +
+  'a value for women and one for men, their average is used and listed in mfAveraged.';
 
 function asDims(json: unknown): Record<string, unknown> {
   if (!json || typeof json !== 'object') return {};
@@ -76,6 +77,12 @@ function dimensionsOf(json: unknown): DimensionMap {
 /** Dimension keys with no measured score -- the explicit "insufficient data" flag. */
 function insufficientOf(dims: DimensionMap): string[] {
   return THEME_KEYS.filter((k) => dims[k] === null);
+}
+
+/** Index indicators scored from the women/men mean because no TOTAL value exists. */
+function mfAveragedOf(json: unknown): string[] {
+  const meta = asDims(json)._meta as Record<string, unknown> | undefined;
+  return Array.isArray(meta?.mfAveraged) ? (meta.mfAveraged as string[]) : [];
 }
 
 /** Share of index weight that was measured (0-1), when the calculator recorded it. */
@@ -163,6 +170,7 @@ export class YouthIndexService {
       return {
         dimensionCoverage: coverageOf(r.dimensionScores),
         insufficientDimensions: insufficientOf(dims),
+        mfAveraged: mfAveragedOf(r.dimensionScores),
         indexCoverage: indexCoverageOf(r.dimensionScores),
         rank: r.rank,
         countryId: r.countryId,
@@ -229,6 +237,7 @@ export class YouthIndexService {
           dimensions: dims,
           dimensionCoverage: coverageOf(s.dimensionScores),
           insufficientDimensions: insufficientOf(dims),
+          mfAveraged: mfAveragedOf(s.dimensionScores),
           indexCoverage: indexCoverageOf(s.dimensionScores),
           rank: s.rank,
           previousRank: s.previousRank,
@@ -272,6 +281,7 @@ export class YouthIndexService {
         dimensions: dims,
         dimensionCoverage: coverageOf(r.dimensionScores),
         insufficientDimensions: insufficientOf(dims),
+        mfAveraged: mfAveragedOf(r.dimensionScores),
         tier: formatTier(r.tier),
       };
     });
