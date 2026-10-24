@@ -13,8 +13,12 @@
  *
  * Copying the schema under apps/api first makes Prisma resolve apps/api's own
  * @prisma/client, wherever the package manager put it.
+ *
+ * Runs as `postinstall` as well as in `build`: Render's build command (set in
+ * its dashboard) calls `nest build` directly, so only an install hook is sure
+ * to run there.
  */
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,6 +29,13 @@ const source = join(apiRoot, '..', '..', 'packages', 'database', 'prisma', 'sche
 // shell would split an absolute path at the spaces in it.
 const targetRel = 'prisma/.generated/schema.prisma';
 const target = join(apiRoot, targetRel);
+
+// An install from package.json alone (apps/api/Dockerfile's first layer) has
+// no schema yet; that build generates later itself.
+if (!existsSync(source)) {
+  console.log(`prisma-generate: ${source} not found, skipping`);
+  process.exit(0);
+}
 
 mkdirSync(dirname(target), { recursive: true });
 copyFileSync(source, target);
