@@ -14,6 +14,15 @@
 
 BEGIN;
 
+-- The trigger below relies on the existing is_admin() helper (used by the
+-- "User" policies); abort the whole file if it is not there.
+DO $$
+BEGIN
+  IF to_regprocedure('public.is_admin()') IS NULL THEN
+    RAISE EXCEPTION 'public.is_admin() is missing; nothing was applied';
+  END IF;
+END $$;
+
 DO $$
 DECLARE t text;
 BEGIN
