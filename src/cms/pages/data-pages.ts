@@ -50,7 +50,7 @@ entries.push(
   { key: 'youth_index.top_ranked_badge', page: YI, section: 'top3', contentType: 'TEXT', defaultContent: 'Top Ranked' },
   { key: 'youth_index.change_suffix', page: YI, section: 'top3', contentType: 'TEXT', defaultContent: 'from last year' },
   { key: 'youth_index.your_country_badge', page: YI, section: 'table', contentType: 'TEXT', defaultContent: 'Your Country' },
-  { key: 'youth_index.score_tooltip', page: YI, section: 'table', contentType: 'TEXT', defaultContent: 'Weighted composite of all dimensions' },
+  { key: 'youth_index.score_tooltip', page: YI, section: 'table', contentType: 'TEXT', defaultContent: 'Average of Education, Employment, Health and Entrepreneurship' },
   { key: 'youth_index.about.title', page: YI, section: 'about', contentType: 'TEXT', defaultContent: 'About the African Youth Index' },
   {
     key: 'youth_index.about.body',
@@ -58,7 +58,7 @@ entries.push(
     section: 'about',
     contentType: 'RICH_TEXT',
     defaultContent:
-      'The African Youth Index is a composite indicator that ranks African Union member states by youth development outcomes. Scores range from 0–100 and are computed each year across seven weighted thematic dimensions: Youth Demography & Participation (20%), Education (15%), Employment (15%), Health (15%), Entrepreneurship (15%), Peace & Security (10%), and Access to Justice (10%). Indicator values are min–max normalized per year (headcounts per 100,000 youth), then combined with these weights. A dimension is scored only when at least half of its indicator weight has data; otherwise it is shown as insufficient data, never estimated. A country is ranked only when at least half of the index weight is measured; countries below that are listed as not ranked. Where an indicator was published only as separate figures for young women and young men, the index uses the simple average of the two.',
+      'The African Youth Index is a composite indicator that ranks African Union member states by youth development outcomes. Scores range from 0–100 and are computed each year. Seven thematic dimensions are scored: Youth Demography & Participation, Education, Employment, Health, Entrepreneurship, Peace & Security, and Access to Justice. The overall score and rank use four of them, weighted equally: Education, Employment, Health and Entrepreneurship, so every ranked country is compared on the same themes. The other three are shown but not yet counted, because too few countries have data for them. Indicator values are min–max normalized per year (headcounts per 100,000 youth). A dimension is scored only when at least half of its indicator weight has data; otherwise it is shown as insufficient data, never estimated. A country is ranked only when all four ranked dimensions are scored; the others are listed as not ranked. Where an indicator was published only as separate figures for young women and young men, the index uses the simple average of the two.',
   },
   { key: 'youth_index.about.methodology_link', page: YI, section: 'about', contentType: 'TEXT', defaultContent: 'View full methodology' },
 );

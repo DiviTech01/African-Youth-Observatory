@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Database, Shield, Calculator, RefreshCw, CheckCircle } from 'lucide-react';
 import { Content } from '@/components/cms';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const QA_CARDS = [
   { slug: 'source', title: '1. Source Verification', body: 'Confirm data origin from official or peer-reviewed sources. Verify methodology documentation is available.' },
@@ -11,6 +12,9 @@ const QA_CARDS = [
 ];
 
 const Methodology = () => {
+  const { t } = useLanguage();
+  // Shown in the Weight column for the themes left out of the overall score.
+  const notInRank = t('youthIndex.notInRank');
   return (
     <>
       <header className="gradient-hero py-8 md:py-12">
@@ -171,37 +175,37 @@ const Methodology = () => {
                     <tbody className="divide-y">
                       <tr>
                         <td className="py-2">Youth Demography &amp; Participation</td>
-                        <td className="py-2 font-semibold">20%</td>
+                        <td className="py-2 font-semibold">{notInRank}</td>
                         <td className="py-2">Population share, voter turnout, parliamentary representation, trust in government, freedom of association, AYC policy markers</td>
                       </tr>
                       <tr>
                         <td className="py-2">Education</td>
-                        <td className="py-2 font-semibold">15%</td>
+                        <td className="py-2 font-semibold">25%</td>
                         <td className="py-2">Literacy, primary / secondary / tertiary enrollment, dropout, teacher–student ratio, education spending</td>
                       </tr>
                       <tr>
                         <td className="py-2">Employment</td>
-                        <td className="py-2 font-semibold">15%</td>
+                        <td className="py-2 font-semibold">25%</td>
                         <td className="py-2">Unemployment, labor-force participation, employment-to-population ratio, sectoral split, informal employment</td>
                       </tr>
                       <tr>
                         <td className="py-2">Health</td>
-                        <td className="py-2 font-semibold">15%</td>
+                        <td className="py-2 font-semibold">25%</td>
                         <td className="py-2">Skilled birth attendance, physician density, HIV prevalence + treatment, contraceptive prevalence, mortality (suicide, AIDS, accidents, substance abuse), maternal mortality, health spending</td>
                       </tr>
                       <tr>
                         <td className="py-2">Entrepreneurship</td>
-                        <td className="py-2 font-semibold">15%</td>
+                        <td className="py-2 font-semibold">25%</td>
                         <td className="py-2">Startup survival, microcredit recipients, IP registrations, internet access, Getting Credit / Protecting Investors rank (WB), mobile money, financial literacy, entrepreneurship rate</td>
                       </tr>
                       <tr>
                         <td className="py-2">Peace &amp; Security</td>
-                        <td className="py-2 font-semibold">10%</td>
+                        <td className="py-2 font-semibold">{notInRank}</td>
                         <td className="py-2">Internally displaced youth, trafficking victims, deaths from violent extremism (ages 18–35)</td>
                       </tr>
                       <tr>
                         <td className="py-2">Access to Justice</td>
-                        <td className="py-2 font-semibold">10%</td>
+                        <td className="py-2 font-semibold">{notInRank}</td>
                         <td className="py-2">Youth awaiting trial, youth imprisoned, juvenile detentions</td>
                       </tr>
                     </tbody>
@@ -217,8 +221,8 @@ const Methodology = () => {
                       <li>Where an indicator has only separate figures for young women and young men, use their simple average</li>
                       <li>Normalize all indicators to 0-100 scale using min-max normalization</li>
                       <li>Calculate dimension scores as weighted average of constituent indicators</li>
-                      <li>Compute overall AYI as weighted sum of dimension scores</li>
-                      <li>Rank countries from highest to lowest AYI score</li>
+                      <li>Compute overall AYI as the equal-weight average of the Education, Employment, Health and Entrepreneurship scores; Demography, Peace &amp; Security and Access to Justice are shown but not yet counted, as too few countries have data for them</li>
+                      <li>Rank countries with all four of those dimensions scored, from highest to lowest AYI score</li>
                     </>
                   }
                   className="space-y-1"

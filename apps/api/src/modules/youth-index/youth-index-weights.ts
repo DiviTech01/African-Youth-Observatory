@@ -33,13 +33,23 @@ export const YOUTH_POPULATION_SLUG = 'youth-population-15-35';
  * MIN_DIMENSION_COVERAGE of the dimension's weight AND number at least
  * MIN_DIMENSION_INDICATORS. Otherwise it is null ("insufficient data").
  *
- * A country is scored and ranked only when its scored dimensions carry at least
- * MIN_INDEX_COVERAGE of the total theme weight. Its overall score is the
- * weighted mean over the scored dimensions only -- nothing is imputed.
+ * Which countries are ranked, and on what, is set by RANKED_THEMES below --
+ * nothing is imputed.
  */
 export const MIN_DIMENSION_COVERAGE = 0.5;
 export const MIN_DIMENSION_INDICATORS = 2;
-export const MIN_INDEX_COVERAGE = 0.5;
+
+/**
+ * The themes the overall score and rank are built from (owner decision
+ * 2026-10-25). Every ranked country is scored on the same set: a country is
+ * ranked only when all of them are scored, and its overall score is their
+ * weighted mean. Demography, Peace & Security and Access to Justice are still
+ * scored and shown, but left out of the rank until most countries have data:
+ * Peace and Justice existed for few countries and, being near-zero rates,
+ * scored 89-99 for almost all of them, so having the data at all moved a
+ * country up more than its results did.
+ */
+export const RANKED_THEMES = ['education', 'employment', 'health', 'entrepreneurship'];
 
 export const SUB_WEIGHTS: Record<string, SubIndicator[]> = {
   'youth-demography-participation': [

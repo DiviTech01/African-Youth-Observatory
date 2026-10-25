@@ -170,7 +170,7 @@ const methodologyEntries: CmsRegistryEntry[] = [
 
   meth('methodology.ayi.title', 'ayi', 'TEXT', 'African Youth Index Methodology'),
   meth('methodology.ayi.intro', 'ayi', 'RICH_TEXT', 'The African Youth Index (AYI) is a composite indicator developed by AYO to provide a comprehensive measure of youth development across African countries.'),
-  meth('methodology.ayi.calculation', 'ayi', 'RICH_TEXT', '<li>Where an indicator has only separate figures for young women and young men, use their simple average</li><li>Normalize all indicators to 0-100 scale using min-max normalization</li><li>Calculate dimension scores as weighted average of constituent indicators</li><li>Compute overall AYI as weighted sum of dimension scores</li><li>Rank countries from highest to lowest AYI score</li>'),
+  meth('methodology.ayi.calculation', 'ayi', 'RICH_TEXT', '<li>Where an indicator has only separate figures for young women and young men, use their simple average</li><li>Normalize all indicators to 0-100 scale using min-max normalization</li><li>Calculate dimension scores as weighted average of constituent indicators</li><li>Compute overall AYI as the equal-weight average of the Education, Employment, Health and Entrepreneurship scores; Demography, Peace &amp; Security and Access to Justice are shown but not yet counted, as too few countries have data for them</li><li>Rank countries with all four of those dimensions scored, from highest to lowest AYI score</li>'),
 
   meth('methodology.updates.title', 'updates', 'TEXT', 'Data Updates & Version Control'),
   meth(

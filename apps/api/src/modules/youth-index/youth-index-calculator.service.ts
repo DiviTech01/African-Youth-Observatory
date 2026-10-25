@@ -1,11 +1,13 @@
 /**
- * African Youth Index — Computation Engine (7-theme, coverage-floored)
+ * African Youth Index — Computation Engine (7 themes scored, 4 ranked)
  *
  * METHODOLOGY:
- *   Composite index over 7 user-mandated themes with weights from DB (Theme.weight):
+ *   All 7 user-mandated themes are scored, with weights from DB (Theme.weight):
  *     Youth Demography & Participation 20% | Education 15% | Employment 15% |
  *     Health 15% | Entrepreneurship 15% | Peace & Security 10% | Access to Justice 10%
- *   Sub-weights per theme live in ./youth-index-weights.ts.
+ *   The overall score and rank use only RANKED_THEMES (Education, Employment,
+ *   Health, Entrepreneurship), so every ranked country is compared on the same
+ *   themes. Sub-weights per theme live in ./youth-index-weights.ts.
  *
  * INPUT:
  *   TOTAL-gender values for the year, read from each indicator's canonical age
@@ -28,10 +30,10 @@
  *   Within a theme, weight is redistributed over the indicators that have data
  *   -- but only if they cover MIN_DIMENSION_COVERAGE of the theme's weight and
  *   number at least MIN_DIMENSION_INDICATORS. Otherwise the theme is null.
- *   A missing theme is NOT filled (no regional average, no 50). The overall
- *   score is the weighted mean over scored themes, and a country whose scored
- *   themes carry less than MIN_INDEX_COVERAGE of the total weight is not scored
- *   or ranked at all.
+ *   A missing theme is NOT filled (no regional average, no 50). A country is
+ *   ranked only when every RANKED_THEMES theme is scored; its overall score is
+ *   their weighted mean. Otherwise it is not scored or ranked at all.
+ *   _meta.indexCoverage still reports the share of all 7 themes' weight scored.
  *
  * STORAGE:
  *   Per-theme scores (number | null) in YouthIndexScore.dimensionScores, keyed
@@ -49,11 +51,11 @@ import {
   YOUTH_POPULATION_SLUG,
   MIN_DIMENSION_COVERAGE,
   MIN_DIMENSION_INDICATORS,
-  MIN_INDEX_COVERAGE,
+  RANKED_THEMES,
 } from './youth-index-weights';
 
 /** Version tag written into _meta so readers can tell which method made a row. */
-export const INDEX_METHOD = 'coverage-floor-2026-10';
+export const INDEX_METHOD = 'core-themes-2026-10';
 
 /**
  * How a dimension score came to exist.
@@ -84,7 +86,7 @@ export interface CountryYearScore {
   coverage: Record<string, DimensionCoverage>;
   /** Share of total theme weight carried by scored dimensions (0-1). */
   indexCoverage: number;
-  /** Null when the country is below MIN_INDEX_COVERAGE. */
+  /** Null unless every RANKED_THEMES theme is scored. */
   overallScore: number | null;
   /** Index indicators scored from the women/men mean (no TOTAL value). */
   mfAveraged: string[];
@@ -199,6 +201,7 @@ export function scoreYear(input: ScoreYearInput): { scored: CountryYearScore[]; 
     const coverage: Record<string, DimensionCoverage> = {};
     let weightedOverall = 0;
     let scoredThemeWeight = 0;
+    let rankedWeight = 0;
     const mfAveraged: string[] = [];
 
     for (const [themeSlug, subs] of Object.entries(SUB_WEIGHTS)) {
@@ -232,15 +235,17 @@ export function scoreYear(input: ScoreYearInput): { scored: CountryYearScore[]; 
       };
       if (enough) {
         const w = themeWeight.get(themeSlug) ?? 0;
-        weightedOverall += (dimensions[themeSlug] as number) * w;
         scoredThemeWeight += w;
+        if (RANKED_THEMES.includes(themeSlug)) {
+          weightedOverall += (dimensions[themeSlug] as number) * w;
+          rankedWeight += w;
+        }
       }
     }
 
     const indexCoverage = totalThemeWeight > 0 ? scoredThemeWeight / totalThemeWeight : 0;
-    const overallScore = indexCoverage >= MIN_INDEX_COVERAGE - 1e-9 && scoredThemeWeight > 0
-      ? round2(weightedOverall / scoredThemeWeight)
-      : null;
+    const allRanked = RANKED_THEMES.every((t) => dimensions[t] !== null && dimensions[t] !== undefined);
+    const overallScore = allRanked && rankedWeight > 0 ? round2(weightedOverall / rankedWeight) : null;
 
     return {
       countryId: country.id,

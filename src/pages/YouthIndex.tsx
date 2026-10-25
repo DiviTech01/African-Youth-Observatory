@@ -25,15 +25,17 @@ import { Content } from '@/components/cms';
 // and ranks were never rendered -- only a country->region lookup was derived
 // from it -- but it read exactly like live data to anyone opening this file,
 // and the API already returns `region` on every ranking row.
-// The seven AYO dimensions — match the slugs in apps/api Theme table.
+// The seven AYO dimensions — match the slugs in apps/api Theme table. Only the
+// four with a weight make up the overall score and rank (RANKED_THEMES in
+// apps/api youth-index-weights.ts); the other three are shown, not counted.
 const dimensions = [
-  { key: "demography",       label: "Demography",      weight: "20%", color: "text-blue-400" },
-  { key: "education",        label: "Education",       weight: "15%", color: "text-violet-400" },
-  { key: "employment",       label: "Employment",      weight: "15%", color: "text-orange-400" },
-  { key: "health",           label: "Health",          weight: "15%", color: "text-red-400" },
-  { key: "entrepreneurship", label: "Entrepreneurship", weight: "15%", color: "text-cyan-400" },
-  { key: "peaceSecurity",    label: "Peace",           weight: "10%", color: "text-green-400" },
-  { key: "accessToJustice",  label: "Justice",         weight: "10%", color: "text-purple-400" },
+  { key: "demography",       label: "Demography",      weight: null,  color: "text-blue-400" },
+  { key: "education",        label: "Education",       weight: "25%", color: "text-violet-400" },
+  { key: "employment",       label: "Employment",      weight: "25%", color: "text-orange-400" },
+  { key: "health",           label: "Health",          weight: "25%", color: "text-red-400" },
+  { key: "entrepreneurship", label: "Entrepreneurship", weight: "25%", color: "text-cyan-400" },
+  { key: "peaceSecurity",    label: "Peace",           weight: null,  color: "text-green-400" },
+  { key: "accessToJustice",  label: "Justice",         weight: null,  color: "text-purple-400" },
 ];
 
 type SortField = 'rank' | 'country' | 'score' | 'change' | 'demography' | 'education' | 'employment' | 'health' | 'entrepreneurship' | 'peaceSecurity' | 'accessToJustice';
@@ -295,7 +297,7 @@ const YouthIndex = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className={`font-semibold ${dim.color}`}>{dim.label}</span>
-                    <Badge variant="secondary" className="text-xs">{dim.weight}</Badge>
+                    <Badge variant="secondary" className="text-xs">{dim.weight ?? t('youthIndex.notInRank')}</Badge>
                   </div>
                   <p className="text-xs text-gray-400">
                     Measures youth outcomes in {dim.label.toLowerCase()}
@@ -656,7 +658,7 @@ const YouthIndex = () => {
               <Content
                 as="span"
                 id="youth_index.about.body"
-                fallback="The African Youth Index is a composite indicator that ranks African Union member states by youth development outcomes. Scores range from 0–100 and are computed each year across seven weighted thematic dimensions: Youth Demography & Participation (20%), Education (15%), Employment (15%), Health (15%), Entrepreneurship (15%), Peace & Security (10%), and Access to Justice (10%). Indicator values are min–max normalized per year (headcounts per 100,000 youth), then combined with these weights. A dimension is scored only when at least half of its indicator weight has data; otherwise it is shown as insufficient data, never estimated. A country is ranked only when at least half of the index weight is measured; countries below that are listed as not ranked. Where an indicator was published only as separate figures for young women and young men, the index uses the simple average of the two."
+                fallback="The African Youth Index is a composite indicator that ranks African Union member states by youth development outcomes. Scores range from 0–100 and are computed each year. Seven thematic dimensions are scored: Youth Demography & Participation, Education, Employment, Health, Entrepreneurship, Peace & Security, and Access to Justice. The overall score and rank use four of them, weighted equally: Education, Employment, Health and Entrepreneurship, so every ranked country is compared on the same themes. The other three are shown but not yet counted, because too few countries have data for them. Indicator values are min–max normalized per year (headcounts per 100,000 youth). A dimension is scored only when at least half of its indicator weight has data; otherwise it is shown as insufficient data, never estimated. A country is ranked only when all four ranked dimensions are scored; the others are listed as not ranked. Where an indicator was published only as separate figures for young women and young men, the index uses the simple average of the two."
               />
               <a href="/resources/methodology" className="text-primary hover:underline ml-1">
                 <Content as="span" id="youth_index.about.methodology_link" fallback="View full methodology" />

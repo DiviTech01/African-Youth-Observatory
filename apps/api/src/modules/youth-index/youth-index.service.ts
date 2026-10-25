@@ -18,9 +18,10 @@ const THEME_KEYS = [
 ] as const;
 
 const METHODOLOGY =
-  'Min-max normalization with weighted dimensional scoring (7 themes). ' +
-  'Dimensions below the coverage floor are null (insufficient data), never imputed; ' +
-  'countries below the floor are not ranked. Where an indicator has no combined (TOTAL) value but has both ' +
+  'Min-max normalization; 7 themes scored, overall score and rank are the equal-weight mean of ' +
+  'Education, Employment, Health and Entrepreneurship (Demography, Peace & Security and Access to ' +
+  'Justice are shown but not counted). Dimensions below the coverage floor are null (insufficient ' +
+  'data), never imputed; countries without all four ranked themes are not ranked. Where an indicator has no combined (TOTAL) value but has both ' +
   'a value for women and one for men, their average is used and listed in mfAveraged.';
 
 function asDims(json: unknown): Record<string, unknown> {
