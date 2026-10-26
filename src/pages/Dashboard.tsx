@@ -106,7 +106,7 @@ const defaultWidgets: Widget[] = [
     id: 'w1',
     title: 'Cross-Dimensional Profile',
     chartType: 'radar',
-    indicator: 'Youth Index dimensions',
+    indicator: 'AYEMI dimensions',
     countries: RADAR_COUNTRIES,
   },
   {
@@ -362,7 +362,7 @@ function WidgetChart({ widget }: { widget: Widget }) {
             {positive ? '+' : ''}{change} rank change
           </span>
         ) : (
-          <span className="text-sm font-medium text-gray-500">Youth Index score</span>
+          <span className="text-sm font-medium text-gray-500">AYEMI score</span>
         )}
       </div>
     );

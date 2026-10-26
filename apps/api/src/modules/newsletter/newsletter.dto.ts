@@ -29,7 +29,7 @@ export class SubscribeDto {
 
 /** One downloadable resource linked at the bottom of a campaign email. */
 export class AttachmentDto {
-  @ApiProperty({ example: 'African Youth Index 2026 (PDF)' })
+  @ApiProperty({ example: 'AYEMI 2026 (PDF)' })
   @IsString()
   @MinLength(1)
   @MaxLength(120)

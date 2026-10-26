@@ -145,7 +145,7 @@ const YouthIndex = () => {
     guard(
       () => toast({
         title: 'Export coming soon',
-        description: 'Bulk export of the Youth Index will be available shortly.',
+        description: 'Bulk export of the AYEMI will be available shortly.',
       }),
       'export',
     );
@@ -653,12 +653,12 @@ const YouthIndex = () => {
 
           {/* Methodology Note */}
           <div className="mt-8 p-4 bg-white/[0.03] border border-gray-800 rounded-2xl">
-            <Content as="h3" id="youth_index.about.title" fallback="About the African Youth Index" className="font-bold mb-2" />
+            <Content as="h3" id="youth_index.about.title" fallback="About the African Youth Empowerment and Monitoring Index" className="font-bold mb-2" />
             <p className="text-sm text-gray-400">
               <Content
                 as="span"
                 id="youth_index.about.body"
-                fallback="The African Youth Index is a composite indicator that ranks African Union member states by youth development outcomes. Scores range from 0–100 and are computed each year. Seven thematic dimensions are scored: Youth Demography & Participation, Education, Employment, Health, Entrepreneurship, Peace & Security, and Access to Justice. The overall score and rank use four of them, weighted equally: Education, Employment, Health and Entrepreneurship, so every ranked country is compared on the same themes. The other three are shown but not yet counted, because too few countries have data for them. Indicator values are min–max normalized per year (headcounts per 100,000 youth). A dimension is scored only when at least half of its indicator weight has data; otherwise it is shown as insufficient data, never estimated. A country is ranked only when all four ranked dimensions are scored; the others are listed as not ranked. Where an indicator was published only as separate figures for young women and young men, the index uses the simple average of the two."
+                fallback="The African Youth Empowerment and Monitoring Index (AYEMI) is a composite indicator that ranks African Union member states by youth development outcomes. Scores range from 0–100 and are computed each year. Seven thematic dimensions are scored: Youth Demography & Participation, Education, Employment, Health, Entrepreneurship, Peace & Security, and Access to Justice. The overall score and rank use four of them, weighted equally: Education, Employment, Health and Entrepreneurship, so every ranked country is compared on the same themes. The other three are shown but not yet counted, because too few countries have data for them. Indicator values are min–max normalized per year (headcounts per 100,000 youth). A dimension is scored only when at least half of its indicator weight has data; otherwise it is shown as insufficient data, never estimated. A country is ranked only when all four ranked dimensions are scored; the others are listed as not ranked. Where an indicator was published only as separate figures for young women and young men, the index uses the simple average of the two."
               />
               <a href="/resources/methodology" className="text-primary hover:underline ml-1">
                 <Content as="span" id="youth_index.about.methodology_link" fallback="View full methodology" />

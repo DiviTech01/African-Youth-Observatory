@@ -255,7 +255,7 @@ const CountrySpotlightWidget: React.FC<{ data: any }> = ({ data }) => {
         </div>
         <div className="text-center p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
           <div className="text-2xl font-bold text-green-600">{data.overallScore == null ? '—' : data.overallScore.toFixed(1)}</div>
-          <div className="text-xs text-muted-foreground">Youth Index</div>
+          <div className="text-xs text-muted-foreground">AYEMI</div>
         </div>
       </div>
       

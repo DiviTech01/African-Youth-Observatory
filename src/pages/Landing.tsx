@@ -130,7 +130,7 @@ const FEATURES = [
   {
     slug: 'card4',
     icon: Users,
-    title: 'Youth Index (AYI)',
+    title: 'Youth Empowerment & Monitoring Index (AYEMI)',
     description: 'Track country rankings across education, health, and economic dimensions.',
   },
   {
@@ -258,7 +258,7 @@ const Landing = () => {
               </Link>
               <Link to="/youth-index">
                 <Button variant="outline" size="lg" className="w-full sm:w-auto text-base gap-2 px-8">
-                  <Content as="span" id="landing.hero.cta_secondary" fallback="View Youth Index" />
+                  <Content as="span" id="landing.hero.cta_secondary" fallback="View AYEMI" />
                 </Button>
               </Link>
             </motion.div>
@@ -387,7 +387,7 @@ const Landing = () => {
             <NewsletterSignup
               source="landing-page"
               heading="Get monthly youth-data briefings"
-              subtitle="Be the first to know when new countries publish AYIMS reports, when the Youth Index updates, and when policy monitor flags new reforms across the continent."
+              subtitle="Be the first to know when new countries publish AYIMS reports, when the AYEMI updates, and when policy monitor flags new reforms across the continent."
             />
           </div>
         </div>

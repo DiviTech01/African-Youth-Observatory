@@ -30,7 +30,7 @@ export class TopPerformersDto {
 }
 
 export class ComputeYearDto {
-  @ApiProperty({ description: 'Year to compute the Youth Index for', example: 2023 })
+  @ApiProperty({ description: 'Year to compute the AYEMI for', example: 2023 })
   @Type(() => Number)
   @IsInt()
   @Min(2000)

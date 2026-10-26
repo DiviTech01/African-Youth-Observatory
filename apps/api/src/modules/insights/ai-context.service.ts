@@ -225,7 +225,7 @@ ${regionalPeers}
       orderBy: { year: 'desc' },
       select: { year: true },
     });
-    if (!latestYear) return 'No Youth Index data available.';
+    if (!latestYear) return 'No AYEMI data available.';
 
     const rankings = await this.prisma.youthIndexScore.findMany({
       where: { year: latestYear.year },
@@ -233,7 +233,7 @@ ${regionalPeers}
       orderBy: { rank: 'asc' },
     });
 
-    return `Youth Index Rankings (${latestYear.year}):\n` + rankings.map(r =>
+    return `AYEMI Rankings (${latestYear.year}):\n` + rankings.map(r =>
       `#${r.rank} ${r.country.name} (${r.country.isoCode3}) — Score: ${r.overallScore.toFixed(1)} | ${formatDimensions(r.dimensionScores)} | Tier: ${r.tier} | Region: ${r.country.region}`
     ).join('\n');
   }
@@ -305,7 +305,7 @@ ${regionalPeers}
       orderBy: { year: 'desc' },
       take: 5,
     });
-    if (!scores.length) return 'No Youth Index data.';
+    if (!scores.length) return 'No AYEMI data.';
     return scores.map(s =>
       `${s.year}: Score ${s.overallScore.toFixed(1)} (Rank #${s.rank}, ${s.tier}) | ${formatDimensions(s.dimensionScores)}`
     ).join('\n');

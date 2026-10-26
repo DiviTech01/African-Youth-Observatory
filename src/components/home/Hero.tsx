@@ -71,7 +71,7 @@ const Hero = () => {
               <Link to="/youth-index">
                 <Button variant="outline" size="lg" className="w-full sm:w-auto gap-2">
                   <TrendingUp className="h-4 w-4" />
-                  Youth Index
+                  AYEMI
                 </Button>
               </Link>
               <Link to="/compare">

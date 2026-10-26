@@ -54,7 +54,7 @@ export const LiveDataTicker: React.FC<LiveDataTickerProps> = ({ speed = 30 }) =>
     if (scored.length > 0) {
       const top = [...scored].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999))[0];
       const name = top.countryName ?? top.country?.name ?? '';
-      out.push({ label: 'Top Youth Index', value: `${top.flagEmoji ?? ''} ${name} · ${top.overallScore.toFixed(1)}`.trim() });
+      out.push({ label: 'Top AYEMI', value: `${top.flagEmoji ?? ''} ${name} · ${top.overallScore.toFixed(1)}`.trim() });
       const avg = scored.reduce((s, r) => s + r.overallScore, 0) / scored.length;
       out.push({ label: 'Continental avg', value: avg.toFixed(1) });
 

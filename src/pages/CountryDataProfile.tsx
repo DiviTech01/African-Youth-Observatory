@@ -58,7 +58,7 @@ const CountryDataProfile: React.FC = () => {
         className="mb-4 md:mb-6 gap-2 text-sm border-gray-800"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to Youth Index
+        Back to AYEMI
       </Button>
       <CountryProfile country={match.country} />
     </div>

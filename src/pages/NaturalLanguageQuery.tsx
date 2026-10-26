@@ -80,7 +80,7 @@ const storageKeyFor = (userId: string | null | undefined) =>
   userId ? `${STORAGE_KEY_BASE}_${userId}` : `${STORAGE_KEY_BASE}_guest`;
 
 const suggestedQuestions = [
-  'Which 5 African countries have the highest Youth Index scores and why?',
+  'Which 5 African countries have the highest AYEMI scores and why?',
   'Compare Nigeria and Kenya across education, employment, and health indicators',
   'What are the biggest data gaps in Southern Africa?',
   'Show me youth unemployment trends in West Africa from 2018 to 2024',

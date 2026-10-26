@@ -91,7 +91,7 @@ async function main() {
   // (a) the platform is moving to real uploads (AYIMS template + Policies DB),
   // (b) the loop saturates the Supabase pooler with 36k+ sequential upserts.
   if (process.env.SEED_MOCK_VALUES !== 'true') {
-    console.log('  ⏭️  Skipping sample indicator values + Youth Index scores (set SEED_MOCK_VALUES=true to generate them).');
+    console.log('  ⏭️  Skipping sample indicator values + AYEMI scores (set SEED_MOCK_VALUES=true to generate them).');
     console.log('🌱 Done. Catalog seeded — upload real data via the Contributor Hub.');
     return;
   }
@@ -181,7 +181,7 @@ async function main() {
   console.log(`  ✅ Created ${valueCount} indicator values`);
 
   // 5. Generate youth index scores
-  console.log('  🏆 Generating Youth Index scores...');
+  console.log('  🏆 Generating AYEMI scores...');
   for (const year of [2022, 2023, 2024]) {
     const scores: { countryId: string; score: number }[] = [];
 
@@ -302,14 +302,14 @@ async function main() {
         {
           id: 'w-overview-3',
           type: 'bar_chart',
-          title: 'Top 10 Countries by Youth Index Score',
+          title: 'Top 10 Countries by AYEMI Score',
           config: { dataSource: 'youth-index-rankings', limit: 10, sortOrder: 'desc' },
           position: { x: 0, y: 1, w: 1, h: 1 },
         },
         {
           id: 'w-overview-4',
           type: 'line_chart',
-          title: 'Continental Average Youth Index Over Time',
+          title: 'Continental Average AYEMI Over Time',
           config: { dataSource: 'youth-index-trend', yearStart: 2010, yearEnd: 2024 },
           position: { x: 0, y: 2, w: 2, h: 1 },
         },
@@ -331,7 +331,7 @@ async function main() {
         {
           id: 'w-deep-2',
           type: 'stat_card',
-          title: 'Youth Index Rank',
+          title: 'AYEMI Rank',
           config: { dataSource: 'country-stats', metric: 'youthIndexRank' },
           position: { x: 1, y: 0, w: 1, h: 1 },
         },

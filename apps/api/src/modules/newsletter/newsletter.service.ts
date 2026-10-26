@@ -606,7 +606,7 @@ export class NewsletterService {
         take: 5,
         include: { country: { select: { name: true } } },
       });
-      ctx += `\nLatest Youth Index year: ${latest.year}.\nTop 5 ranked countries:\n`;
+      ctx += `\nLatest AYEMI year: ${latest.year}.\nTop 5 ranked countries:\n`;
       for (const t of top) {
         const d = (t.dimensionScores && typeof t.dimensionScores === 'object')
           ? (t.dimensionScores as Record<string, number>)
@@ -629,7 +629,7 @@ export class NewsletterService {
         }
       }
     } else {
-      ctx += `\nNo Youth Index data computed yet — keep the briefing forward-looking and brief.\n`;
+      ctx += `\nNo AYEMI data computed yet — keep the briefing forward-looking and brief.\n`;
     }
     return ctx;
   }
@@ -691,7 +691,7 @@ export class NewsletterService {
         include: { country: { select: { name: true, flagEmoji: true } } },
       });
       if (top.length) {
-        html += `<h3>Top-ranked countries — Youth Index ${latest.year}</h3><ul>`;
+        html += `<h3>Top-ranked countries — AYEMI ${latest.year}</h3><ul>`;
         for (const t of top) {
           html += `<li><strong>#${t.rank}</strong> ${t.country?.flagEmoji ?? ''} ${t.country?.name ?? 'Unknown'} — ${t.overallScore.toFixed(1)}</li>`;
         }

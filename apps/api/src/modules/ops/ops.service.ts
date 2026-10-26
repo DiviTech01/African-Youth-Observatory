@@ -590,7 +590,7 @@ export class OpsService {
         `${dataPoints.toLocaleString('en-US')} youth data points across ${countries} countries, ` +
         `${indicators} indicators and ${themes} themes, covering ` +
         `${yearRange._min.year}–${yearRange._max.year}. ` +
-        `${indexedCountries.length} countries have a Youth Index score.`,
+        `${indexedCountries.length} countries have an AYEMI score.`,
       asOf: new Date().toISOString(),
     };
 

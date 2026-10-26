@@ -141,7 +141,7 @@ const AyimsFlow: React.FC<AyimsFlowProps> = ({ file, onDone }) => {
             {commitResult.inserted} values inserted · {commitResult.skipped} skipped · {commitResult.errors} errors
           </p>
           <p className="text-xs text-gray-500 mt-2">
-            Duration: {commitResult.duration}ms — every page tied to these indicators (Themes, Compare, Youth Index, country profile) now reflects the new data.
+            Duration: {commitResult.duration}ms — every page tied to these indicators (Themes, Compare, AYEMI, country profile) now reflects the new data.
           </p>
           <Button variant="outline" className="mt-4" onClick={onDone}>Upload another file</Button>
         </CardContent>

@@ -839,9 +839,9 @@ Regions: NORTH_AFRICA, WEST_AFRICA, CENTRAL_AFRICA, EAST_AFRICA, SOUTHERN_AFRICA
 
     const lines = scores.map((s) => `- **${s.country.name}** — rank ${s.rank} of ${total}, score ${s.overallScore.toFixed(1)}/100 (${s.tier.toLowerCase()} tier)`);
     const lead = parsed.countries.length > 0
-      ? `African Youth Index ${latest.year}:`
-      : `African Youth Index ${latest.year} — ${parsed.sortOrder === 'asc' ? 'lowest' : 'highest'}-ranked ${scores.length}${parsed.regions[0] ? ` in ${REGION_LABEL[parsed.regions[0]]}` : ''}:`;
-    const answer = `${lead}\n\n${lines.join('\n')}\n\nSource: African Youth Index (AYO), ${latest.year}. See the **Youth Index** page for each country's dimension scores.`;
+      ? `AYEMI ${latest.year}:`
+      : `AYEMI ${latest.year} — ${parsed.sortOrder === 'asc' ? 'lowest' : 'highest'}-ranked ${scores.length}${parsed.regions[0] ? ` in ${REGION_LABEL[parsed.regions[0]]}` : ''}:`;
+    const answer = `${lead}\n\n${lines.join('\n')}\n\nSource: AYEMI (AYO), ${latest.year}. See the **AYEMI** page for each country's dimension scores.`;
 
     return {
       data: scores.map((s) => ({ rank: s.rank, country: s.country.name, score: s.overallScore, tier: s.tier, year: latest.year })),
@@ -850,7 +850,7 @@ Regions: NORTH_AFRICA, WEST_AFRICA, CENTRAL_AFRICA, EAST_AFRICA, SOUTHERN_AFRICA
         scores.length > 1
           ? {
               type: 'bar_chart',
-              title: `African Youth Index score, ${latest.year}`,
+              title: `AYEMI score, ${latest.year}`,
               data: scores.map((s) => ({ name: s.country.name, value: round(s.overallScore) })),
               xAxis: 'Country',
               yAxis: 'Score /100',
@@ -865,7 +865,7 @@ Regions: NORTH_AFRICA, WEST_AFRICA, CENTRAL_AFRICA, EAST_AFRICA, SOUTHERN_AFRICA
     return (
       `I couldn't find data on ${what}${where} on the platform. ` +
       'I can answer questions about youth unemployment, literacy, school enrolment, population, HIV prevalence, ' +
-      'labour-force participation, internet access and the Youth Index — for example ' +
+      'labour-force participation, internet access and the AYEMI — for example ' +
       '"What is youth unemployment in Nigeria?", "Compare literacy in Kenya and Ghana" or ' +
       '"Top 5 countries by secondary enrolment".'
     );
@@ -910,7 +910,7 @@ Regions: NORTH_AFRICA, WEST_AFRICA, CENTRAL_AFRICA, EAST_AFRICA, SOUTHERN_AFRICA
       followUps.push(`Top 5 African countries by ${topic}`);
     }
     if (!parsed.youthIndex) {
-      followUps.push('Which 5 African countries have the highest Youth Index scores?');
+      followUps.push('Which 5 African countries have the highest AYEMI scores?');
     }
     for (const extra of [
       'Compare youth literacy in Kenya, Nigeria and Ghana',

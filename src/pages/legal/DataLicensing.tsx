@@ -13,7 +13,7 @@ const SECTIONS: LegalSection[] = [
       <>
         <ul>
           <li>
-            <strong>Our own work is CC BY 4.0.</strong> The AYO compilation, the Youth Index, our
+            <strong>Our own work is CC BY 4.0.</strong> The AYO compilation, the AYEMI, our
             country profiles and our written analysis may be reused, including commercially, with
             attribution.
           </li>
@@ -53,7 +53,7 @@ const SECTIONS: LegalSection[] = [
         <ul>
           <li>the selection, structure and harmonisation of indicators — the compilation itself;</li>
           <li>
-            the Youth Index: its dimensions, weights, normalisation and the scores and ranks it
+            the AYEMI: its dimensions, weights, normalisation and the scores and ranks it
             produces;
           </li>
           <li>our written analysis, country profiles, methodology notes and generated reports;</li>

@@ -36,7 +36,7 @@ const faqPairs: Array<[string, string, string]> = [
   ['platform', 'q4', 'Which countries are covered?'],
   // usage
   ['usage', 'q1', 'How do I search and filter data?'],
-  ['usage', 'q2', 'What is the African Youth Index (AYI)?'],
+  ['usage', 'q2', 'What is the African Youth Empowerment and Monitoring Index (AYEMI)?'],
   ['usage', 'q3', 'Can I download the data?'],
   ['usage', 'q4', 'Can I embed charts in my website or report?'],
   // quality
@@ -60,7 +60,7 @@ const faqAnswers: Record<string, Record<string, string>> = {
   },
   usage: {
     q1: 'Use our Data Explorer to browse data by country, theme (Population, Education, Health, Employment, Entrepreneurship), indicator, year, gender, and age group. The interactive map allows you to click on countries to view their profiles. You can also use the Compare Countries feature to analyze up to 5 countries side by side.',
-    q2: 'The AYI is our flagship composite indicator that ranks all African countries based on youth development outcomes. It combines scores across education, employment, health, and civic engagement to provide a comprehensive measure of how well countries are supporting their youth population. Countries are ranked annually.',
+    q2: 'The AYEMI is our flagship composite indicator that ranks all African countries based on youth development outcomes. It combines scores across education, employment, health, and civic engagement to provide a comprehensive measure of how well countries are supporting their youth population. Countries are ranked annually.',
     q3: 'Yes! All public datasets can be downloaded in multiple formats including CSV, Excel (XLSX), and PDF. Charts can be exported as PNG images. Premium API access provides programmatic access to raw data for advanced users and applications.',
     q4: "Yes, our charts support embedding. Click the 'Embed' button on any visualization to get an embed code. Please ensure you attribute the African Youth Observatory as the source and link back to the original data page.",
   },
@@ -71,7 +71,7 @@ const faqAnswers: Record<string, Record<string, string>> = {
     q4: "Yes, we maintain transparency about data limitations. Common challenges include: varying definitions of 'youth' across countries, limited data from fragile and conflict-affected states, gaps in disaggregated data (by gender, disability, etc.), and lag between data collection and publication. Each indicator page notes specific limitations.",
   },
   access: {
-    q1: 'Yes, core platform features are free for all users. This includes browsing dashboards, viewing visualizations, downloading standard datasets, and accessing the African Youth Index. Premium features (API access, custom dashboards, advanced analytics) require registration or subscription.',
+    q1: 'Yes, core platform features are free for all users. This includes browsing dashboards, viewing visualizations, downloading standard datasets, and accessing the AYEMI. Premium features (API access, custom dashboards, advanced analytics) require registration or subscription.',
     q2: 'No account is needed for basic browsing. However, registered users can: save custom dashboards, set up data alerts, access download history, use the API, and contribute datasets. Registration is free for researchers and institutions.',
     q3: 'Yes! We encourage the use of AYO data for research, policy analysis, and journalism. Please cite the African Youth Observatory as your source and include a link to the specific dataset or page. For academic citations, use our suggested citation format available on each data page.',
     q4: 'We welcome data contributions from national statistical offices, research institutions, and development organizations. Contributors must: register through our Partner Portal, submit datasets with full metadata and methodology, undergo a verification review, and sign a data sharing agreement. Contributors receive attribution and impact metrics.',
@@ -101,7 +101,7 @@ const faqEntries: CmsRegistryEntry[] = [
 
 // ==== GLOSSARY ====
 const glossaryTerms: Array<[string, string, string]> = [
-  ['ayi', 'African Youth Index (AYI)', 'A composite indicator developed by AYO that ranks African countries based on youth development outcomes across education, employment, health, and civic engagement.'],
+  ['ayi', 'African Youth Empowerment and Monitoring Index (AYEMI)', 'A composite indicator developed by AYO that ranks African countries based on youth development outcomes across education, employment, health, and civic engagement.'],
   ['youth', 'Youth', "In the context of AYO, youth refers to individuals aged 15–35, consistent with the African Union definition codified in the African Youth Charter. The UN's narrower 15–24 band remains queryable on Explore for cross-reference."],
   ['neet', 'NEET Rate', 'The share of young people who are Not in Education, Employment, or Training. A key indicator of youth economic exclusion.'],
   ['unemployment', 'Youth Unemployment Rate', 'The percentage of the youth labor force (15–35) that is without work but available and seeking employment.'],
@@ -168,9 +168,9 @@ const methodologyEntries: CmsRegistryEntry[] = [
   meth('methodology.qa.credibility.title', 'qa', 'TEXT', '4. Credibility Scoring'),
   meth('methodology.qa.credibility.body', 'qa', 'RICH_TEXT', 'Assign 1-5 star rating based on source reliability, methodology rigor, and recency.'),
 
-  meth('methodology.ayi.title', 'ayi', 'TEXT', 'African Youth Index Methodology'),
-  meth('methodology.ayi.intro', 'ayi', 'RICH_TEXT', 'The African Youth Index (AYI) is a composite indicator developed by AYO to provide a comprehensive measure of youth development across African countries.'),
-  meth('methodology.ayi.calculation', 'ayi', 'RICH_TEXT', '<li>Where an indicator has only separate figures for young women and young men, use their simple average</li><li>Normalize all indicators to 0-100 scale using min-max normalization</li><li>Calculate dimension scores as weighted average of constituent indicators</li><li>Compute overall AYI as the equal-weight average of the Education, Employment, Health and Entrepreneurship scores; Demography, Peace &amp; Security and Access to Justice are shown but not yet counted, as too few countries have data for them</li><li>Rank countries with all four of those dimensions scored, from highest to lowest AYI score</li>'),
+  meth('methodology.ayi.title', 'ayi', 'TEXT', 'AYEMI Methodology'),
+  meth('methodology.ayi.intro', 'ayi', 'RICH_TEXT', 'The African Youth Empowerment and Monitoring Index (AYEMI) is a composite indicator developed by AYO to provide a comprehensive measure of youth development across African countries.'),
+  meth('methodology.ayi.calculation', 'ayi', 'RICH_TEXT', '<li>Where an indicator has only separate figures for young women and young men, use their simple average</li><li>Normalize all indicators to 0-100 scale using min-max normalization</li><li>Calculate dimension scores as weighted average of constituent indicators</li><li>Compute overall AYEMI as the equal-weight average of the Education, Employment, Health and Entrepreneurship scores; Demography, Peace &amp; Security and Access to Justice are shown but not yet counted, as too few countries have data for them</li><li>Rank countries with all four of those dimensions scored, from highest to lowest AYEMI score</li>'),
 
   meth('methodology.updates.title', 'updates', 'TEXT', 'Data Updates & Version Control'),
   meth(

@@ -496,7 +496,7 @@ const CountryProfile = ({ country }: CountryProfileProps) => {
                 <p className="text-muted-foreground mb-6">
                   {overrides?.ayemiScore != null ? (
                     <>
-                      {country} has an African Youth Index score of{' '}
+                      {country} has an AYEMI score of{' '}
                       <span className="font-medium text-foreground">{overrides.ayemiScore}</span>
                       {overrides.ayemiTier ? ` (${overrides.ayemiTier})` : ''}. The figures below are drawn
                       directly from data uploaded to the African Youth Database; where a value hasn&apos;t been
@@ -851,7 +851,7 @@ const POLICY_COMPONENT_LABELS: [keyof PolicyComponents, string][] = [
   ['policyCurrency', 'Policy currency'],
   ['afcftaProtocol', 'AfCFTA Women & Youth Protocol'],
   ['policyStatus', 'Policy status'],
-  ['youthIndexPerformance', 'Youth Index performance'],
+  ['youthIndexPerformance', 'AYEMI performance'],
   ['dataAvailability', 'Data availability'],
   ['aycPolicyIndex', 'AYC policy index'],
 ];

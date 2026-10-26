@@ -88,7 +88,7 @@ const Methodology = () => {
                       <p>
                         Our canonical youth band is <strong>15–35</strong>, consistent with the African Union (AU)
                         definition and the African Youth Charter. All headline statistics across the platform —
-                        Key Statistics on the landing page, country profiles, the Youth Index, theme rollups,
+                        Key Statistics on the landing page, country profiles, the AYEMI, theme rollups,
                         Compare, and Explore — query <strong>ageGroup = 15–35</strong> by default.
                         The UN's narrower 15–24 band remains queryable on the Explore page for cross-reference,
                         and disaggregated 5-year brackets (15–19, 20–24, 25–29, 30–35) are exposed where source data
@@ -148,19 +148,19 @@ const Methodology = () => {
               </CardContent>
             </Card>
 
-            {/* African Youth Index */}
+            {/* AYEMI */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-primary" />
-                  <Content as="span" id="methodology.ayi.title" fallback="African Youth Index Methodology" />
+                  <Content as="span" id="methodology.ayi.title" fallback="AYEMI Methodology" />
                 </CardTitle>
               </CardHeader>
               <CardContent className="prose prose-sm max-w-none text-muted-foreground">
                 <Content
                   as="p"
                   id="methodology.ayi.intro"
-                  fallback="The African Youth Index (AYI) is a composite indicator developed by AYO to provide a comprehensive measure of youth development across African countries."
+                  fallback="The African Youth Empowerment and Monitoring Index (AYEMI) is a composite indicator developed by AYO to provide a comprehensive measure of youth development across African countries."
                 />
                 <h4 className="text-foreground font-semibold mt-4">Dimensions & Indicators</h4>
                 <div className="not-prose overflow-x-auto">
@@ -221,8 +221,8 @@ const Methodology = () => {
                       <li>Where an indicator has only separate figures for young women and young men, use their simple average</li>
                       <li>Normalize all indicators to 0-100 scale using min-max normalization</li>
                       <li>Calculate dimension scores as weighted average of constituent indicators</li>
-                      <li>Compute overall AYI as the equal-weight average of the Education, Employment, Health and Entrepreneurship scores; Demography, Peace &amp; Security and Access to Justice are shown but not yet counted, as too few countries have data for them</li>
-                      <li>Rank countries with all four of those dimensions scored, from highest to lowest AYI score</li>
+                      <li>Compute overall AYEMI as the equal-weight average of the Education, Employment, Health and Entrepreneurship scores; Demography, Peace &amp; Security and Access to Justice are shown but not yet counted, as too few countries have data for them</li>
+                      <li>Rank countries with all four of those dimensions scored, from highest to lowest AYEMI score</li>
                     </>
                   }
                   className="space-y-1"

@@ -50,7 +50,7 @@ const SaaSHero = React.memo(() => {
                 size="lg"
                 className="w-full sm:w-auto tracking-tight border-gray-700 text-gray-300 hover:text-white hover:border-gray-500"
               >
-                View Youth Index
+                View AYEMI
               </Button>
             </Link>
           </div>

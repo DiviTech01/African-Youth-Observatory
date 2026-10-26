@@ -70,7 +70,7 @@ const changelog: ChangelogEntry[] = [
     description: [
       'Data Explorer with advanced filtering and search',
       'Country Profiles for all 54 African nations',
-      'African Youth Index (AYI) rankings and scoring',
+      'African Youth Empowerment and Monitoring Index (AYEMI) rankings and scoring',
       'Light and dark mode theme support',
     ],
   },

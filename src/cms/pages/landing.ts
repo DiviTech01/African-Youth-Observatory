@@ -31,7 +31,7 @@ export const landingEntries: CmsRegistryEntry[] = [
   { key: 'landing.features.card2.description', page: PAGE, section: 'features', contentType: 'RICH_TEXT', defaultContent: 'Deep dive into trends with powerful charts and comparative analysis.' },
   { key: 'landing.features.card3.title', page: PAGE, section: 'features', contentType: 'TEXT', defaultContent: 'Data Export' },
   { key: 'landing.features.card3.description', page: PAGE, section: 'features', contentType: 'RICH_TEXT', defaultContent: 'Download datasets in multiple formats for your research needs.' },
-  { key: 'landing.features.card4.title', page: PAGE, section: 'features', contentType: 'TEXT', defaultContent: 'Youth Index (AYI)' },
+  { key: 'landing.features.card4.title', page: PAGE, section: 'features', contentType: 'TEXT', defaultContent: 'Youth Empowerment & Monitoring Index (AYEMI)' },
   { key: 'landing.features.card4.description', page: PAGE, section: 'features', contentType: 'RICH_TEXT', defaultContent: 'Track country rankings across education, health, and economic dimensions.' },
   { key: 'landing.features.card5.title', page: PAGE, section: 'features', contentType: 'TEXT', defaultContent: 'Trend Analysis' },
   { key: 'landing.features.card5.description', page: PAGE, section: 'features', contentType: 'RICH_TEXT', defaultContent: 'Monitor changes over time with historical data spanning over a decade.' },

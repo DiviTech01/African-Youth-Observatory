@@ -824,20 +824,20 @@ export class InsightReportsService {
         : null;
 
       const summary = score
-        ? `${countryName ?? 'This country'} scores ${score.overallScore.toFixed(1)} on the African Youth Index for ${useYear}, ranking #${score.rank} continentally in the ${formatTierLabel(score.tier)} tier.`
-        : `No African Youth Index score is available for ${countryName ?? 'this country'}${useYear ? ` in ${useYear}` : ''}. This summary reports only what the database holds.`;
+        ? `${countryName ?? 'This country'} scores ${score.overallScore.toFixed(1)} on the AYEMI for ${useYear}, ranking #${score.rank} continentally in the ${formatTierLabel(score.tier)} tier.`
+        : `No AYEMI score is available for ${countryName ?? 'this country'}${useYear ? ` in ${useYear}` : ''}. This summary reports only what the database holds.`;
 
       if (score) {
         sections.push({
-          heading: `Youth Index — ${useYear}`,
+          heading: `AYEMI — ${useYear}`,
           blocks: [
-            { type: 'stat', label: 'Overall score', value: score.overallScore.toFixed(1), context: `African Youth Index, ${useYear}` },
+            { type: 'stat', label: 'Overall score', value: score.overallScore.toFixed(1), context: `AYEMI, ${useYear}` },
             { type: 'stat', label: 'Continental rank', value: `#${score.rank}`, context: 'Out of all scored countries' },
             { type: 'stat', label: 'Tier', value: formatTierLabel(score.tier) },
           ],
         });
         citations.push({
-          label: 'African Youth Index',
+          label: 'AYEMI',
           detail: `${countryName ?? 'Country'} overall score, rank and tier, ${useYear}`,
         });
 
@@ -856,12 +856,12 @@ export class InsightReportsService {
                 type: 'table',
                 columns: ['Dimension', 'Score'],
                 rows,
-                caption: `African Youth Index dimension breakdown, ${useYear}`,
+                caption: `AYEMI dimension breakdown, ${useYear}`,
               },
             ],
           });
           citations.push({
-            label: 'African Youth Index — dimensions',
+            label: 'AYEMI — dimensions',
             detail: `${rows.length} dimension scores, ${useYear}`,
           });
         }
@@ -872,7 +872,7 @@ export class InsightReportsService {
             {
               type: 'callout',
               tone: 'warning',
-              text: `No Youth Index score is recorded for ${countryName ?? 'this country'}${useYear ? ` in ${useYear}` : ''}.`,
+              text: `No AYEMI score is recorded for ${countryName ?? 'this country'}${useYear ? ` in ${useYear}` : ''}.`,
             },
           ],
         });
@@ -899,12 +899,12 @@ export class InsightReportsService {
       : [];
 
     const summary = top.length
-      ? `A continental snapshot of youth development for ${useYear}, based on the African Youth Index. ${top[0].country?.name ?? 'The leading country'} leads with ${top[0].overallScore.toFixed(1)}.`
-      : 'No African Youth Index data is available yet, so this summary reports data availability only.';
+      ? `A continental snapshot of youth development for ${useYear}, based on the AYEMI. ${top[0].country?.name ?? 'The leading country'} leads with ${top[0].overallScore.toFixed(1)}.`
+      : 'No AYEMI data is available yet, so this summary reports data availability only.';
 
     if (top.length) {
       sections.push({
-        heading: `Top 10 — African Youth Index ${useYear}`,
+        heading: `Top 10 — AYEMI ${useYear}`,
         blocks: [
           {
             type: 'table',
@@ -916,7 +916,7 @@ export class InsightReportsService {
               stripNonWinAnsi(t.country?.name ?? 'Unknown'),
               Number(t.overallScore.toFixed(1)),
             ]),
-            caption: `African Youth Index rankings, ${useYear}`,
+            caption: `AYEMI rankings, ${useYear}`,
           },
           {
             type: 'chart',
@@ -924,19 +924,19 @@ export class InsightReportsService {
             title: `Top 10 overall scores — ${useYear}`,
             categories: top.map((t) => t.country?.name ?? 'Unknown'),
             series: [{ name: 'Overall score', values: top.map((t) => Number(t.overallScore.toFixed(1))) }],
-            sourceNote: 'African Youth Index',
+            sourceNote: 'AYEMI',
           },
         ],
       });
       citations.push({
-        label: 'African Youth Index',
+        label: 'AYEMI',
         detail: `Top 10 country rankings and overall scores, ${useYear}`,
       });
     } else {
       sections.push({
         heading: 'Data availability',
         blocks: [
-          { type: 'callout', tone: 'warning', text: 'No African Youth Index scores are recorded in the database.' },
+          { type: 'callout', tone: 'warning', text: 'No AYEMI scores are recorded in the database.' },
         ],
       });
     }
@@ -1035,7 +1035,7 @@ const REPORT_DOCUMENT_SCHEMA = {
                     type: { type: 'string', enum: ['stat'] },
                     label: { type: 'string' },
                     value: { type: 'string' },
-                    context: { type: 'string', description: 'Optional qualifier, e.g. "African Youth Index, 2023".' },
+                    context: { type: 'string', description: 'Optional qualifier, e.g. "AYEMI, 2023".' },
                   },
                   required: ['type', 'label', 'value'],
                 },

@@ -380,7 +380,7 @@ YOUR CORE RULES:
 3. If data is not available for a specific question, say so clearly — don't estimate.
 4. Always provide context: compare to regional averages, continental trends, or peer countries.
 5. Be analytical, not just descriptive. Explain WHY patterns exist, what they mean, and what actions could address issues.
-6. When relevant, reference the Youth Index scores, policy compliance, or AU frameworks.
+6. When relevant, reference the AYEMI scores, policy compliance, or AU frameworks.
 7. ${langInstruction}
 
 YOUR DATA ACCESS:
@@ -575,7 +575,7 @@ Respond with a JSON object:
       dataCitations: [],
       visualization,
       followUpQuestions: [
-        'What are the top 10 countries by Youth Index score?',
+        'What are the top 10 countries by AYEMI score?',
         'Compare youth unemployment in Nigeria and South Africa',
         'How has internet penetration changed in East Africa since 2010?',
       ],

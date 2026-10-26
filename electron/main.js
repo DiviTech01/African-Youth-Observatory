@@ -132,7 +132,7 @@ function buildMenu() {
           click: () => mainWindow?.webContents.executeJavaScript("window.location.hash = '#/data-explorer'"),
         },
         {
-          label: 'Youth Index',
+          label: 'AYEMI',
           accelerator: 'CmdOrCtrl+I',
           click: () => mainWindow?.webContents.executeJavaScript("window.location.hash = '#/youth-index'"),
         },

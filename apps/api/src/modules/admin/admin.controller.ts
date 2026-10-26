@@ -85,8 +85,8 @@ export class AdminController {
 
   @Post('data/recompute-index')
   @ApiOperation({
-    summary: 'Recompute Youth Index for a year',
-    description: 'Triggers the Youth Index calculator for the specified year. Uses the existing calculator service.',
+    summary: 'Recompute AYEMI for a year',
+    description: 'Triggers the AYEMI calculator for the specified year. Uses the existing calculator service.',
   })
   async recomputeIndex(@Body() dto: RecomputeIndexDto) {
     // Dynamically import to avoid circular deps
@@ -94,7 +94,7 @@ export class AdminController {
       // This will be handled by the YouthIndex module's compute endpoint
       return {
         message: `Use POST /api/youth-index/compute with body { "year": ${dto.year} } to recompute.`,
-        hint: 'The Youth Index compute endpoint already exists at /api/youth-index/compute and /api/youth-index/compute-all',
+        hint: 'The AYEMI compute endpoint already exists at /api/youth-index/compute and /api/youth-index/compute-all',
       };
     } catch (err: unknown) {
       throw new BadRequestException(err instanceof Error ? err.message : 'Recompute failed');

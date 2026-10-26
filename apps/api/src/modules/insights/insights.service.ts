@@ -206,8 +206,8 @@ export class InsightsService {
       `Country: ${country.name}`,
       `Region: ${country.region.replace(/_/g, ' ')}`,
       youthIndex
-        ? `Youth Index: ${youthIndex.overallScore} (rank ${youthIndex.rank}/54, tier: ${youthIndex.tier})\n${dimsLine(youthIndex)}`
-        : 'Youth Index: Not yet computed',
+        ? `AYEMI: ${youthIndex.overallScore} (rank ${youthIndex.rank}/54, tier: ${youthIndex.tier})\n${dimsLine(youthIndex)}`
+        : 'AYEMI: Not yet computed',
       '',
       'Key Indicators:',
       ...indicators.map((i) => {
@@ -298,7 +298,7 @@ Rules:
         id: `rb-${country.id}-tier`,
         type: 'comparison',
         title: `${country.name} ranks #${youthIndex.rank} in youth development`,
-        description: `With a Youth Index score of ${youthIndex.overallScore.toFixed(1)}, ${country.name} is ${td.label} among Africa's 54 nations. The country is in the ${youthIndex.tier.replace(/_/g, ' ')} tier.`,
+        description: `With an AYEMI score of ${youthIndex.overallScore.toFixed(1)}, ${country.name} is ${td.label} among Africa's 54 nations. The country is in the ${youthIndex.tier.replace(/_/g, ' ')} tier.`,
         severity: td.severity,
         confidence: 1.0,
         relatedCountryId: country.id,
@@ -316,7 +316,7 @@ Rules:
         id: `rb-${country.id}-strength`,
         type: 'achievement',
         title: `${best.name} is ${country.name}'s strongest dimension`,
-        description: `${country.name} scores ${best.score.toFixed(1)} in ${best.name}, the highest among its seven Youth Index dimensions. This suggests relatively strong youth outcomes in this area.`,
+        description: `${country.name} scores ${best.score.toFixed(1)} in ${best.name}, the highest among its seven AYEMI dimensions. This suggests relatively strong youth outcomes in this area.`,
         severity: 'positive',
         confidence: 1.0,
         relatedCountryId: country.id,
@@ -330,7 +330,7 @@ Rules:
         id: `rb-${country.id}-opportunity`,
         type: 'opportunity',
         title: `${worst.name} presents the greatest opportunity for improvement`,
-        description: `At ${worst.score.toFixed(1)}, ${worst.name} is ${country.name}'s lowest-scoring dimension. Targeted investment here could yield the largest gains in the country's overall Youth Index ranking.`,
+        description: `At ${worst.score.toFixed(1)}, ${worst.name} is ${country.name}'s lowest-scoring dimension. Targeted investment here could yield the largest gains in the country's overall AYEMI ranking.`,
         severity: worst.score < 40 ? 'warning' : 'info',
         confidence: 1.0,
         relatedCountryId: country.id,

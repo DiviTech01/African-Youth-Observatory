@@ -89,7 +89,7 @@ const dataLinks = [
   { to: '/dashboard/explore', label: 'Data Explorer', icon: Search },
   { to: '/dashboard/countries', label: 'Report Cards', icon: Globe },
   { to: '/dashboard/themes', label: 'Themes', icon: Layers },
-  { to: '/dashboard/youth-index', label: 'Youth Index', icon: BarChart3 },
+  { to: '/dashboard/youth-index', label: 'AYEMI', icon: BarChart3 },
   { to: '/dashboard/compare', label: 'Compare', icon: ArrowLeftRight },
   { to: '/dashboard/insights', label: 'AI Insights', icon: Lightbulb },
   { to: '/dashboard/ask', label: 'Ask AI', icon: MessageSquare },
@@ -634,7 +634,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     if (p.includes('explore')) return 'Data Explorer';
     if (p.includes('countries')) return 'Report Cards';
     if (p.includes('themes')) return 'Themes';
-    if (p.includes('youth-index')) return 'Youth Index';
+    if (p.includes('youth-index')) return 'AYEMI';
     if (p.includes('compare')) return 'Compare';
     if (p.includes('insights')) return 'AI Insights';
     if (p.includes('ask')) return 'Ask AI';

@@ -152,13 +152,13 @@ export class CountryNarrativeService {
       '',
       latestIndex
         ? [
-            `Youth Index (${latestIndex.year}): ${latestIndex.overallScore.toFixed(1)} (Rank ${latestIndex.rank}/54, Tier: ${latestIndex.tier})`,
+            `AYEMI (${latestIndex.year}): ${latestIndex.overallScore.toFixed(1)} (Rank ${latestIndex.rank}/54, Tier: ${latestIndex.tier})`,
             `  ${narrativeDimsLine(latestIndex)}`,
             '',
             'Index History:',
             ...indexHistory.map((s) => `  ${s.year}: Score ${s.overallScore.toFixed(1)}, Rank ${s.rank}`),
           ].join('\n')
-        : 'Youth Index: Not yet computed',
+        : 'AYEMI: Not yet computed',
       '',
       'Key Indicators (latest):',
       ...indicators.map((v) => {
@@ -178,7 +178,7 @@ Given the data below, produce a JSON object with:
 }
 
 Narrative guidelines:
-1. Overall youth development status (reference the Youth Index score and tier)
+1. Overall youth development status (reference the AYEMI score and tier)
 2. Key strengths (top-performing dimensions/indicators)
 3. Key challenges (lowest-performing areas)
 4. Recent trends (improving or declining over past years)
@@ -249,9 +249,9 @@ Return ONLY valid JSON, nothing else.`;
       const change = latest.overallScore - oldest.overallScore;
       const rankChange = oldest.rank - latest.rank;
       if (change > 2) {
-        trendText = ` The country has shown improvement, with its Youth Index score rising from ${oldest.overallScore.toFixed(1)} in ${oldest.year} to ${latest.overallScore.toFixed(1)} in ${latest.year}, and its rank improving by ${rankChange} positions.`;
+        trendText = ` The country has shown improvement, with its AYEMI score rising from ${oldest.overallScore.toFixed(1)} in ${oldest.year} to ${latest.overallScore.toFixed(1)} in ${latest.year}, and its rank improving by ${rankChange} positions.`;
       } else if (change < -2) {
-        trendText = ` The country has experienced a decline, with its Youth Index score falling from ${oldest.overallScore.toFixed(1)} in ${oldest.year} to ${latest.overallScore.toFixed(1)} in ${latest.year}.`;
+        trendText = ` The country has experienced a decline, with its AYEMI score falling from ${oldest.overallScore.toFixed(1)} in ${oldest.year} to ${latest.overallScore.toFixed(1)} in ${latest.year}.`;
       } else {
         trendText = ` Youth development outcomes have remained relatively stable over the observed period.`;
       }
@@ -273,7 +273,7 @@ Return ONLY valid JSON, nothing else.`;
 The country's strongest dimension is ${best?.name || 'N/A'} (${best?.score.toFixed(1) || 'N/A'}), while ${worst?.name || 'N/A'} (${worst?.score.toFixed(1) || 'N/A'}) presents the most significant area for improvement. Among the ${peerCount} countries in ${regionLabel}, ${country.name} performs above the regional average on ${aboveAvg.length} of ${indicators.length} measured indicators and below average on ${belowAvg.length}.
 
 Key youth development indicators show a mixed picture. ${indicators.slice(0, 3).map((i) => `${i.indicator.name} stands at ${i.value.toFixed(1)} ${i.indicator.unit}`).join(', ')}. ${indicators.length > 3 ? `Across all themes, the data covers ${indicators.length} indicators for the most recent available year.` : ''}`
-      : `${country.name} is located in ${regionLabel}. Youth Index data has not yet been computed for this country. Available indicator data covers ${indicators.length} metrics across multiple themes.`;
+      : `${country.name} is located in ${regionLabel}. AYEMI data has not yet been computed for this country. Available indicator data covers ${indicators.length} metrics across multiple themes.`;
 
     const keyStrengths = dimensions
       .filter((d) => d.score >= 55)

@@ -49,7 +49,7 @@ export class YouthIndexController {
   @Roles('ADMIN')
   @Post('compute')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Compute Youth Index for a specific year (admin only)' })
+  @ApiOperation({ summary: 'Compute AYEMI for a specific year (admin only)' })
   computeForYear(@Body() body: ComputeYearDto) {
     return this.calculator.computeForYear(body.year);
   }
@@ -58,7 +58,7 @@ export class YouthIndexController {
   @Roles('ADMIN')
   @Post('compute-all')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Compute Youth Index for every year that has data (admin only)' })
+  @ApiOperation({ summary: 'Compute AYEMI for every year that has data (admin only)' })
   computeAll() {
     return this.calculator.computeAll();
   }

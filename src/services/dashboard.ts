@@ -77,7 +77,7 @@ export interface WidgetTemplate {
 export const WIDGET_TEMPLATES: WidgetTemplate[] = [
   {
     type: 'youth-index-ranking',
-    name: 'Youth Index Rankings',
+    name: 'AYEMI Rankings',
     description: 'Display youth index scores for all countries',
     icon: 'Trophy',
     defaultSize: 'large',
@@ -285,7 +285,7 @@ export const DEFAULT_DASHBOARDS: DashboardConfig[] = [
       {
         id: 'w1',
         type: 'trend-analysis',
-        title: 'Youth Index Trends',
+        title: 'AYEMI Trends',
         size: 'large',
         config: { compareYears: [2020, 2021, 2022, 2023, 2024], chartType: 'line' },
         position: { row: 0, col: 0 },

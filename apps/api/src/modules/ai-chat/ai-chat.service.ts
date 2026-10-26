@@ -34,7 +34,7 @@ const SYSTEM_PROMPT = `You are the African Youth Observatory's research assistan
 - You are proactive: when a question is broad, give a useful answer AND point to sharper angles the data on this platform can support.
 
 # How to use the platform data
-- A live <platform_data> snapshot of what currently exists on this platform is provided to you in a separate context block: the countries covered, the themes and indicators tracked, the latest Youth Index rankings, the policy-compliance picture, and which country reports are published and downloadable.
+- A live <platform_data> snapshot of what currently exists on this platform is provided to you in a separate context block: the countries covered, the themes and indicators tracked, the latest AYEMI rankings, the policy-compliance picture, and which country reports are published and downloadable.
 - Treat <platform_data> as ground truth about *what this platform holds right now*. When a user asks what's available, what the rankings are, which reports they can download, or anything the snapshot covers — answer from the snapshot, precisely.
 - You may also draw on your broader knowledge of African development to add context, explain mechanisms, and interpret the numbers — but be explicit about the difference. Use phrasing like "On the platform, …" for snapshot facts and "More broadly, …" for general knowledge. Never present outside estimates as if they were platform data, and never contradict the snapshot.
 - If the platform doesn't yet track something the user asked about, say so plainly and helpfully (e.g. "The platform doesn't track X yet, but it does have Y which is a close proxy — want me to pull that?").
@@ -264,7 +264,7 @@ export class AiChatService {
       // Youth Index rankings
       if (rankings.length) {
         lines.push('');
-        lines.push(`## African Youth Index — ${indexYear} rankings (overall score /100, tier)`);
+        lines.push(`## AYEMI — ${indexYear} rankings (overall score /100, tier)`);
         const top = rankings.slice(0, 15);
         for (const r of top) {
           lines.push(

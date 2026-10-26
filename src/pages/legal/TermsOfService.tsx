@@ -27,7 +27,7 @@ const SECTIONS: LegalSection[] = [
           AYO compiles youth-related statistics for all 54 African countries from international
           sources such as the World Bank, WHO, UNESCO, ILO and UN agencies, together with data
           submitted by partner institutions, and publishes them as indicators, country profiles,
-          comparisons and a composite Youth Index.
+          comparisons and a composite index, the AYEMI.
         </p>
         <p>
           AYO is a research and advocacy tool. It is not a statistical authority, and it does not
@@ -64,7 +64,7 @@ const SECTIONS: LegalSection[] = [
             what the source said when we ingested it.
           </li>
           <li>
-            The Youth Index is our own construction, not an official ranking. Its weights and its
+            The AYEMI is our own construction, not an official ranking. Its weights and its
             treatment of missing data are judgement calls, documented in our{' '}
             <Link to="/resources/methodology">Methodology</Link>. Small differences in rank between
             countries are not meaningful.

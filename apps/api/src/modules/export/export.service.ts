@@ -415,7 +415,7 @@ export class ExportService {
 
   ${
     youthIndex
-      ? `<h2>Youth Index Score (${youthIndex.year})</h2>
+      ? `<h2>AYEMI Score (${youthIndex.year})</h2>
   <p>Overall Score: <span class="score">${youthIndex.overallScore.toFixed(2)}</span> / 100</p>
   <p>Rank: <strong>#${youthIndex.rank}</strong> of ${scoredCount} scored countries &nbsp; | &nbsp; Tier: <span class="tier tier-${youthIndex.tier}">${youthIndex.tier.replace(/_/g, ' ')}</span></p>
   <table>
@@ -430,7 +430,7 @@ export class ExportService {
       return `<tr><td>${EXPORT_THEME_LABELS[slug]}</td><td>${measured ? (d[slug] as number).toFixed(2) : 'Insufficient data'}</td></tr>`;
     }).join('\n    ')}
   </table>`
-      : '<h2>Youth Index Score</h2><p>No index data available yet. Run compute-all to generate.</p>'
+      : '<h2>AYEMI Score</h2><p>No index data available yet. Run compute-all to generate.</p>'
   }
 
   <h2>Key Indicators</h2>
